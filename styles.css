@@ -1,0 +1,662 @@
+/* Trova. Colours come from Obsidian's CSS variables only, so every theme works. */
+
+body {
+  --trova-radius: 8px;
+  --trova-tint-accent: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  --trova-tint-green: color-mix(in srgb, var(--color-green) 16%, transparent);
+  --trova-tint-blue: color-mix(in srgb, var(--color-blue) 14%, transparent);
+  --trova-tint-orange: color-mix(in srgb, var(--color-orange) 16%, transparent);
+  --trova-ease: 120ms ease-out;
+}
+
+/* ---------- Instant search modal ---------- */
+.trova-modal {
+  width: min(780px, 92vw); max-width: 92vw; padding: 0; overflow: hidden;
+  border-radius: 14px; border: 1px solid var(--background-modifier-border);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+.trova-modal .modal-content { display: flex; flex-direction: column; max-height: 74vh; padding: 0; margin: 0; }
+/*
+ * Obsidian centres a modal vertically, so a result list that grows or shrinks would move the
+ * search box. Instant search is anchored near the top instead and grows downward; only its bottom
+ * edge moves. The list keeps room for about six rows, so it does not collapse between keystrokes.
+ */
+.modal-container.trova-modal-container { align-items: flex-start; }
+.modal-container.trova-modal-container .trova-modal:not(.trova-fullscreen) { margin-top: 12vh; }
+.trova-modal:not(.trova-fullscreen) .trova-list { min-height: min(300px, 40vh); }
+.trova-modal.trova-fullscreen { width: 100vw; max-width: 100vw; height: 100%; max-height: 100%; border-radius: 0; border: none; }
+.trova-modal.trova-fullscreen .modal-content { max-height: 100%; }
+
+.trova-querybar { position: relative; border-bottom: 1px solid var(--background-modifier-border); }
+.trova-query-icon {
+  position: absolute; left: var(--size-4-4); top: 50%; transform: translateY(-50%);
+  display: inline-flex; color: var(--text-faint); pointer-events: none; z-index: 1;
+}
+.trova-query-icon svg { width: 18px; height: 18px; }
+/* Obsidian styles input[type="text"] with its own padding and height; these selectors outrank it. */
+.trova-querybar input.trova-input, .trova-querybar .trova-underlay {
+  box-sizing: border-box; margin: 0; height: auto;
+  font-family: inherit; font-size: var(--font-ui-large); font-weight: var(--font-normal); line-height: 1.4; letter-spacing: normal; white-space: pre;
+  padding: var(--size-4-4) var(--size-4-4) var(--size-4-4) calc(var(--size-4-4) + 30px);
+  border: 1px solid transparent;
+}
+.trova-querybar input.trova-input {
+  display: block; width: 100%; position: relative; border-radius: 0;
+  border-color: transparent !important; box-shadow: none !important; background: transparent !important;
+}
+.trova-querybar input.trova-input::placeholder { color: var(--text-faint); }
+.trova-querybar .trova-underlay { position: absolute; inset: 0; overflow: hidden; color: transparent; pointer-events: none; }
+.trova-modal:not(.trova-fullscreen) .modal-close-button { display: none !important; }
+.trova-modal .modal-header:empty { display: none; }
+.trova-squiggle { text-decoration: underline wavy var(--text-error); text-underline-offset: 4px; pointer-events: auto; }
+
+.trova-notices:empty { display: none; }
+.trova-live, .trova-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.trova-correction { padding: var(--size-4-2) var(--size-4-4) 0; color: var(--text-muted); font-size: var(--font-ui-small); }
+.trova-correction em { color: var(--text-normal); font-weight: var(--font-semibold); }
+.trova-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--size-4-2);
+  margin: var(--size-4-2); padding: var(--size-4-2) var(--size-4-3);
+  background: var(--trova-tint-orange); border-radius: var(--trova-radius);
+  color: var(--text-normal); font-size: var(--font-ui-small);
+}
+.trova-banner button { flex: 0 0 auto; }
+
+.trova-list { overflow-y: auto; flex: 1 1 auto; padding: var(--size-4-2); min-height: 96px; scroll-padding: var(--size-4-2); }
+.trova-section {
+  padding: var(--size-4-3) var(--size-4-3) var(--size-2-3); color: var(--text-faint);
+  font-size: var(--font-ui-smaller); font-weight: var(--font-semibold); text-transform: uppercase; letter-spacing: 0.06em;
+}
+.trova-row {
+  position: relative; padding: var(--size-4-2) var(--size-4-3); border-radius: var(--trova-radius); cursor: var(--cursor);
+  transition: background-color var(--trova-ease);
+}
+.trova-row:hover { background: color-mix(in srgb, var(--background-modifier-hover) 55%, transparent); }
+.trova-row.is-selected { background: var(--background-modifier-hover); }
+.trova-row.is-selected::before {
+  content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--interactive-accent);
+}
+.is-mobile .trova-row, .is-mobile .trova-conn-head, .is-mobile .trova-basket-item { min-height: 44px; }
+.is-mobile .trova-row-actions { opacity: 1; }
+.trova-row-head { display: flex; align-items: baseline; gap: var(--size-4-2); min-width: 0; }
+.trova-row-title, .trova-conn-title { font-weight: var(--font-semibold); color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-row-alias { color: var(--text-muted); font-size: var(--font-ui-small); white-space: nowrap; }
+.trova-row-path { color: var(--text-faint); font-size: var(--font-ui-smaller); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; min-width: 0; }
+.trova-badges { margin-left: auto; display: inline-flex; gap: var(--size-2-2); flex: 0 0 auto; }
+.trova-row-heading { color: var(--text-accent); font-size: var(--font-ui-smaller); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-row-snippet {
+  color: var(--text-muted); font-size: var(--font-ui-small); line-height: 1.45; margin-top: 2px; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.trova-row-context { color: var(--text-faint); font-size: var(--font-ui-smaller); font-style: italic; }
+.trova-pre { white-space: pre-wrap; font-family: var(--font-monospace); font-size: var(--font-ui-smaller); display: block; }
+.trova-row-infile { display: flex; gap: var(--size-4-3); }
+.trova-line-no { color: var(--text-faint); font-family: var(--font-monospace); font-size: var(--font-ui-smaller); min-width: 3ch; text-align: right; padding-top: 3px; }
+.trova-hl { background: var(--text-highlight-bg); color: var(--text-normal); border-radius: 3px; padding: 0 1px; }
+
+.trova-badge, .trova-chip {
+  display: inline-block; padding: 1px 7px; border-radius: 999px;
+  background: var(--background-modifier-border); color: var(--text-muted);
+  font-size: var(--font-ui-smaller); font-weight: var(--font-medium); line-height: 1.5; white-space: nowrap;
+}
+.trova-badge-type { text-transform: uppercase; letter-spacing: 0.04em; font-size: calc(var(--font-ui-smaller) - 1px); }
+.trova-badge-vec, .trova-badge-rerank { background: var(--trova-tint-accent); color: var(--text-accent); }
+.trova-badge-fuzzy, .trova-badge-stale { background: var(--trova-tint-orange); color: var(--text-warning); }
+.trova-badge-refining { font-style: italic; }
+.trova-label { font-size: var(--font-ui-smaller); font-weight: var(--font-medium); padding: 1px 8px; border-radius: 999px; white-space: nowrap; flex: 0 0 auto; }
+.trova-label-strong { color: var(--color-green); background: var(--trova-tint-green); }
+.trova-label-related { color: var(--color-blue); background: var(--trova-tint-blue); }
+.trova-label-loose { color: var(--text-faint); background: var(--background-modifier-border); }
+
+.trova-empty { padding: var(--size-4-8) var(--size-4-4); text-align: center; color: var(--text-muted); line-height: 1.5; }
+.trova-empty-actions { display: flex; gap: var(--size-4-2); justify-content: center; margin-top: var(--size-4-3); flex-wrap: wrap; }
+.trova-hints {
+  display: flex; flex-wrap: wrap; gap: var(--size-2-3) var(--size-4-4); padding: var(--size-4-2) var(--size-4-4);
+  border-top: 1px solid var(--background-modifier-border); background: var(--background-secondary);
+  color: var(--text-faint); font-size: var(--font-ui-smaller);
+}
+.trova-hint kbd {
+  font-family: var(--font-interface); font-size: calc(var(--font-ui-smaller) - 1px); padding: 1px 5px; border-radius: 4px;
+  background: var(--background-primary); border: 1px solid var(--background-modifier-border); color: var(--text-muted);
+}
+.is-mobile .trova-hints { display: none; }
+
+.trova-skeleton {
+  height: 46px; margin: var(--size-4-2); border-radius: var(--trova-radius);
+  background: linear-gradient(90deg, var(--background-modifier-hover) 25%, var(--background-modifier-border) 50%, var(--background-modifier-hover) 75%);
+  background-size: 200% 100%; animation: trova-shimmer 1.4s linear infinite;
+}
+@keyframes trova-shimmer { to { background-position: -200% 0; } }
+@keyframes trova-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Panes ---------- */
+.trova-pane { display: flex; flex-direction: column; padding: 0 !important; overflow: hidden; }
+.trova-pane-header { padding: var(--size-4-2) var(--size-4-3); border-bottom: 1px solid var(--background-modifier-border); flex: 0 0 auto; }
+.trova-pane-toolbar { display: flex; align-items: center; gap: var(--size-4-1); flex-wrap: wrap; padding: var(--size-2-2) 0; }
+.trova-pane-toolbar .dropdown { flex: 1 1 auto; min-width: 0; }
+.trova-pane-toolbar .clickable-icon.is-active { color: var(--text-accent); background: var(--trova-tint-accent); }
+.trova-pane-body { overflow-y: auto; flex: 1 1 auto; padding: var(--size-4-2); }
+.trova-anchor-name { font-weight: var(--font-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-chips { display: flex; flex-wrap: wrap; gap: var(--size-2-2); margin-top: var(--size-2-3); }
+.trova-stale-note { color: var(--text-warning); font-size: var(--font-ui-smaller); padding: 0 var(--size-4-3) var(--size-4-2); }
+
+.trova-conn-head {
+  display: flex; align-items: center; gap: var(--size-4-1); padding: var(--size-4-1) var(--size-4-2);
+  border-radius: var(--trova-radius); cursor: var(--cursor); min-width: 0; transition: background-color var(--trova-ease);
+}
+.trova-conn-head:hover, .trova-conn-block:hover { background: var(--background-modifier-hover); }
+.trova-conn-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 16px; width: 16px; color: var(--text-faint); border-radius: 4px; }
+.trova-conn-toggle svg { width: 14px; height: 14px; }
+.trova-conn-toggle:hover { color: var(--text-normal); }
+.trova-conn-toggle.is-hidden { visibility: hidden; }
+.trova-pin { display: inline-flex; color: var(--text-accent); }
+/*
+ * A related note's details share one left edge with its title: the reason line, each section
+ * heading and each snippet start where the title text starts. `--trova-indent` is that edge, from
+ * the row's padding, the 16px chevron and the gap after it.
+ */
+.trova-conn { margin-bottom: 2px; --trova-indent: calc(var(--size-4-2) + 16px + var(--size-4-1)); }
+.trova-conn-block {
+  margin: 0 0 1px calc(var(--trova-indent) - var(--size-4-2)); padding: var(--size-2-2) var(--size-4-2);
+  border-radius: var(--trova-radius); cursor: var(--cursor); transition: background-color var(--trova-ease);
+}
+.trova-conn-block .trova-row-heading { flex: 1 1 auto; min-width: 0; margin-top: 0; color: var(--text-accent); }
+.trova-conn-block .trova-row-snippet { -webkit-line-clamp: 3; margin-top: 1px; }
+/* The hidden basket button must not make the heading line taller than its text. */
+.trova-conn-block .trova-row-head { align-items: center; min-height: 0; }
+.trova-conn-block .trova-basket-btn { padding: 0 2px; height: auto; }
+.trova-conn-block .trova-basket-btn svg { width: 13px; height: 13px; }
+.trova-whyline {
+  display: flex; align-items: center; gap: var(--size-4-2); min-width: 0;
+  margin: 0 var(--size-4-2) var(--size-2-3) var(--trova-indent);
+  color: var(--text-faint); font-size: var(--font-ui-smaller); white-space: nowrap; overflow: hidden;
+}
+.trova-whyline > span { white-space: nowrap; }
+.trova-whyline > span:last-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.trova-whyline-sep { margin: 0 calc(-1 * var(--size-4-2)); }
+/* The score is the one pill. Its background starts on the title's edge, like the text below it. */
+.trova-whyline-score {
+  flex: 0 0 auto; padding: 0 7px; border-radius: 999px; line-height: 1.6;
+  background: var(--trova-tint-accent); color: var(--text-accent); font-weight: var(--font-medium); font-variant-numeric: tabular-nums;
+}
+.trova-whyline-score + .trova-whyline-sep { display: none; }
+.trova-basket-btn { opacity: 0; transition: opacity var(--trova-ease); }
+.trova-conn-block:hover .trova-basket-btn, .trova-basket-btn:focus { opacity: 1; }
+
+.trova-popover {
+  position: fixed; z-index: var(--layer-popover); max-width: 340px; padding: var(--size-4-3);
+  font-size: var(--font-ui-small); color: var(--text-muted); border-radius: 10px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.35);
+}
+.trova-why-title { font-weight: var(--font-semibold); color: var(--text-normal); margin-bottom: var(--size-2-3); }
+.trova-popover-row { margin: 3px 0; }
+.trova-popover-actions { display: flex; gap: var(--size-4-2); margin-top: var(--size-4-3); flex-wrap: wrap; }
+.trova-popover-actions button { display: inline-flex; align-items: center; gap: var(--size-2-2); }
+.trova-popover-item { padding: var(--size-4-1) var(--size-4-2); border-radius: var(--trova-radius); cursor: var(--cursor); }
+.trova-popover-item:hover, .trova-popover-item:focus-visible { background: var(--background-modifier-hover); outline: none; }
+.trova-badge-popover { max-height: 50vh; overflow-y: auto; padding: var(--size-4-1); }
+
+/* ---------- Ask ---------- */
+.trova-card-actions { display: flex; gap: var(--size-2-3); justify-content: flex-end; margin-top: var(--size-4-2); flex-wrap: wrap; }
+.trova-explain {
+  display: flex; flex-wrap: wrap; gap: var(--size-2-3) var(--size-4-3); margin-top: var(--size-4-2); padding: var(--size-4-1) var(--size-4-2);
+  background: var(--background-secondary); border-radius: var(--trova-radius);
+  font-family: var(--font-monospace); font-size: var(--font-ui-smaller); color: var(--text-muted);
+}
+
+/* ---------- Basket ---------- */
+.trova-meter { padding: var(--size-4-3) var(--size-4-3) var(--size-4-2); font-size: var(--font-ui-small); color: var(--text-muted); flex: 0 0 auto; }
+.trova-meter-bar { height: 6px; margin-top: var(--size-2-3); background: var(--background-modifier-border); border-radius: 3px; overflow: hidden; }
+.trova-meter-fill { height: 100%; background: var(--interactive-accent); border-radius: 3px; transition: width 200ms ease-out; }
+.trova-meter.is-over .trova-meter-fill { background: var(--text-error); }
+.trova-meter-warn { display: block; color: var(--text-error); margin-top: var(--size-2-2); }
+.trova-basket-actions { display: flex; flex-wrap: wrap; gap: var(--size-2-3); padding: 0 var(--size-4-3) var(--size-4-3); border-bottom: 1px solid var(--background-modifier-border); flex: 0 0 auto; }
+.trova-basket-item { display: flex; align-items: center; gap: var(--size-4-2); padding: var(--size-4-1) var(--size-4-2); border-radius: var(--trova-radius); transition: background-color var(--trova-ease); }
+.trova-basket-item:hover, .trova-basket-item:focus-visible { background: var(--background-modifier-hover); outline: none; }
+.trova-basket-item.is-drop-target { box-shadow: 0 -2px 0 var(--interactive-accent); }
+.trova-basket-item.is-dragging { opacity: 0.5; }
+.trova-basket-text { flex: 1 1 auto; min-width: 0; cursor: var(--cursor); }
+.trova-grip { color: var(--text-faint); cursor: grab; display: inline-flex; }
+
+/* ---------- Vault care (editor tab) ---------- */
+.trova-care { container-type: inline-size; }
+.trova-care .trova-care-page { overflow-y: auto; flex: 1 1 auto; padding: var(--size-4-6) var(--size-4-8) var(--size-4-8); }
+.trova-care-page > * { max-width: 980px; margin-left: auto; margin-right: auto; }
+.trova-care-header { display: flex; align-items: center; gap: var(--size-4-3); flex-wrap: wrap; margin-bottom: var(--size-4-4); }
+.trova-care-title { display: flex; align-items: center; gap: var(--size-4-2); }
+.trova-care-title-icon { display: inline-flex; color: var(--text-muted); }
+.trova-care-title-icon svg { width: 20px; height: 20px; }
+.trova-care-title h2 { margin: 0; font-size: var(--font-ui-large); font-weight: var(--font-semibold); color: var(--text-normal); }
+.trova-care-summary { color: var(--text-muted); font-size: var(--font-ui-small); }
+.trova-care-scan { margin-left: auto; }
+.trova-care-scan-button { display: inline-flex; align-items: center; gap: var(--size-2-3); font-size: var(--font-ui-small); }
+.trova-care-scan-button svg { width: 14px; height: 14px; }
+.trova-care-scan-button.is-running svg { animation: trova-spin 1s linear infinite; }
+
+/* The three task tiles: icon, count and label; the selected one has an accent outline. */
+.trova-care-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--size-4-3); margin-bottom: var(--size-4-4); }
+@container (max-width: 520px) { .trova-care-tiles { grid-template-columns: minmax(0, 1fr); } }
+.trova-care-tiles button.trova-care-tile {
+  display: flex; align-items: center; gap: var(--size-4-3); height: auto; padding: var(--size-4-3) var(--size-4-4); text-align: left;
+  background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 12px; box-shadow: none; cursor: var(--cursor);
+  transition: border-color var(--trova-ease), background-color var(--trova-ease);
+}
+.trova-care-tiles button.trova-care-tile:hover { border-color: var(--background-modifier-border-hover); background: var(--background-primary-alt); }
+.trova-care-tiles button.trova-care-tile.is-active { border-color: var(--interactive-accent); box-shadow: 0 0 0 1px var(--interactive-accent); }
+.trova-care-tiles button.trova-care-tile:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+.trova-care-tile-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; }
+.trova-care-tile-icon svg { width: 18px; height: 18px; }
+.trova-care-tile-duplicates .trova-care-tile-icon { background: var(--trova-tint-orange); color: var(--color-orange); }
+.trova-care-tile-orphans .trova-care-tile-icon { background: var(--background-modifier-hover); color: var(--text-muted); }
+.trova-care-tile-rediscover .trova-care-tile-icon { background: var(--trova-tint-green); color: var(--color-green); }
+.trova-care-tile-text { display: flex; flex-direction: column; min-width: 0; }
+.trova-care-tile-count { font-size: 22px; font-weight: var(--font-semibold); line-height: 1.15; color: var(--text-normal); font-variant-numeric: tabular-nums; }
+.trova-care-tile-label { font-size: var(--font-ui-small); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.trova-care-desc { color: var(--text-muted); font-size: var(--font-ui-small); margin-bottom: var(--size-4-3); }
+.trova-care-undo:empty { display: none; }
+.trova-care-undo-bar {
+  display: flex; align-items: center; gap: var(--size-4-2); margin-bottom: var(--size-4-3); padding: var(--size-4-2) var(--size-4-3);
+  border-radius: 10px; background: var(--background-secondary); color: var(--text-muted); font-size: var(--font-ui-small);
+}
+.trova-care-undo-icon { display: inline-flex; color: var(--color-green); }
+.trova-care-undo-icon svg { width: 15px; height: 15px; }
+.trova-care-undo-text { flex: 1 1 auto; min-width: 0; }
+
+/* Cards: a duplicate pair, an orphan, or a note to rediscover. */
+.trova-care-card {
+  border: 1px solid var(--background-modifier-border); border-radius: 12px; background: var(--background-primary);
+  padding: var(--size-4-3); margin-bottom: var(--size-4-3); transition: box-shadow 300ms ease-out;
+}
+.trova-care-card.is-flash { box-shadow: 0 0 0 2px var(--interactive-accent); }
+.trova-care-card-title { font-weight: var(--font-semibold); color: var(--text-normal); }
+.trova-care-meta { color: var(--text-faint); font-size: var(--font-ui-smaller); }
+.trova-care-snippet { color: var(--text-muted); font-size: var(--font-ui-small); line-height: 1.45; margin-top: var(--size-2-3); }
+.trova-care-snippet:empty { display: none; }
+.trova-care-side { border-radius: var(--trova-radius); padding: var(--size-2-3) var(--size-4-2); cursor: var(--cursor); min-width: 0; }
+.trova-care-side:hover, .trova-care-side:focus-visible { background: var(--background-modifier-hover); outline: none; }
+.trova-care-pill { font-size: var(--font-ui-smaller); font-weight: var(--font-medium); padding: 1px 8px; border-radius: 999px; background: var(--trova-tint-accent); color: var(--text-accent); white-space: nowrap; }
+.trova-care-rediscover { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--size-4-3); }
+.trova-care-rediscover-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; background: var(--trova-tint-green); color: var(--color-green); }
+.trova-care-rediscover-icon svg { width: 16px; height: 16px; }
+
+/* Good-news and first-run states, and the footer with dismissed items. */
+.trova-care-empty { display: flex; flex-direction: column; align-items: center; gap: var(--size-4-3); padding: var(--size-4-8) var(--size-4-4); color: var(--text-muted); text-align: center; }
+.trova-care-empty-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: var(--trova-tint-green); color: var(--color-green); }
+.trova-care-empty-icon svg { width: 22px; height: 22px; }
+.trova-care-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--size-4-2); color: var(--text-faint); font-size: var(--font-ui-small); min-height: 24px; }
+.trova-care-dismissed { margin-top: var(--size-4-2); border: 1px dashed var(--background-modifier-border); border-radius: 10px; padding: var(--size-2-3) var(--size-4-2); }
+.trova-care-dismissed-row { display: flex; align-items: center; justify-content: space-between; gap: var(--size-4-2); padding: var(--size-2-2) 0; color: var(--text-muted); font-size: var(--font-ui-small); }
+.trova-care-row { display: flex; align-items: center; justify-content: space-between; gap: var(--size-4-2); padding: var(--size-2-2) var(--size-4-2); }
+.trova-care-row .trova-row-snippet { flex: 1 1 auto; min-width: 0; }
+.trova-care-row button { flex: 0 0 auto; }
+.trova-confirm-list { max-height: 40vh; overflow-y: auto; font-size: var(--font-ui-small); }
+
+/* ---------- Connections and Ask pane ---------- */
+.trova-seek-header { flex: 0 0 auto; padding: var(--size-4-2) var(--size-4-2) var(--size-2-3); border-bottom: 1px solid var(--background-modifier-border); }
+.trova-seek-search {
+  display: flex; align-items: flex-start; gap: var(--size-2-2); padding: 3px var(--size-2-2) 3px var(--size-4-2);
+  background: var(--background-modifier-form-field); border: 1px solid var(--background-modifier-border); border-radius: var(--trova-radius);
+  transition: border-color var(--trova-ease), box-shadow var(--trova-ease);
+}
+.trova-seek-search:focus-within { border-color: var(--interactive-accent); box-shadow: 0 0 0 2px var(--trova-tint-accent); }
+.trova-seek-icon { display: inline-flex; color: var(--text-faint); padding-top: 6px; }
+.trova-seek-icon svg { width: 15px; height: 15px; }
+.trova-seek-search textarea.trova-seek-input {
+  flex: 1 1 auto; min-width: 0; resize: none; overflow-y: auto; max-height: 6.5em; min-height: 0; height: auto;
+  border: none !important; background: transparent !important; box-shadow: none !important;
+  padding: 4px 0; line-height: 1.4; font-size: var(--font-ui-small);
+}
+.trova-seek-mode {
+  flex: 0 0 auto; height: auto; margin-top: 3px; padding: 1px 7px; box-shadow: none;
+  background: var(--background-modifier-hover); color: var(--text-muted); border-radius: 999px; font-size: var(--font-ui-smaller);
+}
+.trova-seek-mode:hover { color: var(--text-normal); }
+.trova-seek-search .clickable-icon { flex: 0 0 auto; padding: 4px; }
+.trova-seek-clear.is-hidden { display: none; }
+.trova-seek-scope { display: flex; align-items: center; gap: var(--size-2-3); margin-top: var(--size-4-2); }
+.trova-segmented { display: flex; flex: 1 1 auto; gap: 2px; padding: 2px; background: var(--background-secondary); border-radius: var(--trova-radius); min-width: 0; }
+.trova-segmented button {
+  flex: 1 1 0; min-width: 0; height: auto; padding: 3px var(--size-2-2); box-shadow: none; background: transparent;
+  color: var(--text-muted); border-radius: 6px; font-size: var(--font-ui-smaller); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.trova-segmented button:hover { color: var(--text-normal); }
+.trova-segmented button.is-active { background: var(--background-primary); color: var(--text-normal); font-weight: var(--font-medium); box-shadow: 0 0 0 1px var(--background-modifier-border); }
+.trova-segmented button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
+.trova-seek-scope .clickable-icon.is-active { color: var(--text-accent); background: var(--trova-tint-accent); }
+.trova-seek-context { display: flex; align-items: center; gap: var(--size-2-3); margin-top: var(--size-4-2); min-width: 0; min-height: 22px; line-height: 22px; color: var(--text-muted); font-size: var(--font-ui-small); }
+.trova-seek-context-icon { display: inline-flex; color: var(--text-faint); flex: 0 0 auto; }
+.trova-seek-context-icon svg { width: 14px; height: 14px; }
+.trova-seek-context-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-seek-context .trova-anchor-name { color: var(--text-normal); }
+/*
+ * Link buttons and key hints carry no button chrome. Obsidian gives every `button` that is not a
+ * clickable icon a background and a shadow; `body button` outranks that rule.
+ */
+body button.trova-link-button {
+  display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto; height: auto; padding: 1px var(--size-2-2);
+  background: transparent; box-shadow: none; border: none; color: var(--text-accent); font-size: var(--font-ui-smaller); border-radius: 6px; cursor: var(--cursor);
+}
+body button.trova-link-button:hover { background: var(--trova-tint-accent); }
+body button.trova-link-button svg { width: 13px; height: 13px; }
+.trova-care button.trova-link-button { font-size: var(--font-ui-small); padding: 2px var(--size-2-3); }
+.trova-modal button.trova-link-button { font-size: var(--font-ui-small); padding: 2px var(--size-2-3); gap: var(--size-4-2); }
+.trova-small-button { height: auto; padding: 1px var(--size-4-2); font-size: var(--font-ui-smaller); }
+.trova-chip-remove { display: inline-flex; align-items: center; gap: 3px; height: auto; box-shadow: none; cursor: var(--cursor); }
+.trova-chip-remove:hover { color: var(--text-normal); }
+.trova-chip-x { display: inline-flex; }
+.trova-chip-x svg { width: 11px; height: 11px; }
+.trova-seek-body { padding: var(--size-2-3) var(--size-4-1) var(--size-4-2); }
+
+.trova-group-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-2) var(--size-2-2); color: var(--text-faint); font-size: var(--font-ui-smaller);
+}
+.trova-group-count { margin-left: var(--size-2-3); color: var(--text-faint); font-variant-numeric: tabular-nums; font-weight: var(--font-normal); }
+.trova-group-toggle {
+  display: inline-flex; align-items: center; gap: var(--size-2-2); height: auto; padding: 2px var(--size-2-2) 2px 0;
+  background: transparent; box-shadow: none; color: inherit; font-size: inherit; border-radius: 6px; min-width: 0;
+}
+.trova-group-toggle:hover { color: var(--text-normal); }
+.trova-group-toggle svg { width: 14px; height: 14px; }
+
+.trova-conn-head.is-selected, .trova-conn-block.is-selected { background: var(--background-modifier-hover); box-shadow: inset 2px 0 0 var(--interactive-accent); }
+.trova-conn-head:focus-visible, .trova-conn-block:focus-visible { background: var(--background-modifier-hover); outline: none; box-shadow: inset 0 0 0 2px var(--interactive-accent); }
+button.trova-conn-toggle { height: auto; padding: 0; background: transparent; box-shadow: none; }
+.trova-row-actions { display: inline-flex; gap: 1px; margin-left: auto; opacity: 0; transition: opacity var(--trova-ease); flex: 0 0 auto; }
+.trova-row-actions .clickable-icon { padding: 2px; }
+.trova-row-actions svg { width: 14px; height: 14px; }
+.trova-conn-head:hover .trova-row-actions, .trova-conn-head:focus-within .trova-row-actions { opacity: 1; }
+.trova-conn-head .trova-row-actions + .trova-meter3 { margin-left: var(--size-2-2); }
+
+
+/* Three bars in the accent colour; the number of filled bars is the strength. */
+.trova-meter3 { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; flex: 0 0 auto; margin-left: auto; }
+.trova-meter3-bar { width: 3px; border-radius: 1px; background: var(--background-modifier-border); }
+.trova-meter3-bar:nth-child(1) { height: 5px; }
+.trova-meter3-bar:nth-child(2) { height: 8px; }
+.trova-meter3-bar:nth-child(3) { height: 11px; }
+.trova-meter3[data-level="1"] .trova-meter3-bar:nth-child(-n+1),
+.trova-meter3[data-level="2"] .trova-meter3-bar:nth-child(-n+2),
+.trova-meter3[data-level="3"] .trova-meter3-bar { background: var(--interactive-accent); }
+.trova-conn-block .trova-meter3 { margin-left: var(--size-2-2); }
+.trova-conn-head > .trova-row-actions { margin-left: auto; }
+
+.trova-alert {
+  display: flex; align-items: center; gap: var(--size-2-3); margin: var(--size-2-3) var(--size-4-1) var(--size-4-1);
+  padding: var(--size-2-3) var(--size-4-2); border-radius: var(--trova-radius);
+  background: var(--trova-tint-orange); color: var(--text-normal); font-size: var(--font-ui-smaller);
+}
+.trova-alert-icon { display: inline-flex; color: var(--text-warning); }
+.trova-alert-icon svg { width: 14px; height: 14px; }
+.trova-alert-text { flex: 1 1 auto; min-width: 0; }
+.trova-alert button { flex: 0 0 auto; height: auto; padding: 1px var(--size-4-2); font-size: var(--font-ui-smaller); }
+
+.trova-seek-hints { display: none; flex: 0 0 auto; }
+.trova-seek.is-searching .trova-seek-hints, .trova-seek.is-asking .trova-seek-hints { display: flex; }
+
+/* The graph drawer at the bottom of the pane. */
+.trova-drawer { flex: 0 0 auto; display: flex; flex-direction: column; border-top: 1px solid var(--background-modifier-border); background: var(--background-primary); }
+.trova-drawer-handle { display: none; height: 9px; margin-top: -5px; cursor: row-resize; position: relative; z-index: 1; touch-action: none; }
+.trova-drawer.is-open .trova-drawer-handle { display: block; }
+.trova-drawer-handle::after {
+  content: ""; position: absolute; left: 50%; top: 3px; width: 32px; height: 3px; margin-left: -16px;
+  border-radius: 2px; background: var(--background-modifier-border-hover); transition: background-color var(--trova-ease);
+}
+.trova-drawer-handle:hover::after, .trova-drawer-handle:focus-visible::after, .is-resizing .trova-drawer-handle::after { background: var(--interactive-accent); }
+.trova-drawer-handle:focus-visible { outline: none; }
+.trova-drawer-head { padding: 2px var(--size-4-2) var(--size-2-2); }
+.trova-drawer-bar { display: flex; align-items: center; gap: var(--size-2-2); min-height: 26px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.trova-drawer-bar .trova-graph-count { margin-left: 0; flex: 1 1 auto; }
+.trova-drawer-bar .clickable-icon { padding: 3px; }
+.trova-drawer-bar .clickable-icon.is-active { color: var(--text-accent); background: var(--trova-tint-accent); }
+.trova-drawer-size { height: auto; padding: 1px 22px 1px 6px; font-size: var(--font-ui-smaller); max-width: 96px; }
+.trova-drawer-body { display: none; position: relative; overflow: hidden; }
+.trova-drawer.is-open .trova-drawer-body { display: flex; flex-direction: column; }
+.trova-drawer .trova-similarity-graph { flex: 1 1 auto; min-height: 0; }
+.trova-drawer .trova-graph-stage { min-height: 0; }
+.is-resizing { user-select: none; cursor: row-resize; }
+
+/* ---------- Similarity graph and topic map ---------- */
+.trova-similarity-graph { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.trova-graph-stage {
+  position: relative; flex: 1 1 auto; min-height: 220px; overflow: hidden;
+  background-image: radial-gradient(var(--background-modifier-border) 1px, transparent 1px); background-size: 22px 22px;
+}
+.trova-graph-canvas { position: absolute; inset: 0; display: block; touch-action: none; outline: none; }
+.trova-graph-canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--interactive-accent); }
+.trova-graph .trova-notices { position: relative; flex: 0 0 auto; }
+/* The bar under the map keeps one height with or without a selection, so selecting a node never
+   resizes the map: 44px for the topic map's one row, 48px for the similarity graph's two lines.
+   It holds the hint, or the selected note with its actions. The compact drawer graph has none. */
+.trova-graph-info { --trova-info-height: 44px; flex: 0 0 var(--trova-info-height); height: var(--trova-info-height); display: flex; align-items: center; padding: 0 var(--size-4-3); border-top: 1px solid var(--background-modifier-border); background: var(--background-primary); overflow: hidden; }
+.trova-similarity-graph .trova-graph-info { --trova-info-height: 48px; }
+.trova-drawer .trova-graph-info { display: none; }
+.trova-graph-hint { color: var(--text-faint); font-size: var(--font-ui-smaller); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-graph-card { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--size-4-3); }
+.trova-graph-card-main { flex: 1 1 auto; min-width: 0; }
+.trova-graph-card .trova-row-head { flex-wrap: nowrap; overflow: hidden; }
+.trova-graph-card .trova-row-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-graph-card .trova-row-path { flex: 0 1 auto; min-width: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-graph-card .trova-label { flex: 0 0 auto; white-space: nowrap; }
+.trova-graph-card .trova-row-snippet { margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-graph-card .trova-card-actions { flex: 0 0 auto; margin: 0; flex-wrap: nowrap; }
+.trova-graph-action-icon { display: none; }
+/* In a narrow bar (560px or less; the graph sets the class) the title keeps its room: the folder
+   goes, and Expand and Centre show their icon. */
+.trova-graph-info.is-narrow .trova-graph-card .trova-row-path { display: none; }
+.trova-graph-info.is-narrow .trova-graph-action-text { display: none; }
+.trova-graph-info.is-narrow .trova-graph-action-icon { display: inline-flex; }
+.trova-graph-info.is-narrow .trova-graph-action-icon svg { width: 16px; height: 16px; }
+body .trova-graph-info.is-narrow button.trova-graph-action { padding: 4px 8px; }
+.trova-graph-count { margin-left: auto; color: var(--text-faint); font-size: var(--font-ui-smaller); white-space: nowrap; }
+.trova-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--background-modifier-border); border-top-color: var(--interactive-accent); visibility: hidden; }
+.trova-spinner.is-busy { visibility: visible; animation: trova-spin 0.7s linear infinite; }
+.trova-map-legend { display: flex; flex-wrap: wrap; gap: var(--size-2-3) var(--size-4-3); padding-top: var(--size-2-3); font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.trova-map-legend-scroll { flex: 0 0 auto; max-height: 22%; overflow-y: auto; padding: var(--size-4-2) var(--size-4-3); border-top: 1px solid var(--background-modifier-border); }
+.trova-map-legend-item { display: inline-flex; align-items: center; gap: var(--size-2-3); }
+.trova-map-legend-button { background: transparent; box-shadow: none; height: auto; padding: 2px var(--size-4-2); border-radius: 999px; font-size: var(--font-ui-smaller); color: var(--text-muted); cursor: var(--cursor); }
+.trova-map-legend-button:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.trova-map-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+
+/* ---------- Status bar, welcome, editor ---------- */
+.trova-status[data-state="off"], .trova-status[data-state="error"] { color: var(--text-error); }
+.trova-status[data-state="paused"] { color: var(--text-warning); }
+.trova-status[data-state="progress"], .trova-status[data-state="model"] { color: var(--text-accent); }
+.trova-command { display: flex; align-items: center; gap: var(--size-4-2); margin: var(--size-4-2) 0; }
+.trova-command code { flex: 1 1 auto; padding: var(--size-4-2) var(--size-4-3); background: var(--background-secondary); border-radius: var(--trova-radius); user-select: all; }
+.trova-reason { max-height: 120px; overflow: auto; font-size: var(--font-ui-smaller); color: var(--text-muted); white-space: pre-wrap; }
+.trova-welcome-scope { padding: var(--size-4-1) var(--size-4-3); background: var(--background-secondary); border-radius: 10px; }
+.trova-undo { display: flex; align-items: center; gap: var(--size-4-3); }
+.trova-prompt { width: 100%; }
+.trova-inline-badge {
+  display: inline-block; margin-left: var(--size-4-2); padding: 0 7px; border-radius: 999px; vertical-align: middle;
+  background: color-mix(in srgb, var(--interactive-accent) 16%, transparent); color: var(--text-accent);
+  font-size: var(--font-ui-smaller); font-weight: var(--font-semibold); line-height: 18px; cursor: var(--cursor);
+  font-family: var(--font-interface); transition: background-color 120ms ease-out;
+}
+.trova-inline-badge:hover { background: var(--interactive-accent); color: var(--text-on-accent); }
+.trova-footer {
+  display: flex; align-items: center; gap: var(--size-4-2); overflow-x: auto; padding: var(--size-4-1) var(--size-4-3);
+  border-top: 1px solid var(--background-modifier-border); background: var(--background-primary); font-size: var(--font-ui-smaller);
+  scrollbar-width: none;
+}
+.trova-footer-label { color: var(--text-faint); flex: 0 0 auto; font-weight: var(--font-semibold); text-transform: uppercase; letter-spacing: 0.06em; }
+.trova-footer-chip { flex: 0 0 auto; height: auto; padding: 2px var(--size-4-2); box-shadow: none; border-radius: 999px; font-size: var(--font-ui-smaller); cursor: var(--cursor); }
+.trova-suggest .trova-row-path { display: block; }
+.trova-saved { border: 1px solid var(--background-modifier-border); border-radius: 10px; padding: var(--size-4-2) var(--size-4-3); background: var(--background-primary-alt); }
+.trova-saved-head { display: flex; gap: var(--size-4-2); align-items: baseline; color: var(--text-muted); font-size: var(--font-ui-small); }
+.trova-saved-query { font-family: var(--font-monospace); }
+.trova-bases-table { width: 100%; border-collapse: collapse; }
+.trova-bases-table th, .trova-bases-table td { text-align: left; padding: var(--size-2-3) var(--size-4-2); border-bottom: 1px solid var(--background-modifier-border); }
+
+@media (prefers-reduced-motion: reduce) {
+  .trova-skeleton, .trova-spinner.is-busy { animation: none; }
+  .trova-row, .trova-conn-head, .trova-conn-block, .trova-meter-fill, .trova-basket-item, .trova-row-actions, .trova-seek-search { transition: none; }
+}
+.trova-rerank-note {
+  display: flex; align-items: center; gap: var(--size-4-2); margin: var(--size-2-3) var(--size-4-2) 0; padding: var(--size-2-3) var(--size-4-2);
+  border-radius: var(--trova-radius); background: var(--background-secondary); color: var(--text-muted); font-size: var(--font-ui-smaller);
+}
+.trova-rerank-text { flex: 1 1 auto; min-width: 0; }
+.trova-rerank-note button, .trova-rerank-note .trova-spinner { flex: 0 0 auto; }
+
+/* An answer's snippet sits on the title's edge and opens the answer on click. */
+.trova-answer-body { margin: -1px var(--size-4-2) var(--size-2-3) var(--trova-indent); cursor: var(--cursor); }
+.trova-answer-body .trova-row-snippet { -webkit-line-clamp: 3; margin-top: 0; }
+.trova-answer .trova-conn-head .trova-badges { margin-left: var(--size-2-2); }
+/* The "↵ Deep" hint in the Answers line: a key hint, clickable, not a button in looks. */
+.trova-seek-mode-text { color: var(--text-faint); }
+body button.trova-key-hint {
+  display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; height: auto; padding: 1px 4px;
+  background: transparent; box-shadow: none; border: none; border-radius: 6px; color: var(--text-muted); font-size: var(--font-ui-smaller); cursor: var(--cursor);
+}
+body button.trova-key-hint:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.trova-key-hint:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
+.trova-key-hint kbd {
+  font-family: var(--font-interface); font-size: calc(var(--font-ui-smaller) - 1px); line-height: 1.3; padding: 0 4px; border-radius: 4px;
+  background: var(--background-primary); border: 1px solid var(--background-modifier-border); color: var(--text-muted);
+}
+/*
+ * The Answers line and the related-notes context line share one row: one font size and height for
+ * the text, the key hint and the link, so they sit on one baseline. The link's text ends on the
+ * search box's right edge; its padding only widens the hover area.
+ */
+.trova-seek-context button.trova-link-button, .trova-seek-context button.trova-key-hint {
+  height: 22px; line-height: 22px; padding: 0 var(--size-2-3); font-size: var(--font-ui-small);
+}
+.trova-seek-context button.trova-link-button { margin-right: calc(-1 * var(--size-2-3)); }
+.trova-seek-context button.trova-link-button > span { display: inline-flex; align-items: center; }
+.trova-seek-context button.trova-link-button svg { width: 14px; height: 14px; display: block; }
+.trova-seek-context button.trova-key-hint kbd { line-height: 16px; }
+/* Instant search: "Ask this as a question" above the notes for a question-like query. */
+.trova-row.trova-ask-row { display: flex; align-items: center; gap: var(--size-4-3); margin-bottom: var(--size-2-2); border: 1px dashed var(--background-modifier-border-hover); }
+.trova-ask-row-icon {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 26px; height: 26px;
+  border-radius: 7px; background: var(--trova-tint-accent); color: var(--text-accent);
+}
+.trova-ask-row-icon svg { width: 15px; height: 15px; }
+.trova-ask-row-text { flex: 1 1 auto; min-width: 0; }
+.trova-ask-row-text .trova-row-path { display: block; }
+.trova-ask-row-key {
+  flex: 0 0 auto; font-family: var(--font-interface); font-size: calc(var(--font-ui-smaller) - 1px); padding: 1px 5px; border-radius: 4px;
+  background: var(--background-primary); border: 1px solid var(--background-modifier-border); color: var(--text-muted);
+}
+.is-mobile .trova-ask-row-key { display: none; }
+/* Instant search with a question that found no notes: a line saying why, the Ask row, then a quiet "Create note". */
+.trova-ask-empty-note { padding: var(--size-4-3) var(--size-4-3) var(--size-4-2); color: var(--text-muted); font-size: var(--font-ui-small); }
+.trova-ask-empty-actions { padding: var(--size-2-3) var(--size-4-2); }
+.trova-modal button kbd, .trova-empty-actions kbd {
+  margin-left: var(--size-4-2); font-family: var(--font-interface); font-size: calc(var(--font-ui-smaller) - 1px); padding: 0 5px; border-radius: 4px;
+  background: var(--background-primary); border: 1px solid var(--background-modifier-border); color: var(--text-muted);
+}
+.trova-modal button.trova-link-button kbd { margin-left: 0; }
+.is-mobile .trova-modal button kbd { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .trova-care-scan-button.is-running svg { animation: none; }
+  .trova-care-tiles button.trova-care-tile, .trova-care-card { transition: none; }
+}
+
+/* A duplicate pair: a top line, then the two notes as boxes with Compare between them. */
+.trova-care-pair-top { display: flex; align-items: center; gap: var(--size-4-2); margin-bottom: var(--size-4-2); flex-wrap: wrap; }
+.trova-care-quiet { display: flex; gap: var(--size-2-2); margin-left: auto; }
+.trova-care button.trova-care-quiet-button {
+  display: inline-flex; align-items: center; gap: var(--size-2-3); height: auto; padding: 3px var(--size-4-2);
+  background: transparent; box-shadow: none; border: none; color: var(--text-muted); font-size: var(--font-ui-small); border-radius: 6px;
+}
+.trova-care button.trova-care-quiet-button:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.trova-care button.trova-care-quiet-button svg { width: 14px; height: 14px; }
+.trova-care-pair-cols { display: grid; grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr); align-items: center; }
+.trova-care-note.trova-care-side {
+  align-self: stretch; padding: var(--size-4-2) var(--size-4-3); min-height: 84px;
+  background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 10px;
+}
+.trova-care-note.trova-care-side:hover, .trova-care-note.trova-care-side:focus-visible { border-color: var(--background-modifier-border-hover); background: var(--background-modifier-hover); }
+.trova-care-note .trova-care-snippet { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.trova-care-pair-mid { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.trova-care button.trova-care-compare {
+  display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; padding: 0; border-radius: 50%;
+  background: var(--trova-tint-accent); color: var(--text-accent); border: 1.5px solid var(--interactive-accent); box-shadow: none; cursor: var(--cursor);
+  transition: background-color var(--trova-ease);
+}
+.trova-care button.trova-care-compare:hover { background: var(--interactive-accent); color: var(--text-on-accent); }
+.trova-care button.trova-care-compare:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+.trova-care button.trova-care-compare svg { width: 18px; height: 18px; }
+.trova-care-compare-label { font-size: var(--font-ui-smaller); color: var(--text-accent); }
+@container (max-width: 520px) {
+  .trova-care-pair-cols { grid-template-columns: minmax(0, 1fr); gap: var(--size-2-3); }
+  .trova-care-pair-mid { flex-direction: row; justify-content: center; }
+}
+
+/* Orphans: one bordered list of compact rows. */
+.trova-care-rows { border: 1px solid var(--background-modifier-border); border-radius: 12px; background: var(--background-primary); margin-bottom: var(--size-4-3); overflow: hidden; }
+.trova-care-oicon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; background: var(--background-modifier-hover); color: var(--text-muted); }
+.trova-care-oicon svg { width: 15px; height: 15px; }
+.trova-care button.trova-care-tag {
+  height: auto; margin-left: var(--size-2-3); padding: 1px 8px; border-radius: 999px; border: none; box-shadow: none;
+  background: var(--trova-tint-orange); color: var(--text-warning); font-size: var(--font-ui-smaller); white-space: nowrap; cursor: var(--cursor);
+}
+/* The tag is a link to the pair: its tint and text darken on hover and focus, like other links here, without an underline. */
+.trova-care button.trova-care-tag { transition: background-color var(--trova-ease), color var(--trova-ease); }
+.trova-care button.trova-care-tag:hover, .trova-care button.trova-care-tag:focus-visible {
+  background: color-mix(in srgb, var(--color-orange) 30%, transparent); color: var(--text-normal);
+}
+.trova-care button.trova-care-tag:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
+/* The split Link button never grows past the row; a long note name ends in "…". */
+.trova-care-split { display: inline-flex; max-width: 100%; min-width: 0; border: 1px solid var(--interactive-accent); border-radius: 7px; overflow: hidden; }
+.trova-care-split button {
+  display: inline-flex; align-items: center; gap: var(--size-2-3); height: auto; padding: 3px var(--size-4-2); border: none; border-radius: 0; box-shadow: none;
+  background: var(--trova-tint-accent); color: var(--text-accent); font-size: var(--font-ui-small); cursor: var(--cursor);
+}
+.trova-care-split button:hover { background: color-mix(in srgb, var(--interactive-accent) 22%, transparent); }
+.trova-care-split button:disabled { opacity: 0.5; cursor: default; }
+.trova-care-split button svg { width: 14px; height: 14px; flex: 0 0 auto; }
+.trova-care-split .trova-care-split-main { min-width: 0; max-width: 360px; }
+.trova-care-split-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-care-split .trova-care-split-more { flex: 0 0 auto; padding: 3px 6px; border-left: 1px solid color-mix(in srgb, var(--interactive-accent) 45%, transparent); }
+
+/* Rediscover: a card per note, with its age, its text and the recent note that led to it. */
+.trova-care-card.trova-care-redis { display: flex; flex-direction: column; gap: var(--size-4-2); margin-bottom: 0; padding: var(--size-4-3) var(--size-4-3) var(--size-4-2); }
+.trova-care-redis:hover { border-color: var(--background-modifier-border-hover); }
+.trova-care-redis-head { display: flex; align-items: flex-start; gap: var(--size-4-2); }
+.trova-care-redis-name.trova-care-side { flex: 1 1 auto; min-width: 0; padding: 0 var(--size-2-2); }
+.trova-care-redis-name .trova-care-card-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-care-redis-age { flex: 0 0 auto; font-size: var(--font-ui-smaller); padding: 1px 8px; border-radius: 999px; background: var(--trova-tint-green); color: var(--color-green); white-space: nowrap; }
+.trova-care-redis-snippet {
+  color: var(--text-muted); font-size: var(--font-ui-small); line-height: 1.5; flex: 1 1 auto;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.trova-care-redis-foot { display: flex; align-items: center; gap: var(--size-4-2); padding-top: var(--size-4-2); border-top: 1px solid var(--background-modifier-border); }
+.trova-care-redis-why { display: flex; align-items: center; gap: var(--size-2-3); flex: 1 1 auto; min-width: 0; }
+.trova-care .trova-care-chip {
+  display: inline-flex; align-items: center; gap: 4px; min-width: 0; height: auto; padding: 1px 8px; border: none; border-radius: 999px; box-shadow: none;
+  background: var(--background-modifier-hover); color: var(--text-normal); font-size: var(--font-ui-smaller); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.trova-care button.trova-care-chip { cursor: var(--cursor); }
+.trova-care button.trova-care-chip:hover { background: var(--trova-tint-accent); color: var(--text-accent); }
+.trova-care .trova-care-chip svg { width: 12px; height: 12px; flex: 0 0 auto; }
+
+/* An orphan row: icon, then title line, snippet and actions on one left edge. */
+.trova-care-orow { display: flex; align-items: flex-start; gap: var(--size-4-3); padding: var(--size-4-3) var(--size-4-4); }
+.trova-care-orow + .trova-care-orow { border-top: 1px solid var(--background-modifier-border); }
+.trova-care-orow .trova-care-oicon { margin-top: 2px; }
+.trova-care-ocol { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.trova-care-otop { display: flex; align-items: center; gap: var(--size-4-2); min-width: 0; }
+.trova-care-oname.trova-care-side { flex: 1 1 auto; min-width: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trova-care-oname.trova-care-side:hover, .trova-care-oname.trova-care-side:focus-visible { background: transparent; }
+.trova-care-oname:hover .trova-care-card-title, .trova-care-oname:focus-visible .trova-care-card-title { color: var(--text-accent); }
+.trova-care-otop button.trova-care-tag { flex: 0 0 auto; margin-left: auto; }
+.trova-care-osnippet { color: var(--text-muted); font-size: var(--font-ui-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trova-care-osnippet:empty { display: none; }
+.trova-care-oactions { display: flex; align-items: center; gap: var(--size-4-2); flex-wrap: wrap; margin-top: 4px; }
+.trova-care-oactions .trova-care-quiet-button { margin-left: 0; }
+.trova-care-oslot { flex: 0 1 auto; min-width: 0; }
+
+/* The note a selection came from, in the context line: a quiet inline link, coloured on hover. */
+body button.trova-anchor-source { display: inline; height: auto; padding: 0; margin: 0; border: 0; background: none; box-shadow: none; font: inherit; color: var(--text-normal); cursor: pointer; }
+body button.trova-anchor-source:hover { color: var(--text-accent); }
+body button.trova-anchor-source:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 1px; border-radius: 3px; }
+
+/* The × that clears a selection, at the end of the context line. */
+.trova-seek-context button.trova-selection-clear { flex: 0 0 auto; padding: 2px; height: auto; margin-right: calc(-1 * var(--size-2-3)); }
+.trova-seek-context button.trova-selection-clear svg { width: 14px; height: 14px; }

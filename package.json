@@ -1,0 +1,21 @@
+{
+  "name": "trova-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p . --noEmit && node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs"
+  },
+  "devDependencies": {
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@trova/contract": "*",
+    "obsidian": "^1.14.4"
+  },
+  "dependencies": {
+    "minisearch": "^7.2.0"
+  }
+}

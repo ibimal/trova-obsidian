@@ -1,0 +1,9 @@
+{
+  "id": "trova",
+  "name": "Trova",
+  "version": "0.1.0",
+  "minAppVersion": "1.9.0",
+  "description": "Instant search, related notes and Ask, a Context basket and Vault care on one local index. Nothing leaves your machine.",
+  "author": "Bimal",
+  "isDesktopOnly": false
+}
