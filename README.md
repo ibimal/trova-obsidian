@@ -73,7 +73,7 @@ npm test
 
 `npm run dev` rebuilds `main.js` on every change. To try a build, copy `main.js`, `manifest.json` and `styles.css` into a vault's `.obsidian/plugins/trova/` folder and reload Obsidian. A git-ignored `test-vault/` folder in this repository is a convenient place for that vault.
 
-`src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/packages/contract); its header names the commit. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
+`docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/packages/contract); its header names the commit. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
 
 Releases are built by GitHub Actions: pushing a tag that equals the version in `manifest.json` (for example `0.1.0`, with no "v") creates a release with the three files attached.
 
