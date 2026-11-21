@@ -5,7 +5,7 @@ import type { DaemonInfo } from "../contract/index.js";
 
 type NodeRequire = (id: string) => unknown;
 function nodeRequire(): NodeRequire {
-  return (globalThis as unknown as { require: NodeRequire }).require;
+  return (window as unknown as { require: NodeRequire }).require;
 }
 
 interface Fs {
@@ -29,7 +29,7 @@ function mods(): { fs: Fs; os: Os; path: PathMod } {
 
 export function trovaHome(): string {
   const { os, path } = mods();
-  const env = (globalThis as unknown as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+  const env = (window as unknown as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
   return env["TROVA_HOME"] || path.join(os.homedir(), ".cache", "trova");
 }
 
@@ -46,7 +46,7 @@ export function readDaemonInfo(): DaemonInfo | null {
 /** Folders that may hold the `trova` binary. macOS apps do not inherit the shell's PATH. */
 export function searchDirs(): string[] {
   const { fs, os, path } = mods();
-  const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
+  const env = (window as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
   const home = os.homedir();
   const dirs = [...(env["PATH"] ?? "").split(path.delimiter).filter(Boolean), "/opt/homebrew/bin", "/usr/local/bin", path.join(home, ".bun", "bin"), path.join(home, ".npm-global", "bin")];
   if (env["NVM_BIN"]) dirs.push(env["NVM_BIN"]);
@@ -58,6 +58,8 @@ export function searchDirs(): string[] {
     /* nvm is not installed */
   }
   dirs.push(path.join(home, "Library", "pnpm"), path.join(home, ".local", "bin"), path.join(home, ".volta", "bin"));
+  // Windows: `npm install -g` puts its command wrappers here.
+  if (env["APPDATA"]) dirs.push(path.join(env["APPDATA"], "npm"));
   return [...new Set(dirs)];
 }
 
@@ -72,6 +74,36 @@ export function findBinary(configured: string): string | null {
     }
   }
   return null;
+}
+
+/** cmd.exe metacharacters, as cross-spawn escapes them. A caret makes cmd.exe read the next character literally. */
+const CMD_META = /([()\][%!^"`<>&|;, *?])/g;
+
+export interface SpawnCommand {
+  command: string;
+  args: string[];
+  /** Passes `args` to cmd.exe as written, so Node does not quote them a second time. */
+  windowsVerbatimArguments: boolean;
+}
+
+/**
+ * The command that starts `binary` with `args`. Node cannot start a `.cmd` or `.bat` file, such as the
+ * wrapper `npm install -g` creates on Windows, without cmd.exe. The path is escaped so spaces and
+ * characters such as `&` stay part of it. Every other binary starts directly, with no shell.
+ */
+export function spawnCommand(binary: string, args: string[], platform: string, comspec?: string): SpawnCommand {
+  if (platform !== "win32" || !/\.(cmd|bat)$/i.test(binary)) return { command: binary, args, windowsVerbatimArguments: false };
+  const line = [binary, ...args].map((a) => a.replace(CMD_META, "^$1")).join(" ");
+  return { command: comspec || "cmd.exe", args: ["/d", "/s", "/c", `"${line}"`], windowsVerbatimArguments: true };
+}
+
+/** A copy of `env` whose search path is `value`, under the variable's existing name (`Path` on Windows). */
+export function withPath(env: Record<string, string | undefined>, value: string): Record<string, string | undefined> {
+  const out = { ...env };
+  const keys = Object.keys(out).filter((k) => k.toUpperCase() === "PATH");
+  for (const k of keys) delete out[k];
+  out[keys[0] ?? "PATH"] = value;
+  return out;
 }
 
 export interface Spawned {
@@ -90,17 +122,19 @@ export function spawnDaemon(binary: string, debug: boolean, embeddingModel: stri
       unref(): void;
     };
   };
-  const proc = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process;
-  // Homebrew's folders go first so `#!/usr/bin/env node` finds a current Node.
-  const pathEnv = [...new Set(["/opt/homebrew/bin", "/usr/local/bin", ...searchDirs()])].join(path.delimiter);
-  const env: Record<string, string | undefined> = { ...proc.env, PATH: pathEnv };
+  const proc = (window as unknown as { process: { env: Record<string, string | undefined> } }).process;
+  const platform = os.platform();
+  // On macOS and Linux, Homebrew's folders go first so `#!/usr/bin/env node` finds a current Node.
+  const first = platform === "win32" ? [] : ["/opt/homebrew/bin", "/usr/local/bin"];
+  const env = withPath(proc.env, [...new Set([...first, ...searchDirs()])].join(path.delimiter));
   if (debug) env["TROVA_DEBUG"] = "1";
   if (embeddingModel.trim()) env["QMD_EMBED_MODEL"] = embeddingModel.trim();
   // node-llama-cpp, which qmd runs its models on, reads this variable.
   if (gpu !== "auto") env["NODE_LLAMA_CPP_GPU"] = gpu === "cpu" ? "false" : "metal";
   let output = "";
   let exited = false;
-  const child = cp.spawn(binary, ["watch"], { detached: true, stdio: ["ignore", "ignore", "pipe"], env, shell: os.platform() === "win32", windowsHide: true });
+  const run = spawnCommand(binary, ["watch"], platform, env["ComSpec"] ?? env["COMSPEC"]);
+  const child = cp.spawn(run.command, run.args, { detached: true, stdio: ["ignore", "ignore", "pipe"], env, windowsHide: true, windowsVerbatimArguments: run.windowsVerbatimArguments });
   child.stderr?.on("data", (d) => {
     output = (output + String(d)).slice(-4000);
   });

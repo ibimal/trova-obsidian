@@ -12,8 +12,12 @@ const stubs: Record<string, unknown> = {
   cancelAnimationFrame: () => undefined,
   getComputedStyle: () => ({ fontFamily: "sans-serif", getPropertyValue: () => "#888" }),
   matchMedia: () => ({ matches: false }),
-  window: { devicePixelRatio: 1 },
+  // The code calls window.requestAnimationFrame and window.setTimeout; this window finds the
+  // stand-ins above, and Node's timers, through the global object.
+  window: Object.assign(Object.create(globalThis) as object, { devicePixelRatio: 1 }),
   document: { createElement: () => ({}) },
+  // Obsidian's global DOM helper.
+  createSpan: () => ({}),
 };
 const saved: Record<string, unknown> = {};
 beforeAll(() => {

@@ -91,9 +91,9 @@ export class EngineClient {
   static async health(base: string, timeoutMs = 1000): Promise<{ api: string; version: string; name: string } | null> {
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const timer = window.setTimeout(() => controller.abort(), timeoutMs);
       const res = await fetch(`${base}/health`, { signal: controller.signal });
-      clearTimeout(timer);
+      window.clearTimeout(timer);
       return res.ok ? ((await res.json()) as { api: string; version: string; name: string }) : null;
     } catch {
       return null;

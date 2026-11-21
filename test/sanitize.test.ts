@@ -60,7 +60,7 @@ describe("data.json checks", () => {
     expect(clampSetting("httpApiPort", 99_999)).toBe(65_535);
     expect(clampSetting("graphLabels", 4.6)).toBe(5);
     expect(clampSetting("restoreQuerySeconds", 0)).toBe(0);
-    expect(clampSetting("vimKeys" as never, 3)).toBe(3);
+    expect(clampSetting("vimKeys", 3)).toBe(3);
     // A clamped value passes the load check without a repair.
     expect(sanitizeData({ settings: { httpApiPort: clampSetting("httpApiPort", 99_999) } }).problems).toEqual([]);
   });

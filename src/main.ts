@@ -183,7 +183,12 @@ export default class TrovaPlugin extends Plugin {
     this.httpApi?.stop();
     this.statusBar?.close();
     void this.store.flush();
-    document.querySelectorAll(".trova-popover").forEach((el) => el.remove());
+    // Badge popovers open in the window of the badge, so look in every window.
+    const docs = new Set<Document>([activeDocument]);
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      docs.add(leaf.view.containerEl.ownerDocument);
+    });
+    for (const doc of docs) doc.querySelectorAll(".trova-popover").forEach((el) => el.remove());
   }
 
   private async startBackground(): Promise<void> {
@@ -452,13 +457,13 @@ export default class TrovaPlugin extends Plugin {
 
   dailyFolder(): string | null {
     const options = (this.app as unknown as { internalPlugins?: { plugins?: Record<string, { enabled?: boolean; instance?: { options?: { folder?: string } } }> } }).internalPlugins?.plugins;
-    const folder = options?.["daily-notes"]?.enabled ? options["daily-notes"]!.instance?.options?.folder : undefined;
+    const folder = options?.["daily-notes"]?.enabled ? options["daily-notes"].instance?.options?.folder : undefined;
     return folder ? folder.replace(/^\/+|\/+$/g, "") : null;
   }
 
   private templatesFolder(): string | null {
     const options = (this.app as unknown as { internalPlugins?: { plugins?: Record<string, { enabled?: boolean; instance?: { options?: { folder?: string } } }> } }).internalPlugins?.plugins;
-    const folder = options?.["templates"]?.enabled ? options["templates"]!.instance?.options?.folder : undefined;
+    const folder = options?.["templates"]?.enabled ? options["templates"].instance?.options?.folder : undefined;
     return folder ? folder.replace(/^\/+|\/+$/g, "") : null;
   }
 

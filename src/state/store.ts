@@ -25,7 +25,7 @@ export function renameId(id: string, oldSource: string, newSource: string): stri
 
 export class DataStore {
   data: TrovaData = defaultData();
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  private timer: number | null = null;
   private listeners = new Set<() => void>();
 
   constructor(private persistence: Persistence) {}
@@ -74,13 +74,13 @@ export class DataStore {
   /** Marks the data as changed: listeners run now, the write happens after the debounce. */
   touch(): void {
     for (const l of this.listeners) l();
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => void this.flush(), SAVE_DEBOUNCE_MS);
+    if (this.timer) window.clearTimeout(this.timer);
+    this.timer = window.setTimeout(() => void this.flush(), SAVE_DEBOUNCE_MS);
   }
 
   /** Writes the data now. A failed write is logged and tried again later; it never throws. */
   async flush(): Promise<void> {
-    if (this.timer) clearTimeout(this.timer);
+    if (this.timer) window.clearTimeout(this.timer);
     this.timer = null;
     try {
       await this.persistence.save(this.data);
@@ -89,7 +89,7 @@ export class DataStore {
       const delay = SAVE_RETRY_MS[this.saveFailures];
       this.saveFailures++;
       console.error("Trova: could not save data.json", err);
-      if (delay !== undefined) this.timer = setTimeout(() => void this.flush(), delay);
+      if (delay !== undefined) this.timer = window.setTimeout(() => void this.flush(), delay);
       else this.saveFailures = 0;
     }
   }
@@ -262,7 +262,7 @@ export interface HistoryEntry {
 
 export class LocalState {
   private opened: Record<string, number>;
-  private openedTimer: ReturnType<typeof setTimeout> | null = null;
+  private openedTimer: number | null = null;
 
   constructor(private backend: LocalBackend) {
     const opened = this.read("trova-opened");
@@ -275,7 +275,11 @@ export class LocalState {
   history(): HistoryEntry[] {
     const raw = this.read("trova-history");
     if (!Array.isArray(raw)) return [];
-    return raw.filter((h): h is HistoryEntry => typeof h === "object" && h !== null && typeof h.query === "string" && ["auto", "fast", "deep"].includes(h.mode) && typeof h.at === "number");
+    return (raw as unknown[]).filter((h): h is HistoryEntry => {
+      if (typeof h !== "object" || h === null) return false;
+      const e = h as Record<string, unknown>;
+      return typeof e["query"] === "string" && (e["mode"] === "auto" || e["mode"] === "fast" || e["mode"] === "deep") && typeof e["at"] === "number";
+    });
   }
 
   /** Stores a value; storage that is full or unavailable is logged, not thrown. */
@@ -325,7 +329,7 @@ export class LocalState {
   markOpened(path: string, at = Date.now()): void {
     this.opened[path] = at;
     if (this.openedTimer) return;
-    this.openedTimer = setTimeout(() => {
+    this.openedTimer = window.setTimeout(() => {
       this.openedTimer = null;
       this.write("trova-opened", this.opened);
     }, 2000);

@@ -1,6 +1,7 @@
 // The opt-in Local HTTP API: a separate port on 127.0.0.1 with its own user-visible token and
 // read-only endpoints that mirror search, ask and related. Desktop only.
 
+import { Platform } from "obsidian";
 import type { Result, ResultBatch } from "../contract/index.js";
 import type TrovaPlugin from "../main.js";
 
@@ -35,7 +36,8 @@ export class HttpApi {
 
   start(port: number, token: string): Promise<void> {
     this.stop();
-    const http = (globalThis as unknown as { require: (id: string) => { createServer(h: (req: Req, res: Res) => void): HttpServer } }).require("http");
+    if (!Platform.isDesktopApp) return Promise.reject(new Error("The local HTTP API needs the desktop app"));
+    const http = (window as unknown as { require: (id: string) => { createServer(h: (req: Req, res: Res) => void): HttpServer } }).require("http");
     const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Authorization", "Access-Control-Allow-Methods": "GET, OPTIONS" };
     const send = (res: Res, status: number, body: unknown) => {
       res.writeHead(status, { "Content-Type": "application/json", ...cors });

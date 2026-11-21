@@ -6,6 +6,7 @@ export default defineConfig({
     include: ["test/**/*.test.ts"],
     testTimeout: 30000,
     pool: "forks",
+    setupFiles: ["test/setup.ts"],
   },
   resolve: {
     alias: {

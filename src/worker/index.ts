@@ -261,7 +261,7 @@ export class SearchIndex {
         prefix: !exact && !hasCjk(token),
         fuzzy: exact || fuzzy === 0 ? false : (t: string) => (typoMaxEdits(t, fuzzy) > 0 ? typoMaxEdits(t, fuzzy) : false),
       })),
-    } as Query;
+    };
   }
 
   private buildQuery(q: ParsedQuery, fields: string[], fuzzy: 0 | 1 | 2): Query | null {
@@ -269,10 +269,10 @@ export class SearchIndex {
     for (const group of q.must) {
       const parts = group.map((t) => this.termQuery(t, fields, fuzzy)).filter((p): p is Query => p !== null);
       if (parts.length === 0) return null;
-      groups.push(parts.length === 1 ? parts[0]! : ({ combineWith: "OR", queries: parts } as Query));
+      groups.push(parts.length === 1 ? parts[0]! : ({ combineWith: "OR", queries: parts }));
     }
     if (groups.length === 0) return null;
-    return { combineWith: "AND", queries: groups } as Query;
+    return { combineWith: "AND", queries: groups };
   }
 
   private run(q: ParsedQuery, fields: string[], fuzzy: 0 | 1 | 2, weights: SearchOptions["weights"], only?: Set<string>): SearchResult[] {
@@ -382,7 +382,7 @@ export class SearchIndex {
     let correction: Correction | undefined;
     // Highlights follow the corrected words.
     let shown = q;
-    const count = new Set([...found.title, ...found.body].map((r) => r.id)).size;
+    const count = new Set([...found.title, ...found.body].map((r) => r.id as string)).size;
     if (fuzzy > 0 && count < 3) {
       // Typo rescue: each word that is absent from the index is replaced by the index word within
       // the allowed edits that occurs in the most notes.
@@ -391,7 +391,7 @@ export class SearchIndex {
       const must = q.must.map((group) =>
         group.map((term) => {
           const max = term.kind === "word" ? typoMaxEdits(term.text, fuzzy) : 0;
-          if (max === 0 || this.mini.search({ queries: [term.text], prefix: true } as Query, { fuzzy: false }).length > 0) return term;
+          if (max === 0 || this.mini.search({ queries: [term.text], prefix: true }, { fuzzy: false }).length > 0) return term;
           const best = this.correct(term.text, max);
           if (!best) return term;
           from.push(term.text);
@@ -402,7 +402,7 @@ export class SearchIndex {
       if (from.length > 0) {
         const corrected = { ...q, must };
         const rescued = lanes(corrected);
-        if (new Set([...rescued.title, ...rescued.body].map((r) => r.id)).size > count) {
+        if (new Set([...rescued.title, ...rescued.body].map((r) => r.id as string)).size > count) {
           found = rescued;
           matchedBy = "fuzzy";
           shown = corrected;
@@ -424,7 +424,7 @@ export class SearchIndex {
    */
   private correct(word: string, max: number): string | null {
     const stem = processTerm(word);
-    const hits = this.mini.search({ queries: [word], prefix: false, fuzzy: Math.min(3, max + 1) } as Query, { filter: (r) => !this.docs.get(r.id as string)?.excluded });
+    const hits = this.mini.search({ queries: [word], prefix: false, fuzzy: Math.min(3, max + 1) }, { filter: (r) => !this.docs.get(r.id as string)?.excluded });
     const counts = new Map<string, { n: number; distance: number; path: string }>();
     for (const r of hits) {
       for (const term of Object.keys(r.match)) {
@@ -455,7 +455,7 @@ export class SearchIndex {
   suggest(text: string, limit = 30): { path: string; title: string; alias?: string; score: number }[] {
     const tokens = tokenize(text);
     if (tokens.length === 0) return [];
-    const results = this.mini.search({ combineWith: "AND", queries: tokens.map((t) => ({ queries: [t], prefix: true })) } as Query, {
+    const results = this.mini.search({ combineWith: "AND", queries: tokens.map((t) => ({ queries: [t], prefix: true })) }, {
       fields: ["title", "aliases"],
       boost: { title: 2 },
       filter: (r) => !this.docs.get(r.id as string)?.excluded,

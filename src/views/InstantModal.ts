@@ -177,7 +177,7 @@ export class InstantModal extends Modal {
 
   override onClose(): void {
     this.plugin.controller.cancel();
-    cancelAnimationFrame(this.frame);
+    window.cancelAnimationFrame(this.frame);
     this.cancelSkeleton?.();
     if (!this.inFile || this.inFile.saved) {
       const raw = this.inFile?.saved ? this.inFile.saved.raw : this.input.value;
@@ -248,8 +248,8 @@ export class InstantModal extends Modal {
         arrived = true;
         this.state = state;
         // One render per animation frame, however many lanes arrive in it.
-        cancelAnimationFrame(this.frame);
-        this.frame = requestAnimationFrame(() => this.renderResults());
+        window.cancelAnimationFrame(this.frame);
+        this.frame = window.requestAnimationFrame(() => this.renderResults());
       },
       { noFuzzy: this.noFuzzy },
     );

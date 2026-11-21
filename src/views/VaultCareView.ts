@@ -342,7 +342,7 @@ export class VaultCareView extends ItemView {
       });
       setIcon(tile.createSpan({ cls: "trova-care-tile-icon", attr: { "aria-hidden": "true" } }), TILE[task].icon);
       const text = tile.createSpan({ cls: "trova-care-tile-text" });
-      text.createSpan({ cls: "trova-care-tile-count", text: counts[task] === null ? "–" : counts[task]!.toLocaleString() });
+      text.createSpan({ cls: "trova-care-tile-count", text: counts[task] === null ? "–" : counts[task].toLocaleString() });
       text.createSpan({ cls: "trova-care-tile-label", text: TILE[task].label() });
       tile.addEventListener("click", () => this.setTask(task));
     }

@@ -22,12 +22,12 @@ export class TrovaSettingTab extends PluginSettingTab {
   }
 
   private set<K extends keyof TrovaSettings>(key: K, value: TrovaSettings[K], effect: Effect = "none"): void {
-    this.plugin.store.updateSettings({ [key]: value } as Partial<TrovaSettings>);
+    this.plugin.store.updateSettings({ [key]: value });
     this.plugin.applySettings(effect);
   }
 
   private toggle(el: HTMLElement, name: string, desc: string, key: keyof TrovaSettings, effect: Effect = "none"): void {
-    new Setting(el).setName(name).setDesc(desc).addToggle((c) => c.setValue(this.plugin.settings[key] as boolean).onChange((v) => this.set(key, v as never, effect)));
+    new Setting(el).setName(name).setDesc(desc).addToggle((c) => c.setValue(this.plugin.settings[key] as boolean).onChange((v) => this.set(key, v, effect)));
   }
 
   private lines(el: HTMLElement, name: string, desc: string, key: "includeGlobs" | "excludeGlobs" | "attachmentTypes" | "careExcludedFolders", effect: Effect, placeholder: string): void {
@@ -40,15 +40,16 @@ export class TrovaSettingTab extends PluginSettingTab {
 
   private text(el: HTMLElement, name: string, desc: string, key: keyof TrovaSettings, effect: Effect = "none", placeholder = ""): void {
     new Setting(el).setName(name).setDesc(desc).addText((c) => {
-      c.setPlaceholder(placeholder).setValue(String(this.plugin.settings[key] ?? ""));
+      const shown = this.plugin.settings[key];
+      c.setPlaceholder(placeholder).setValue(typeof shown === "string" || typeof shown === "number" ? String(shown) : "");
       c.inputEl.addEventListener("blur", () => {
         const current = this.plugin.settings[key];
-        if (typeof current !== "number") return this.set(key, c.getValue().trim() as never, effect);
+        if (typeof current !== "number") return this.set(key, c.getValue().trim(), effect);
         // A number outside its range is brought into it, and the field shows the value kept.
         const typed = Number(c.getValue().trim());
         const value = c.getValue().trim() !== "" && Number.isFinite(typed) ? clampSetting(key, typed) : current;
         c.setValue(String(value));
-        this.set(key, value as never, effect);
+        this.set(key, value, effect);
       });
     });
   }

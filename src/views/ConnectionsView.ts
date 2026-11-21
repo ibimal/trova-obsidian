@@ -228,7 +228,16 @@ export class ConnectionsView extends ItemView {
         }
       }),
     );
-    this.registerDomEvent(document, "selectionchange", onCursor);
+    // Selections happen in editors, which can be in popout windows: listen in every window.
+    const watched = new Set<Document>();
+    const watch = (doc: Document) => {
+      if (watched.has(doc)) return;
+      watched.add(doc);
+      this.registerDomEvent(doc, "selectionchange", onCursor);
+    };
+    watch(this.containerEl.ownerDocument);
+    this.app.workspace.iterateAllLeaves((leaf) => watch(leaf.view.containerEl.ownerDocument));
+    this.registerEvent(this.app.workspace.on("window-open", (w) => watch(w.doc)));
     this.register(this.plugin.engine.onChange(() => this.onEngineChange()));
     this.register(
       this.plugin.engine.onEvent((e) => {
@@ -282,8 +291,11 @@ export class ConnectionsView extends ItemView {
     const input = (this.inputEl = box.createEl("textarea", { cls: "trova-seek-input", attr: { rows: "1", placeholder: t("seekPlaceholder"), spellcheck: "false" } }));
     quietLabel(input, t("askPlaceholder"));
     const grow = () => {
-      input.style.height = "auto";
-      input.style.height = `${input.scrollHeight}px`;
+      // Measure the text at its natural height, then fix the box to it.
+      input.addClass("trova-seek-measuring");
+      const height = input.scrollHeight;
+      input.removeClass("trova-seek-measuring");
+      input.setCssProps({ height: `${height}px` });
     };
     input.addEventListener("input", () => {
       grow();
@@ -723,7 +735,8 @@ export class ConnectionsView extends ItemView {
   private renderBody(): void {
     const el = this.bodyEl;
     // Keep keyboard focus on the same row across a re-render.
-    const focused = el.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset["key"] : undefined;
+    const active = el.ownerDocument.activeElement;
+    const focused = active?.instanceOf(HTMLElement) && el.contains(active) ? active.dataset["key"] : undefined;
     el.empty();
     if (this.ask.active) this.ask.renderList(el);
     else this.renderRelated(el);

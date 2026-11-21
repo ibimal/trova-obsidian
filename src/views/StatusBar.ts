@@ -1,6 +1,6 @@
 // The status bar item and its popover. Trova always says what it is doing.
 
-import { Notice, setIcon } from "obsidian";
+import { Notice, Platform, apiVersion, setIcon } from "obsidian";
 import type { EngineSnapshot } from "../engine/manager.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
@@ -63,20 +63,21 @@ export class StatusBar {
   }
 
   private open(): void {
-    this.popover = document.body.createDiv({ cls: "trova-popover popover", attr: { role: "dialog" } });
+    const doc = this.el.ownerDocument;
+    this.popover = doc.body.createDiv({ cls: "trova-popover popover", attr: { role: "dialog" } });
     this.popover.setAttr("aria-labelledby", "trova-status-title");
     this.renderPopover();
     const rect = this.el.getBoundingClientRect();
-    this.popover.style.bottom = `${window.innerHeight - rect.top + 6}px`;
-    this.popover.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
-    document.addEventListener("mousedown", this.closer, true);
+    const win = doc.defaultView ?? window;
+    this.popover.setCssProps({ bottom: `${win.innerHeight - rect.top + 6}px`, right: `${Math.max(8, win.innerWidth - rect.right)}px` });
+    doc.addEventListener("mousedown", this.closer, true);
     void this.plugin.engine.refreshStatus();
   }
 
   close(): void {
     this.popover?.remove();
     this.popover = null;
-    document.removeEventListener("mousedown", this.closer, true);
+    this.el.ownerDocument.removeEventListener("mousedown", this.closer, true);
   }
 
   private renderPopover(): void {
@@ -120,7 +121,7 @@ export class StatusBar {
     }
     if (line.kind === "error" || line.kind === "off") {
       button(t("copyDebug"), "copy", () => {
-        const info = { plugin: this.plugin.manifest.version, state: s.state, reason: s.reason, error: s.error, status: s.status, worker: indexer.progress, platform: navigator.userAgent };
+        const info = { plugin: this.plugin.manifest.version, state: s.state, reason: s.reason, error: s.error, status: s.status, worker: indexer.progress, platform: Platform.isMacOS ? "macOS" : Platform.isWin ? "Windows" : Platform.isLinux ? "Linux" : Platform.isIosApp ? "iOS" : Platform.isAndroidApp ? "Android" : "other", obsidian: apiVersion };
         void navigator.clipboard.writeText(JSON.stringify(info, null, 2));
         new Notice(t("debugCopied"));
       });

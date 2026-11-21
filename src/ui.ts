@@ -24,7 +24,7 @@ let labelSeq = 0;
  * element with `aria-label`, which suits icon buttons but not lists, canvases or text fields.
  */
 export function quietLabel(el: HTMLElement, text: string): void {
-  const span = document.createElement("span");
+  const span = createSpan();
   span.className = "trova-sr-only";
   span.textContent = text;
   span.id = `trova-label-${++labelSeq}`;
@@ -184,7 +184,7 @@ export function navigableInMainArea(view: ItemView): void {
 export async function openTarget(app: App, target: OpenTarget, where: OpenIn = false, given?: WorkspaceLeaf): Promise<void> {
   if (target.root) {
     if (Platform.isDesktopApp) {
-      const electron = (globalThis as unknown as { require: (id: string) => { shell: { openPath(p: string): Promise<string> } } }).require("electron");
+      const electron = (window as unknown as { require: (id: string) => { shell: { openPath(p: string): Promise<string> } } }).require("electron");
       await electron.shell.openPath(`${target.root.replace(/[\\/]+$/, "")}/${target.path}`);
       new Notice(t("attachmentOpened"));
     }
@@ -251,12 +251,12 @@ export function banner(parent: HTMLElement, text: string, action?: { label: stri
 
 /** Skeleton rows appear only if nothing has arrived after 150 ms. */
 export function skeletonAfter(parent: HTMLElement, isStillPending: () => boolean, rows = 4): () => void {
-  const timer = setTimeout(() => {
+  const timer = window.setTimeout(() => {
     if (!isStillPending()) return;
     const wrap = parent.createDiv({ cls: "trova-skeletons" });
     for (let i = 0; i < rows; i++) wrap.createDiv({ cls: "trova-skeleton" });
   }, 150);
-  return () => clearTimeout(timer);
+  return () => window.clearTimeout(timer);
 }
 
 export function hashText(text: string): string {

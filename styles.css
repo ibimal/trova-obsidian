@@ -307,6 +307,11 @@ body {
   border: none !important; background: transparent !important; box-shadow: none !important;
   padding: 4px 0; line-height: 1.4; font-size: var(--font-ui-small);
 }
+
+.trova-seek-input.trova-seek-measuring {
+  height: auto !important;
+}
+
 .trova-seek-mode {
   flex: 0 0 auto; height: auto; margin-top: 3px; padding: 1px 7px; box-shadow: none;
   background: var(--background-modifier-hover); color: var(--text-muted); border-radius: 999px; font-size: var(--font-ui-smaller);

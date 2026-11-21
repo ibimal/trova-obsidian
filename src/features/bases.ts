@@ -57,7 +57,7 @@ export function registerBases(plugin: TrovaPlugin): boolean {
         const pairs = rows.map((r) => [{ source: plugin.sourceId(active.path) }, { source: plugin.sourceId(r.file.path) }] as [{ source: string }, { source: string }]);
         const scores = await plugin.engine.score({ pairs }).catch(() => null);
         if (run !== this.run) return;
-        rows.forEach((r, i) => r.score.setText(scores?.scores[i] == null ? "–" : scores.scores[i]!.toFixed(2)));
+        rows.forEach((r, i) => r.score.setText(scores?.scores[i] == null ? "–" : scores.scores[i].toFixed(2)));
       } else rows.forEach((r) => r.score.setText("–"));
       // trova_related(): the top related notes per row, one row at a time.
       for (const r of rows) {

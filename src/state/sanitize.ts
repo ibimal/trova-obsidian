@@ -146,7 +146,7 @@ function sanitizeFilters(raw: unknown, problems: string[]): Filter[] {
       problems.push("filters.connections: dropped a bad filter");
       continue;
     }
-    out.push({ field: f["field"], op: f["op"] as FilterOp, value: value as Filter["value"], ...(f["negate"] === true ? { negate: true } : {}) });
+    out.push({ field: f["field"], op: f["op"] as FilterOp, value: value, ...(f["negate"] === true ? { negate: true } : {}) });
   }
   return out;
 }
@@ -167,7 +167,7 @@ function sanitizeCare(raw: unknown, problems: string[]): CareData {
     problems.push("care: not an object; cleared");
     return { notDuplicates: [], keepUnlinked: [] };
   }
-  const care = (raw ?? {}) as Obj;
+  const care = (raw ?? {});
   return {
     // A pair key is two ids joined by a newline.
     notDuplicates: sanitizeStrings(care["notDuplicates"], "care.notDuplicates", problems, (s) => s.split("\n").length === 2),

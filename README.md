@@ -71,6 +71,12 @@ npm run build
 npm test
 ```
 
+```bash
+npm run lint
+```
+
+`npm run lint` checks the code against Obsidian's own ESLint rules (`eslint-plugin-obsidianmd`), the rules Obsidian's review uses.
+
 `npm run dev` rebuilds `main.js` on every change. To try a build, copy `main.js`, `manifest.json` and `styles.css` into a vault's `.obsidian/plugins/trova/` folder and reload Obsidian. A git-ignored `test-vault/` folder in this repository is a convenient place for that vault.
 
 `docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/packages/contract); its header names the commit. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.

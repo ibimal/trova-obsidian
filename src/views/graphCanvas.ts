@@ -133,7 +133,7 @@ export class GraphCanvas<T = unknown> {
   }
 
   destroy(): void {
-    cancelAnimationFrame(this.frame);
+    window.cancelAnimationFrame(this.frame);
     this.observer.disconnect();
     this.el.remove();
   }
@@ -310,7 +310,7 @@ export class GraphCanvas<T = unknown> {
 
   private schedule(): void {
     if (this.frame) return;
-    this.frame = requestAnimationFrame(() => {
+    this.frame = window.requestAnimationFrame(() => {
       this.frame = 0;
       if (this.opts.simulate && this.alpha > ALPHA_MIN) {
         this.tick();

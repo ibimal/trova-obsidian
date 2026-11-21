@@ -12,20 +12,20 @@ const REFRESH_MS = 800;
 
 export function footerExtension(plugin: TrovaPlugin) {
   return showPanel.of((view: EditorView): Panel => {
-    const dom = document.createElement("div");
+    const dom = createDiv();
     dom.className = "trova-footer";
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let timer: number | null = null;
     let abort: AbortController | null = null;
     let lastKey = "";
 
     const load = async () => {
       if (!plugin.settings.footerPanel || !plugin.engine.ready) {
-        dom.style.display = "none";
+        dom.hide();
         lastKey = "";
         return;
       }
       const file = view.state.field(editorInfoField, false)?.file;
-      if (!file || file.extension !== "md") return void (dom.style.display = "none");
+      if (!file || file.extension !== "md") return void dom.hide();
       const line = view.state.doc.lineAt(view.state.selection.main.head).number - 1;
       const cache = plugin.app.metadataCache.getFileCache(file);
       const section = sectionAt((cache?.headings ?? []).map((h) => ({ heading: h.heading, level: h.level, line: h.position.start.line })), line);
@@ -39,14 +39,14 @@ export function footerExtension(plugin: TrovaPlugin) {
       if (signal.aborted) return;
       dom.replaceChildren();
       const top = (result?.state === "ok" ? result.results : []).slice(0, 5);
-      if (top.length === 0) return void (dom.style.display = "none");
-      dom.style.display = "";
-      const label = document.createElement("span");
+      if (top.length === 0) return void dom.hide();
+      dom.show();
+      const label = createSpan();
       label.className = "trova-footer-label";
       label.textContent = t("connectionsTitle");
       dom.appendChild(label);
       for (const r of top) {
-        const chip = document.createElement("button");
+        const chip = createEl("button");
         chip.className = `trova-footer-chip trova-label-${r.label}`;
         chip.textContent = r.title;
         chip.setAttribute("aria-label", `${r.title} (${labelText(r.label)})`);
@@ -55,10 +55,10 @@ export function footerExtension(plugin: TrovaPlugin) {
       }
     };
     const schedule = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => void load(), REFRESH_MS);
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => void load(), REFRESH_MS);
     };
-    dom.style.display = "none";
+    dom.hide();
     schedule();
     return {
       dom,
@@ -67,7 +67,7 @@ export function footerExtension(plugin: TrovaPlugin) {
         if (u.selectionSet || u.docChanged) schedule();
       },
       destroy() {
-        if (timer) clearTimeout(timer);
+        if (timer) window.clearTimeout(timer);
         abort?.abort();
       },
     };

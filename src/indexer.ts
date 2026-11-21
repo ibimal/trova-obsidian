@@ -23,9 +23,9 @@ export interface IndexerDeps {
 
 export function idle(): Promise<void> {
   return new Promise((resolve) => {
-    const ric = (globalThis as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback;
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback;
     if (ric) ric(() => resolve(), { timeout: 200 });
-    else setTimeout(resolve, 0);
+    else window.setTimeout(resolve, 0);
   });
 }
 
@@ -68,7 +68,7 @@ export class VaultIndexer {
   isExcluded(path: string, cache?: CachedMetadata | null): boolean {
     if (this.excludeRes.some((r) => r.test(path))) return true;
     if (this.includeRes.length > 0 && !this.includeRes.some((r) => r.test(path))) return true;
-    return isExcludedByFrontmatter(cache?.frontmatter as Record<string, unknown> | undefined);
+    return isExcludedByFrontmatter(cache?.frontmatter);
   }
 
   noteTyping(): void {
@@ -77,7 +77,7 @@ export class VaultIndexer {
 
   private async calm(): Promise<void> {
     await idle();
-    while (Date.now() - this.lastInput < TYPING_PAUSE_MS && !this.stopped) await new Promise((r) => setTimeout(r, TYPING_PAUSE_MS));
+    while (Date.now() - this.lastInput < TYPING_PAUSE_MS && !this.stopped) await new Promise((r) => window.setTimeout(r, TYPING_PAUSE_MS));
   }
 
   docFor(file: TFile): WorkerDoc {

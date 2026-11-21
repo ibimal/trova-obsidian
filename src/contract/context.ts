@@ -30,7 +30,7 @@ export function mergePieces(pieces: ContextPiece[], fullText: (path: string) => 
       continue;
     }
     if (whole.has(p.path)) continue;
-    const overlap = out.find((o) => o.path === p.path && o.start !== undefined && p.start! <= o.end! && p.end! >= o.start!);
+    const overlap = out.find((o) => o.path === p.path && o.start !== undefined && p.start! <= o.end! && p.end! >= o.start);
     if (!overlap) {
       out.push({ ...p });
       continue;

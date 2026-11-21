@@ -25,6 +25,11 @@ import {
 } from "../contract/index.js";
 import { EngineClient } from "./client.js";
 
+/** An event field as text; anything that is not a string or number becomes "". */
+function text(v: unknown): string {
+  return typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
+}
+
 export type EngineState = "disabled" | "idle" | "connecting" | "ready" | "offline" | "not-found" | "wrong-version";
 
 export interface EngineSnapshot {
@@ -71,7 +76,7 @@ export class EngineOffline extends Error {
   }
 }
 
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
 export class EngineManager {
   snapshot: EngineSnapshot = { state: "idle" };
@@ -80,14 +85,14 @@ export class EngineManager {
   private listeners = new Set<(s: EngineSnapshot) => void>();
   private eventListeners = new Set<(e: EngineEvent) => void>();
   private eventsAbort: AbortController | null = null;
-  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryTimer: number | null = null;
   private retryCount = 0;
   private stopped = false;
   private connecting: Promise<void> | null = null;
   private pending = new Map<string, { changed: Set<string>; deleted: Set<string>; renamed: { from: string; to: string }[]; full: boolean }>();
-  private syncTimer: ReturnType<typeof setTimeout> | null = null;
+  private syncTimer: number | null = null;
   private unsupported = new Set<string>();
-  private keepAlive: ReturnType<typeof setInterval> | null = null;
+  private keepAlive: number | null = null;
   private allCollections: string[] = [];
 
   constructor(private host: EngineHost) {}
@@ -164,7 +169,7 @@ export class EngineManager {
   }
 
   private async doConnect(userAction: boolean): Promise<void> {
-    if (this.retryTimer) clearTimeout(this.retryTimer);
+    if (this.retryTimer) window.clearTimeout(this.retryTimer);
     this.retryTimer = null;
     const firstAttempt = this.snapshot.state === "idle" || userAction;
     if (firstAttempt) this.set({ state: "connecting", reason: undefined });
@@ -273,10 +278,10 @@ export class EngineManager {
         this.emitEvent({ event: "engine.state", data: { state: "offline" } });
         this.scheduleRetry();
       });
-    if (this.keepAlive) clearInterval(this.keepAlive);
+    if (this.keepAlive) window.clearInterval(this.keepAlive);
     // qmd unloads idle models after 5 minutes; keep them warm while Obsidian is focused.
-    this.keepAlive = setInterval(() => {
-      if (this.ready && typeof document !== "undefined" && document.hasFocus()) void this.client?.json("POST", "/v1/keepalive", {}).catch(() => undefined);
+    this.keepAlive = window.setInterval(() => {
+      if (this.ready && typeof activeDocument !== "undefined" && activeDocument.hasFocus()) void this.client?.json("POST", "/v1/keepalive", {}).catch(() => undefined);
     }, 4 * 60_000);
   }
 
@@ -284,7 +289,7 @@ export class EngineManager {
     if (this.stopped || this.retryTimer) return;
     const delay = RETRY_SCHEDULE_MS[this.retryCount] ?? RETRY_STEADY_MS;
     this.retryCount++;
-    this.retryTimer = setTimeout(() => {
+    this.retryTimer = window.setTimeout(() => {
       this.retryTimer = null;
       void this.connect(false);
     }, delay);
@@ -296,12 +301,12 @@ export class EngineManager {
 
   private onEngineEvent(e: EngineEvent): void {
     if (e.event === "index.progress") {
-      this.set({ progress: { kind: String(e.data["stage"] ?? e.data["kind"] ?? ""), done: Number(e.data["done"] ?? 0), total: Number(e.data["total"] ?? 0) } });
+      this.set({ progress: { kind: text(e.data["stage"]) || text(e.data["kind"]), done: Number(e.data["done"] ?? 0), total: Number(e.data["total"] ?? 0) } });
     } else if (e.event === "index.ready") {
       this.set({ progress: undefined });
       void this.refreshStatus();
     } else if (e.event === "engine.state") {
-      if (e.data["state"] === "error") this.set({ error: String(e.data["message"] ?? "") });
+      if (e.data["state"] === "error") this.set({ error: text(e.data["message"]) });
       void this.refreshStatus();
     } else if (e.event === "model.changed") {
       void this.refreshStatus();
@@ -324,9 +329,9 @@ export class EngineManager {
   /** 6. Leave: closing Obsidian never stops the daemon; only the plugin's connections close. */
   stop(): void {
     this.stopped = true;
-    if (this.retryTimer) clearTimeout(this.retryTimer);
-    if (this.syncTimer) clearTimeout(this.syncTimer);
-    if (this.keepAlive) clearInterval(this.keepAlive);
+    if (this.retryTimer) window.clearTimeout(this.retryTimer);
+    if (this.syncTimer) window.clearTimeout(this.syncTimer);
+    if (this.keepAlive) window.clearInterval(this.keepAlive);
     this.retryTimer = this.syncTimer = this.keepAlive = null;
     this.eventsAbort?.abort();
     this.client = null;
@@ -355,7 +360,9 @@ export class EngineManager {
     if (capability && this.unsupported.has(capability)) throw new EngineError("unsupported", `The engine lacks ${capability}`);
     try {
       return await fn();
-    } catch (err) {
+    } catch (caught) {
+      // After a failed retry, the retry's error is the one handled and thrown.
+      let err: unknown = caught;
       if (err instanceof EngineError) {
         if (err.code === "unauthorized") {
           // Re-read daemon.json once, then show engine offline.
@@ -468,12 +475,12 @@ export class EngineManager {
     if (change.deleted) b.deleted.add(change.deleted);
     if (change.renamed) b.renamed.push(change.renamed);
     if (change.full) b.full = true;
-    if (this.syncTimer) clearTimeout(this.syncTimer);
-    this.syncTimer = setTimeout(() => this.flushSync(), SYNC_DEBOUNCE_MS);
+    if (this.syncTimer) window.clearTimeout(this.syncTimer);
+    this.syncTimer = window.setTimeout(() => this.flushSync(), SYNC_DEBOUNCE_MS);
   }
 
   private flushSync(): void {
-    if (this.syncTimer) clearTimeout(this.syncTimer);
+    if (this.syncTimer) window.clearTimeout(this.syncTimer);
     this.syncTimer = null;
     if (!this.ready) return;
     for (const [collection, b] of this.pending) {

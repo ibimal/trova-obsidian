@@ -49,7 +49,7 @@ export class BadgeStore {
     this.running = true;
     while (this.queue.length > 0) {
       // Background work pauses while the user types.
-      while (Date.now() - this.lastTyped < TYPING_QUIET_MS) await new Promise((r) => setTimeout(r, TYPING_QUIET_MS));
+      while (Date.now() - this.lastTyped < TYPING_QUIET_MS) await new Promise((r) => window.setTimeout(r, TYPING_QUIET_MS));
       const job = this.queue.shift()!;
       try {
         this.results.set(job.key, await this.plugin.connections.strongBlocks(job.path, job.headingPath, job.headings));
@@ -58,15 +58,18 @@ export class BadgeStore {
       }
       this.pending.delete(job.key);
       for (const l of this.listeners) l();
-      await new Promise((r) => setTimeout(r, 30));
+      await new Promise((r) => window.setTimeout(r, 30));
     }
     this.running = false;
   }
 }
 
 export function showBadgePopover(plugin: TrovaPlugin, anchorEl: HTMLElement, results: Result[]): void {
-  document.querySelectorAll(".trova-badge-popover").forEach((el) => el.remove());
-  const pop = document.body.createDiv({ cls: "trova-popover trova-badge-popover popover" });
+  // The badge may sit in a popout window: build and place the popover in that window.
+  const doc = anchorEl.ownerDocument;
+  const win = doc.defaultView ?? window;
+  doc.querySelectorAll(".trova-badge-popover").forEach((el) => el.remove());
+  const pop = doc.body.createDiv({ cls: "trova-popover trova-badge-popover popover" });
   for (const r of results.slice(0, 12)) {
     const row = pop.createDiv({ cls: "trova-popover-item", attr: { tabindex: "0" } });
     row.createDiv({ cls: "trova-row-title", text: r.title });
@@ -79,15 +82,14 @@ export function showBadgePopover(plugin: TrovaPlugin, anchorEl: HTMLElement, res
     });
   }
   const rect = anchorEl.getBoundingClientRect();
-  pop.style.top = `${Math.min(window.innerHeight - 200, rect.bottom + 4)}px`;
-  pop.style.left = `${Math.max(8, Math.min(window.innerWidth - 340, rect.left))}px`;
+  pop.setCssProps({ top: `${Math.min(win.innerHeight - 200, rect.bottom + 4)}px`, left: `${Math.max(8, Math.min(win.innerWidth - 340, rect.left))}px` });
   const close = (e: MouseEvent) => {
     if (!pop.contains(e.target as Node)) {
       pop.remove();
-      document.removeEventListener("mousedown", close, true);
+      doc.removeEventListener("mousedown", close, true);
     }
   };
-  setTimeout(() => document.addEventListener("mousedown", close, true), 0);
+  win.setTimeout(() => doc.addEventListener("mousedown", close, true), 0);
 }
 
 class BadgeWidget extends WidgetType {
@@ -101,7 +103,7 @@ class BadgeWidget extends WidgetType {
     return other.results === this.results;
   }
   toDOM(): HTMLElement {
-    const el = document.createElement("span");
+    const el = createSpan();
     el.className = "trova-inline-badge";
     el.textContent = String(this.results.length);
     el.setAttribute("aria-label", `${this.results.length} ${t("strong").toLowerCase()}`);
@@ -127,7 +129,7 @@ export function badgeExtension(plugin: TrovaPlugin, store: BadgeStore) {
         this.decorations = this.build();
         this.off = store.onChange(() => {
           // Dispatching from a store callback must not happen inside an update.
-          setTimeout(() => this.view.dom.isConnected && this.view.dispatch({ effects: refresh.of(null) }), 0);
+          window.setTimeout(() => this.view.dom.isConnected && this.view.dispatch({ effects: refresh.of(null) }), 0);
         });
       }
       update(u: ViewUpdate): void {

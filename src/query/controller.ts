@@ -198,21 +198,21 @@ export function fuseLanes(lanes: Lanes, daysSinceOpened: (path: string) => numbe
 
 export class QueryController {
   private abort: AbortController | null = null;
-  private semanticTimer: ReturnType<typeof setTimeout> | null = null;
+  private semanticTimer: number | null = null;
 
   constructor(private deps: ControllerDeps) {}
 
   cancel(): void {
     this.abort?.abort();
     this.abort = null;
-    if (this.semanticTimer) clearTimeout(this.semanticTimer);
+    if (this.semanticTimer) window.clearTimeout(this.semanticTimer);
     this.semanticTimer = null;
-    for (const timer of this.paintTimers) clearTimeout(timer);
+    for (const timer of this.paintTimers) window.clearTimeout(timer);
     this.paintTimers = [];
   }
 
   /** The first-paint and settle timers of the running query. */
-  private paintTimers: ReturnType<typeof setTimeout>[] = [];
+  private paintTimers: number[] = [];
 
   parse(raw: string): { query: ParsedQuery; diagnostics: QueryDiagnostic[] } {
     return parseQuery(raw, { knownKeys: this.deps.knownKeys() });
@@ -247,9 +247,9 @@ export class QueryController {
     const settleMs = this.deps.settleMs ?? SETTLE_MS;
     const started = Date.now();
     let painted: Row[] | null = null;
-    let firstTimer: ReturnType<typeof setTimeout> | null = null;
+    let firstTimer: number | null = null;
     const timer = (ms: number, run: () => void) => {
-      const id = setTimeout(() => {
+      const id = window.setTimeout(() => {
         this.paintTimers = this.paintTimers.filter((t) => t !== id);
         if (!signal.aborted) run();
       }, ms);
@@ -267,9 +267,9 @@ export class QueryController {
     /** The full ranking of every lane so far. */
     const publish = () => {
       if (signal.aborted) return;
-      if (firstTimer) clearTimeout(firstTimer);
+      if (firstTimer) window.clearTimeout(firstTimer);
       firstTimer = null;
-      const rows = fuseLanes(lanes, this.deps.daysSinceOpened, settings.recencyBoost);
+      const rows = fuseLanes(lanes, (path) => this.deps.daysSinceOpened(path), settings.recencyBoost);
       painted = rows;
       emit(rows);
     };
@@ -280,7 +280,7 @@ export class QueryController {
         if (painted && firstTimer === null) {
           // Rows are on screen from before this lane: add its new rows below them, then show the
           // full ranking after a pause in typing.
-          const fused = fuseLanes(lanes, this.deps.daysSinceOpened, settings.recencyBoost);
+          const fused = fuseLanes(lanes, (path) => this.deps.daysSinceOpened(path), settings.recencyBoost);
           painted = mergeBelow(painted, fused);
           emit(painted);
           timer(settleMs, publish);
@@ -315,7 +315,7 @@ export class QueryController {
 
     // Lane 3: the engine's lex lane.
     if (engineUp && !lexOnly) {
-      (async () => {
+      void (async () => {
         try {
           const req: SearchRequest = { query, lanes: ["lex"], collections: this.deps.collections(), limit: 30, fuzzy: settings.typoTolerance > 0, deadlineMs: 250 };
           for await (const batch of this.deps.engine.search(req, signal)) {
@@ -337,9 +337,9 @@ export class QueryController {
     const wantsVec = lexOnly || (settings.semanticRows && queryWordCount(query) >= SEMANTIC_ROWS_MIN_WORDS);
     if (engineUp && wantsVec && this.deps.engine.has("vec")) {
       state.refining = true;
-      this.semanticTimer = setTimeout(
+      this.semanticTimer = window.setTimeout(
         () => {
-          (async () => {
+          void (async () => {
             try {
               const req: SearchRequest = { query, lanes: ["vec"], collections: this.deps.collections(), limit: lexOnly ? 20 : SEMANTIC_ROWS_MAX * 3, deadlineMs: 1500 };
               for await (const batch of this.deps.engine.search(req, signal)) {
