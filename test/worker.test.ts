@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseQuery } from "@trova/contract";
+import { parseQuery } from "../src/contract/index.js";
 import { SearchIndex } from "../src/worker/index.js";
 import { fixtureDocs } from "./fixture-docs.js";
 

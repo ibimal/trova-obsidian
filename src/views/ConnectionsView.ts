@@ -5,7 +5,7 @@
 // similarity graph of the same note, with its selection kept in step with the list.
 
 import { ItemView, Keymap, MarkdownView, Notice, Platform, TFile, debounce, setIcon, type WorkspaceLeaf } from "obsidian";
-import { parseId, slugHeading, type DuplicatePair, type DuplicatesResponse, type Filter, type Result } from "@trova/contract";
+import { parseId, slugHeading, type DuplicatePair, type DuplicatesResponse, type Filter, type Result } from "../contract/index.js";
 import type { Anchor, RelatedView } from "../features/connections.js";
 import { confirmLinkAll, findMentions, linkMentions, mentionCount } from "../features/mentions.js";
 import { t } from "../i18n/en.js";

@@ -2,7 +2,7 @@
 // user clicks Start. The plugin never installs executables; it shows the command.
 
 import { Modal, Notice } from "obsidian";
-import { API_VERSION } from "@trova/contract";
+import { API_VERSION } from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 

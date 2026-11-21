@@ -5,7 +5,7 @@
 // are remembered, so a dismissed item does not return with the next scan.
 
 import { ItemView, TFile, setIcon, type ViewStateResult, type WorkspaceLeaf } from "obsidian";
-import { ORPHAN_SUGGESTIONS, REDISCOVER_PER_DAY, REDISCOVER_RECENT_DAYS, REDISCOVER_STALE_DAYS, type DuplicatePair, type DuplicatesResponse, type Result } from "@trova/contract";
+import { ORPHAN_SUGGESTIONS, REDISCOVER_PER_DAY, REDISCOVER_RECENT_DAYS, REDISCOVER_STALE_DAYS, type DuplicatePair, type DuplicatesResponse, type Result } from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import { idle } from "../indexer.js";
 import type TrovaPlugin from "../main.js";

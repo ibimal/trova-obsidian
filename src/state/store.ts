@@ -1,6 +1,6 @@
 // The data.json store. Writes are debounced by 1 second and never happen on a keystroke.
 
-import type { Filter } from "@trova/contract";
+import type { Filter } from "../contract/index.js";
 import { defaultData, pairKey, type TrovaData, type TrovaSettings } from "../settings.js";
 import { sanitizeData } from "./sanitize.js";
 

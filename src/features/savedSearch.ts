@@ -2,7 +2,7 @@
 // a query, plus optional `limit:` and `mode:` lines.
 
 import { MarkdownRenderChild, type MarkdownPostProcessorContext } from "obsidian";
-import type { Result } from "@trova/contract";
+import type { Result } from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 import { Lru } from "../state/store.js";

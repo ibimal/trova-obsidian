@@ -1,7 +1,7 @@
 // Finds and starts the daemon. Desktop only: Node modules are loaded lazily, and only after the
 // caller has checked Platform.isDesktopApp. The plugin never downloads or installs executables.
 
-import type { DaemonInfo } from "@trova/contract";
+import type { DaemonInfo } from "../contract/index.js";
 
 type NodeRequire = (id: string) => unknown;
 function nodeRequire(): NodeRequire {

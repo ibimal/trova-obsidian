@@ -26,7 +26,7 @@ import {
   type ParsedQuery,
   type SourceMeta,
   type Term,
-} from "@trova/contract";
+} from "../contract/index.js";
 
 export interface WorkerDoc extends SourceMeta {
   headings: { text: string; level: number; offset: number }[];

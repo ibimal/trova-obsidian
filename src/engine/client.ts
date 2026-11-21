@@ -1,7 +1,7 @@
 // EngineClient: fetch with AbortController, NDJSON streams and Server-Sent Events. `requestUrl`
 // cannot stream, so everything uses fetch.
 
-import { EngineError, type EngineEvent, type EngineEventName, type ErrorBody, type ResultBatch } from "@trova/contract";
+import { EngineError, type EngineEvent, type EngineEventName, type ErrorBody, type ResultBatch } from "../contract/index.js";
 
 export class EngineClient {
   constructor(

@@ -25,7 +25,7 @@ const inlineWorker = {
     b.onLoad({ filter: /.*/, namespace: "worker-code" }, async () => ({
       contents: `export default ${JSON.stringify(await workerCode())};`,
       loader: "js",
-      watchDirs: ["src/worker", "../contract/src"],
+      watchDirs: ["src/worker", "src/contract"],
     }));
   },
 };

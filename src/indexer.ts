@@ -3,7 +3,7 @@
 // UI between chunks; it pauses while the user types.
 
 import { getAllTags, parseFrontMatterAliases, TFile, type App, type CachedMetadata } from "obsidian";
-import { countWords, globToRegExp, isExcludedByFrontmatter, titleFromPath } from "@trova/contract";
+import { countWords, globToRegExp, isExcludedByFrontmatter, titleFromPath } from "./contract/index.js";
 import type { WorkerDoc } from "./worker/index.js";
 import type { WorkerHost } from "./worker/host.js";
 

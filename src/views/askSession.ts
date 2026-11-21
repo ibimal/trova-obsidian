@@ -3,7 +3,7 @@
 // shows a block's related blocks in the same list.
 
 import { MarkdownView, Notice, setIcon } from "obsidian";
-import { ASK_STOPWORDS, labelForRank, parseQuery, pickAskMode, type AskRequest, type DocumentBody, type Lane, type ParsedQuery, type Result, type ResultBatch } from "@trova/contract";
+import { ASK_STOPWORDS, labelForRank, parseQuery, pickAskMode, type AskRequest, type DocumentBody, type Lane, type ParsedQuery, type Result, type ResultBatch } from "../contract/index.js";
 import { fromWorker, fuseLanes } from "../query/controller.js";
 import { EngineOffline } from "../engine/manager.js";
 import { t } from "../i18n/en.js";

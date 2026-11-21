@@ -1,4 +1,4 @@
-import type { LineMatch, ParsedQuery } from "@trova/contract";
+import type { LineMatch, ParsedQuery } from "../contract/index.js";
 import type { MentionHit, SearchOptions, SearchReply, WorkerDoc } from "./index.js";
 
 /** Calls the main thread makes on the worker. Each returns a value over postMessage. */

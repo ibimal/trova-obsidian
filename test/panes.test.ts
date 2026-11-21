@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DuplicatePair } from "@trova/contract";
+import type { DuplicatePair } from "../src/contract/index.js";
 import { canRerankNow, deepOnEnter, historyTitle, shiftHighlights, stripHeading } from "../src/views/askSession.js";
 import { DRAWER_MIN, clampDrawer, duplicateOf } from "../src/views/ConnectionsView.js";
 import { strengthLevel } from "../src/views/rows.js";

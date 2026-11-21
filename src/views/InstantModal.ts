@@ -2,7 +2,7 @@
 // rows come from the worker and the engine's lex lane; semantic rows join in their own section.
 
 import { Modal, Notice, Platform, TFile, setIcon, type Editor } from "obsidian";
-import { findInText, parseQuery, pickAskMode, queryRanges, queryText, type LineMatch } from "@trova/contract";
+import { findInText, parseQuery, pickAskMode, queryRanges, queryText, type LineMatch } from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 import { stableOrder, type InstantState, type Row } from "../query/controller.js";

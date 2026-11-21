@@ -23,7 +23,7 @@ import {
   type Result,
   type ResultBatch,
   type SearchRequest,
-} from "@trova/contract";
+} from "../contract/index.js";
 import type { SearchOptions, SearchReply, WorkerHit } from "../worker/index.js";
 
 export interface Row {

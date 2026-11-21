@@ -1,4 +1,4 @@
-import type { Filter } from "@trova/contract";
+import type { Filter } from "./contract/index.js";
 
 export interface TrovaSettings {
   // Scope

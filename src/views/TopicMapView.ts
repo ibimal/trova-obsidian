@@ -2,7 +2,7 @@
 // on one canvas, so a vault of ten thousand notes pans and zooms without lag.
 
 import { ItemView, setIcon, type WorkspaceLeaf } from "obsidian";
-import type { TopicsResponse } from "@trova/contract";
+import type { TopicsResponse } from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 import { banner, folderOf, navigableInMainArea, onOpen, openIn, passEnterKeys, type OpenIn } from "../ui.js";

@@ -1,7 +1,7 @@
 // The Context basket view: reorder by dragging, watch the size meter, and copy in one click.
 
 import { ItemView, Notice, setIcon, type WorkspaceLeaf } from "obsidian";
-import type { ContextFormat } from "@trova/contract";
+import type { ContextFormat } from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 import { folderOf, onOpen, undoNotice } from "../ui.js";

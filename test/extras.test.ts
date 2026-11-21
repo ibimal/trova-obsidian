@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseQuery, type GraphNode, type GraphResponse } from "@trova/contract";
+import { parseQuery, type GraphNode, type GraphResponse } from "../src/contract/index.js";
 import { GraphModel } from "../src/views/similarityGraph.js";
 import { SearchIndex, type WorkerDoc } from "../src/worker/index.js";
 import { fixtureDocs } from "./fixture-docs.js";

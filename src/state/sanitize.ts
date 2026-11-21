@@ -3,7 +3,7 @@
 // against its expected shape. A field that does not fit falls back to its default; one bad entry
 // in a list is dropped without losing the rest. Nothing here throws.
 
-import type { Filter, FilterOp } from "@trova/contract";
+import type { Filter, FilterOp } from "../contract/index.js";
 import { DEFAULT_SETTINGS, defaultData, type CareData, type TrovaData, type TrovaSettings } from "../settings.js";
 
 export interface Sanitized {

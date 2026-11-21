@@ -1,7 +1,7 @@
 // Small DOM helpers shared by the views. Plain DOM with Obsidian's own components only.
 
 import { Keymap, Menu, Modal, Notice, Platform, Scope, TFile, type App, type ItemView, type Modifier, type PaneType, type WorkspaceLeaf } from "obsidian";
-import type { Label, MatchedBy } from "@trova/contract";
+import type { Label, MatchedBy } from "./contract/index.js";
 import { t, type StringKey } from "./i18n/en.js";
 
 /** Renders text with <mark> around the highlighted character ranges. */

@@ -2,7 +2,7 @@
 // by name. Title-lane matches are re-ordered by 0.5 x title rank score + 0.5 x similarity.
 
 import { EditorSuggest, TFile, type Editor, type EditorPosition, type EditorSuggestContext, type EditorSuggestTriggerInfo } from "obsidian";
-import { LINK_SUGGEST_SIMILARITY_WEIGHT, LINK_SUGGEST_TITLE_WEIGHT } from "@trova/contract";
+import { LINK_SUGGEST_SIMILARITY_WEIGHT, LINK_SUGGEST_TITLE_WEIGHT } from "../contract/index.js";
 import type TrovaPlugin from "../main.js";
 import { folderOf } from "../ui.js";
 

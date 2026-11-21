@@ -15,7 +15,7 @@ import {
   type Filter,
   type RelatedRequest,
   type Result,
-} from "@trova/contract";
+} from "../contract/index.js";
 import type { EngineManager } from "../engine/manager.js";
 import type { TrovaSettings } from "../settings.js";
 import { Lru, type DataStore } from "../state/store.js";

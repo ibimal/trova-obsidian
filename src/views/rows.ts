@@ -1,7 +1,7 @@
 // Pieces shared by the rows of the Connections pane: the strength meter and keyboard movement
 // between rows.
 
-import type { Label } from "@trova/contract";
+import type { Label } from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import { labelText } from "../ui.js";
 

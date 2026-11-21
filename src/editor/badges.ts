@@ -5,7 +5,7 @@ import { RangeSetBuilder, StateEffect } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import { editorInfoField, type MarkdownPostProcessorContext } from "obsidian";
 import { onOpen } from "../ui.js";
-import type { Result } from "@trova/contract";
+import type { Result } from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 import { sectionAt } from "../views/ConnectionsView.js";

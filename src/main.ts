@@ -13,7 +13,7 @@ import {
   type CollectionAddRequest,
   type ContextFormat,
   type Result,
-} from "@trova/contract";
+} from "./contract/index.js";
 import workerCode from "virtual:worker-code";
 import { BadgeStore, badgeExtension, badgePostProcessor } from "./editor/badges.js";
 import { footerExtension } from "./editor/footer.js";

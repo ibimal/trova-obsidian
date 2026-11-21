@@ -4,7 +4,7 @@
 // The editor's Similarity graph view and the Connections pane's graph drawer both use it.
 
 import { Notice, setIcon } from "obsidian";
-import { DEFAULT_THRESHOLDS, EngineError, type GraphNode, type GraphResponse, type Label } from "@trova/contract";
+import { DEFAULT_THRESHOLDS, EngineError, type GraphNode, type GraphResponse, type Label } from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 import { Lru } from "../state/store.js";

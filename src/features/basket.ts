@@ -11,7 +11,7 @@ import {
   titleFromPath,
   type ContextFormat,
   type ContextPiece,
-} from "@trova/contract";
+} from "../contract/index.js";
 import type { LocalState } from "../state/store.js";
 
 export interface BasketItem {

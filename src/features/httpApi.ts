@@ -1,7 +1,7 @@
 // The opt-in Local HTTP API: a separate port on 127.0.0.1 with its own user-visible token and
 // read-only endpoints that mirror search, ask and related. Desktop only.
 
-import type { Result, ResultBatch } from "@trova/contract";
+import type { Result, ResultBatch } from "../contract/index.js";
 import type TrovaPlugin from "../main.js";
 
 interface Req {

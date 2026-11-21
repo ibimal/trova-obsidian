@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { parseQuery, type Result, type ResultBatch, type SearchRequest } from "@trova/contract";
+import { parseQuery, type Result, type ResultBatch, type SearchRequest } from "../src/contract/index.js";
 import { rankLinkSuggestions } from "../src/editor/linkSuggest.js";
 import { EngineManager, RETRY_SCHEDULE_MS, type EngineSnapshot } from "../src/engine/manager.js";
 import { rowToResult } from "../src/features/api.js";

@@ -1,7 +1,7 @@
 // The public API: other plugins, Templater scripts and Dataview JS reach Trova through
 // `app.plugins.plugins.trova.api`. Every method is async and takes an AbortSignal.
 
-import { blockId, formatContext, parseQuery, slugHeading, sourceId, type ContextFormat, type EngineAnchor, type Filter, type IndexStatus, type Result, type ResultBatch } from "@trova/contract";
+import { blockId, formatContext, parseQuery, slugHeading, sourceId, type ContextFormat, type EngineAnchor, type Filter, type IndexStatus, type Result, type ResultBatch } from "../contract/index.js";
 import type TrovaPlugin from "../main.js";
 import { QueryController, type InstantState, type Row } from "../query/controller.js";
 import { itemKey, piecesFor, type BasketItem } from "./basket.js";

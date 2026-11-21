@@ -22,7 +22,7 @@ import {
   type SearchRequest,
   type SyncRequest,
   type TopicsResponse,
-} from "@trova/contract";
+} from "../contract/index.js";
 import { EngineClient } from "./client.js";
 
 export type EngineState = "disabled" | "idle" | "connecting" | "ready" | "offline" | "not-found" | "wrong-version";

@@ -1,5 +1,5 @@
-import { createLinkResolver, extractInlineTags, extractLinks, frontmatterEnd, splitBlocks, titleFromPath } from "@trova/contract";
-import { fixtureNotes } from "../../eval/src/fixture.js";
+import { createLinkResolver, extractInlineTags, extractLinks, frontmatterEnd, splitBlocks, titleFromPath } from "../src/contract/index.js";
+import { fixtureNotes } from "./fixture.js";
 import type { WorkerDoc } from "../src/worker/index.js";
 
 /** A fake metadata cache built from the fixture vault. */
