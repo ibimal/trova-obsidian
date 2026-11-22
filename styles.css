@@ -87,14 +87,15 @@ body {
   padding: var(--size-4-4) var(--size-4-4) var(--size-4-4) calc(var(--size-4-4) + 30px);
   border: 1px solid transparent;
 }
-.trova-querybar input.trova-input {
+/* The ancestor classes outrank Obsidian's input rules, including :hover and :focus. */
+.trova-modal .trova-querybar input.trova-input {
   display: block;
   width: 100%;
   position: relative;
   border-radius: 0;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  background: transparent !important;
+  border-color: transparent;
+  box-shadow: none;
+  background: transparent;
 }
 .trova-querybar input.trova-input::placeholder {
   color: var(--text-faint);
@@ -106,8 +107,8 @@ body {
   color: transparent;
   pointer-events: none;
 }
-.trova-modal:not(.trova-fullscreen) .modal-close-button {
-  display: none !important;
+.modal.trova-modal:not(.trova-fullscreen) .modal-close-button {
+  display: none;
 }
 .trova-modal .modal-header:empty {
   display: none;
@@ -395,10 +396,11 @@ body {
 }
 
 /* ---------- Panes ---------- */
-.trova-pane {
+/* Outranks Obsidian's padding on a view's content element. */
+.workspace-leaf-content .view-content.trova-pane {
   display: flex;
   flex-direction: column;
-  padding: 0 !important;
+  padding: 0;
   overflow: hidden;
 }
 .trova-pane-header {
@@ -1044,7 +1046,7 @@ body {
   width: 15px;
   height: 15px;
 }
-.trova-seek-search textarea.trova-seek-input {
+.trova-pane .trova-seek-search textarea.trova-seek-input {
   flex: 1 1 auto;
   min-width: 0;
   resize: none;
@@ -1052,16 +1054,12 @@ body {
   max-height: 6.5em;
   min-height: 0;
   height: auto;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  border: none;
+  background: transparent;
+  box-shadow: none;
   padding: 4px 0;
   line-height: 1.4;
   font-size: var(--font-ui-small);
-}
-
-.trova-seek-input.trova-seek-measuring {
-  height: auto !important;
 }
 
 .trova-seek-mode {

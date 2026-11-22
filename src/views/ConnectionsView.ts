@@ -391,11 +391,9 @@ export class ConnectionsView extends ItemView {
     }));
     quietLabel(input, t("askPlaceholder"));
     const grow = () => {
-      // Measure the text at its natural height, then fix the box to it.
-      input.addClass("trova-seek-measuring");
-      const height = input.scrollHeight;
-      input.removeClass("trova-seek-measuring");
-      input.setCssProps({ height: `${height}px` });
+      // Measure the text at its natural height (the stylesheet's), then fix the box to it.
+      input.style.removeProperty("height");
+      input.setCssProps({ height: `${input.scrollHeight}px` });
     };
     input.addEventListener("input", () => {
       grow();
@@ -498,7 +496,7 @@ export class ConnectionsView extends ItemView {
   private backToRelated(focus: boolean): void {
     this.ask.clear();
     this.inputEl.value = "";
-    this.inputEl.style.height = "";
+    this.inputEl.style.removeProperty("height");
     this.renderClear();
     this.render();
     if (focus) this.inputEl.focus();
@@ -1702,7 +1700,7 @@ export class ConnectionsView extends ItemView {
       this.setDrawerHeight(this.drawerHeight, false);
       void this.graph.load(this.anchor?.path ?? null, false);
     } else {
-      this.drawerBodyEl.style.height = "";
+      this.drawerBodyEl.style.removeProperty("height");
     }
     this.renderDrawerHead();
   }
@@ -1825,8 +1823,9 @@ export class ConnectionsView extends ItemView {
         overlap = Math.ceil(pane.bottom - status.top);
     }
     const value = overlap > 0 ? `${overlap}px` : "";
-    if (el.style.paddingBottom !== value)
-      el.style.setProperty("padding-bottom", value, value ? "important" : "");
+    if (el.style.paddingBottom === value) return;
+    if (value) el.setCssProps({ "padding-bottom": value });
+    else el.style.removeProperty("padding-bottom");
   }
 }
 

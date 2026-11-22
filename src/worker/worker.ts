@@ -16,6 +16,7 @@ const index = new SearchIndex();
 const scope = self as unknown as {
   onmessage: ((e: MessageEvent<WorkerMessage>) => void) | null;
   postMessage(msg: WorkerResponse): void;
+  setTimeout(handler: () => void, ms: number): number;
 };
 const reads: WorkerRequest[] = [];
 const writes: WorkerRequest[] = [];
@@ -38,7 +39,7 @@ function run(): void {
 function pump(): void {
   if (scheduled || (reads.length === 0 && writes.length === 0)) return;
   scheduled = true;
-  setTimeout(run, 0);
+  scope.setTimeout(run, 0);
 }
 
 scope.onmessage = (e) => {

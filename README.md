@@ -86,6 +86,8 @@ If the plugin needs a newer engine, the welcome screen says so and shows this co
 
 Obsidian asks plugins to state these things.
 
+- **It lists the files in your vault.** To build its index, the plugin reads the list of files in the vault, and the text of the notes and attachments it indexes. It skips the folders you exclude, notes with `trova: false` in their frontmatter, and Obsidian's own excluded files.
+- **Clipboard.** The plugin only writes to the clipboard, when you choose a copy action: copying the basket, links, a saved search, the debug info or the install command. It never reads the clipboard.
 - **It runs a separate program.** The plugin starts the `trova` engine that you installed, as a background process. It never downloads or installs programs itself.
 - **Network.** The plugin talks only to the engine, on `127.0.0.1`, with a token that only your user account can read. The engine downloads its models from Hugging Face once, after you click Start (about 330 MB, and about 1.7 GB more for Deep mode, which the plugin downloads only after you confirm). The models have their own licences, listed in the [engine's README](https://github.com/ibimal/trova#models). Your notes never leave the computer.
 - **No telemetry.** The plugin and the engine collect no usage data and send nothing anywhere.
@@ -129,6 +131,8 @@ npm run lint
 `npm run dev` rebuilds `main.js` on every change. To try a build, copy `main.js`, `manifest.json` and `styles.css` into a vault's `.obsidian/plugins/trova/` folder and reload Obsidian. A git-ignored `test-vault/` folder in this repository is a convenient place for that vault.
 
 `docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/src/contract); keep the two identical, and copy any change across. `test/contract.test.ts` and the notes in `test/fixture.ts` are copied from there too; the contract test differs only in its test import (`vitest` here, `vite-plus/test` there). The plugin connects only to an engine that serves its API major version; [the engine's `docs/api.md`](https://github.com/ibimal/trova/blob/main/docs/api.md) gives the rules. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
+
+Each release's files carry a GitHub build provenance attestation, which shows they were built from this repository by its release workflow. To check one, download it and run `gh attestation verify main.js --repo ibimal/trova-obsidian`.
 
 To release a version, run `npm version` with `patch`, `minor` or `major`, then push the commit and the tag:
 

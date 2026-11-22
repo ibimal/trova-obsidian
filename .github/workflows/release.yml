@@ -1,13 +1,16 @@
 name: Release
 
-# Pushing a tag that equals manifest.json's version (for example 0.1.0, no "v") builds the plugin
-# and creates a draft release with the three files Obsidian installs.
+# Pushing a tag that equals manifest.json's version (for example 0.1.0, no "v") builds the plugin,
+# attests where the three files Obsidian installs were built, and creates a draft release with them.
 on:
   push:
     tags: ["*.*.*"]
 
 permissions:
   contents: write
+  # For the build provenance attestation.
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -24,8 +27,18 @@ jobs:
           if [ "$version" != "$GITHUB_REF_NAME" ]; then echo "Tag $GITHUB_REF_NAME does not match manifest.json version $version"; exit 1; fi
           node -e "const v=require('./versions.json'); if (!v['$version']) { console.error('versions.json has no entry for $version'); process.exit(1) }"
       - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
       - run: npm test
       - run: npm run build
+      - name: Attest the build provenance of the release files
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
       - name: Create a draft release
         env:
           GH_TOKEN: ${{ github.token }}
