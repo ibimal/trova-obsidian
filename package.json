@@ -1,6 +1,6 @@
 {
   "name": "trova-obsidian",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Obsidian plugin for Trova: Instant search, related notes and Ask, a Context basket and Vault care on one local index",
   "license": "MIT",
