@@ -2,8 +2,34 @@
 // (github.com/ibimal/trova-obsidian) keeps a copy in src/contract/, so a change to the /v1 API
 // must be copied there too.
 
-export const API_VERSION = "1.0";
+/**
+ * The API version, MAJOR.MINOR. A minor version adds without breaking: new endpoints, optional
+ * fields, new capabilities. A new major version gets new paths (/v2) and is announced in `apis`.
+ * docs/api.md in github.com/ibimal/trova states the rules.
+ */
+export const API_VERSION = "1.1";
 export const API_MAJOR = 1;
+
+/** The answer to GET /health, which needs no token. */
+export interface HealthResponse {
+  ok: true;
+  name: string;
+  version: string;
+  /** The newest API version the engine serves. */
+  api: string;
+  /** Every API version the engine serves, one per major version. Added in API 1.1; older engines send only `api`. */
+  apis?: string[];
+}
+
+/**
+ * Whether an engine that serves the API versions `served` can talk to a client built for API major
+ * `major`, and if not, which side is out of date.
+ */
+export function apiCompatibility(served: readonly string[], major = API_MAJOR): "ok" | "engineTooOld" | "engineTooNew" {
+  const majors = served.map((v) => Number(v.split(".")[0])).filter(Number.isFinite);
+  if (majors.includes(major)) return "ok";
+  return majors.some((m) => m > major) ? "engineTooNew" : "engineTooOld";
+}
 
 // ---------- Query ----------
 

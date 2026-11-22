@@ -269,6 +269,26 @@ describe("engine lifecycle", () => {
     expect(findBinary).toHaveBeenCalledTimes(calls);
     vi.useRealTimers();
   });
+  it("connects only to an engine that serves API major 1, and says which side to update otherwise", async () => {
+    const health = (body: object) => vi.fn(async () => new Response(JSON.stringify({ ok: true, name: "trova", version: "x", ...body })));
+    const check = async (body: object) => {
+      vi.stubGlobal("fetch", health(body));
+      const m = new EngineManager(host({ mode: () => "external" as const, endpoint: () => ({ base: "http://127.0.0.1:1", token: "t" }) }));
+      await m.connect(true);
+      const { state, outdated, gotApi } = m.snapshot;
+      m.stop();
+      return { state, outdated, gotApi };
+    };
+    try {
+      expect(await check({ api: "2.0", apis: ["2.0"] })).toEqual({ state: "wrong-version", outdated: "plugin", gotApi: "2.0" });
+      expect(await check({ api: "0.9" })).toEqual({ state: "wrong-version", outdated: "engine", gotApi: "0.9" });
+      // An engine that serves both majors, and one from before API 1.1 that sends only `api`.
+      expect((await check({ api: "2.0", apis: ["2.0", "1.4"] })).state).not.toBe("wrong-version");
+      expect((await check({ api: "1.0" })).state).not.toBe("wrong-version");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
   it("status bar text follows the states table", () => {
     const idle = { done: 0, total: 0, running: false };
     const base = { api: "1.0", engine: { name: "trova", version: "0.1.0", backend: "qmd" }, capabilities: [], collections: [], jobs: [] };

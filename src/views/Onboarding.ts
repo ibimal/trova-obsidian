@@ -76,6 +76,8 @@ export class OnboardingModal extends Modal {
     }
     if (s.state === "connecting" || s.state === "idle") {
       box.createEl("p", { text: t("engineChecking") });
+    } else if (s.state === "wrong-version" && s.outdated === "plugin") {
+      box.createEl("p", { text: t("pluginTooOld", { got: s.gotApi ?? "?", want: API_VERSION }) });
     } else if (s.state === "wrong-version") {
       box.createEl("p", { text: t("engineWrongVersion", { got: s.gotApi ?? "?", want: API_VERSION }) });
       this.command(box, t("upgradeCommand"));

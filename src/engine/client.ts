@@ -2,7 +2,7 @@
 // `requestUrl` returns only whole responses and cannot be aborted, so everything uses fetch. The
 // engine listens on 127.0.0.1 and allows the app://obsidian.md origin.
 
-import { EngineError, type EngineEvent, type EngineEventName, type ErrorBody, type ResultBatch } from "../contract/index.js";
+import { EngineError, type EngineEvent, type EngineEventName, type ErrorBody, type HealthResponse, type ResultBatch } from "../contract/index.js";
 
 export class EngineClient {
   constructor(
@@ -89,13 +89,13 @@ export class EngineClient {
     }
   }
 
-  static async health(base: string, timeoutMs = 1000): Promise<{ api: string; version: string; name: string } | null> {
+  static async health(base: string, timeoutMs = 1000): Promise<HealthResponse | null> {
     try {
       const controller = new AbortController();
       const timer = window.setTimeout(() => controller.abort(), timeoutMs);
       const res = await fetch(`${base}/health`, { signal: controller.signal });
       window.clearTimeout(timer);
-      return res.ok ? ((await res.json()) as { api: string; version: string; name: string }) : null;
+      return res.ok ? ((await res.json()) as HealthResponse) : null;
     } catch {
       return null;
     }

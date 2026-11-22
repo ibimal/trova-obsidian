@@ -3,6 +3,7 @@
 
 import {
   API_MAJOR,
+  apiCompatibility,
   EngineError,
   type AskRequest,
   type Capability,
@@ -39,6 +40,8 @@ export interface EngineSnapshot {
   status?: IndexStatus;
   /** The engine's API version when it is the wrong one. */
   gotApi?: string;
+  /** With state "wrong-version": which side needs updating. */
+  outdated?: "engine" | "plugin";
   progress?: { kind: string; done: number; total: number };
   error?: string;
 }
@@ -159,9 +162,12 @@ export class EngineManager {
     if (!ep) return "none";
     const health = await EngineClient.health(ep.base);
     if (!health) return "none";
-    // Upgrade: a different major API version is never connected to.
-    if (Number(String(health.api).split(".")[0]) !== API_MAJOR) {
-      this.set({ state: "wrong-version", gotApi: health.api, reason: `API ${health.api}` });
+    // The plugin talks only to an engine that serves its major API version. An engine from before
+    // API 1.1 sends no `apis` list, only `api`.
+    const served = health.apis ?? [health.api];
+    const fit = apiCompatibility(served, API_MAJOR);
+    if (fit !== "ok") {
+      this.set({ state: "wrong-version", gotApi: served.join(", "), outdated: fit === "engineTooOld" ? "engine" : "plugin", reason: `API ${served.join(", ")}` });
       return "wrong-version";
     }
     this.client = new EngineClient(ep.base, ep.token);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  apiCompatibility,
   blendRerank,
   blockAt,
   blockId,
@@ -430,5 +431,17 @@ describe("context basket", () => {
       { path: "a.md", title: "a", start: 0, end: 12, content: text.slice(0, 12), headings: undefined },
       { path: "b.md", title: "b", content: "whole b" },
     ]);
+  });
+});
+
+describe("API compatibility", () => {
+  it("connects when the engine serves the client's major version, and says which side is out of date otherwise", () => {
+    expect(apiCompatibility(["1.1"], 1)).toBe("ok");
+    expect(apiCompatibility(["1.0"], 1)).toBe("ok");
+    expect(apiCompatibility(["2.0", "1.4"], 1)).toBe("ok");
+    expect(apiCompatibility(["2.0"], 1)).toBe("engineTooNew");
+    expect(apiCompatibility(["1.3"], 2)).toBe("engineTooOld");
+    expect(apiCompatibility([], 1)).toBe("engineTooOld");
+    expect(apiCompatibility(["nonsense"], 1)).toBe("engineTooOld");
   });
 });

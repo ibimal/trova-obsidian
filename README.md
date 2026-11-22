@@ -128,7 +128,7 @@ npm run lint
 
 `npm run dev` rebuilds `main.js` on every change. To try a build, copy `main.js`, `manifest.json` and `styles.css` into a vault's `.obsidian/plugins/trova/` folder and reload Obsidian. A git-ignored `test-vault/` folder in this repository is a convenient place for that vault.
 
-`docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/src/contract); keep the two identical, and copy any change across. `test/contract.test.ts` and the notes in `test/fixture.ts` are copied from there too. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
+`docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/src/contract); keep the two identical, and copy any change across. `test/contract.test.ts` and the notes in `test/fixture.ts` are copied from there too. The plugin connects only to an engine that serves its API major version; [the engine's `docs/api.md`](https://github.com/ibimal/trova/blob/main/docs/api.md) gives the rules. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
 
 To release a version, run `npm version` with `patch`, `minor` or `major`, then push the commit and the tag:
 
@@ -154,4 +154,4 @@ git push origin 0.1.0
 
 ## Licence
 
-MIT; see `LICENSE`. No code is copied from Smart Connections or Omnisearch.
+MIT; see `LICENSE`. `main.js` includes [MiniSearch](https://github.com/lucaong/minisearch) by Luca Ongaro (MIT), whose notice is at the top of the file. No code is copied from Smart Connections or Omnisearch.
