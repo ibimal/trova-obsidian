@@ -403,6 +403,10 @@ body {
   padding: 0;
   overflow: hidden;
 }
+/* The Connections pane leaves room under it for Obsidian's status bar; the pane measures how much. */
+.workspace-leaf-content .view-content.trova-pane.trova-seek {
+  padding-bottom: var(--trova-status-clearance, 0px);
+}
 .trova-pane-header {
   padding: var(--size-4-2) var(--size-4-3);
   border-bottom: 1px solid var(--background-modifier-border);

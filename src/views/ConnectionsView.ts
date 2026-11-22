@@ -1822,8 +1822,9 @@ export class ConnectionsView extends ItemView {
       if (!sideBySide && status.top < pane.bottom && status.bottom > pane.top)
         overlap = Math.ceil(pane.bottom - status.top);
     }
-    if (overlap > 0) el.setCssProps({ "padding-bottom": `${overlap}px` });
-    else el.style.removeProperty("padding-bottom");
+    // The stylesheet turns this custom property into the pane's bottom padding.
+    if (overlap > 0) el.setCssProps({ "--trova-status-clearance": `${overlap}px` });
+    else el.style.removeProperty("--trova-status-clearance");
   }
 }
 

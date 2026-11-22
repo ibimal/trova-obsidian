@@ -4,7 +4,7 @@ All notable changes to the Trova plugin for Obsidian. Versions follow [semantic 
 
 ## 0.1.2
 
-- Fixes the error in Obsidian's review of 0.1.1: the Connections pane's room for the status bar is now set from a computed value only.
+- Fixes the error in Obsidian's review of 0.1.1: the Connections pane's room for the status bar now passes through a CSS custom property, which the stylesheet turns into padding.
 - Merges a duplicated style rule for the Vault care tags. Nothing changes in how the plugin looks or works.
 
 ## 0.1.1
