@@ -1,7 +1,7 @@
 // The fixture vault's notes: about 200 notes that cover duplicate headings, notes without
 // headings, long notes, frontmatter of every type, aliases, tags, links, an excluded note, a
 // canvas, a PDF and non-English text. Generation is deterministic. Copied from the trova
-// repository (packages/eval/src/fixture.ts), which also holds the evaluation queries and the code
+// repository (src/eval/fixture.ts), which also holds the evaluation queries and the code
 // that writes the notes to disk for `trova eval`.
 
 interface Topic {

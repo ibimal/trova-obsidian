@@ -87,7 +87,7 @@ If the plugin needs a newer engine, the welcome screen says so and shows this co
 Obsidian asks plugins to state these things.
 
 - **It runs a separate program.** The plugin starts the `trova` engine that you installed, as a background process. It never downloads or installs programs itself.
-- **Network.** The plugin talks only to the engine, on `127.0.0.1`, with a token that only your user account can read. The engine downloads its models from Hugging Face once, after you click Start (about 330 MB, and about 1.7 GB more for Deep mode, which the plugin downloads only after you confirm). The models have their own licences, listed in the [engine's README](https://github.com/ibimal/trova/tree/main/packages/engine#models). Your notes never leave the computer.
+- **Network.** The plugin talks only to the engine, on `127.0.0.1`, with a token that only your user account can read. The engine downloads its models from Hugging Face once, after you click Start (about 330 MB, and about 1.7 GB more for Deep mode, which the plugin downloads only after you confirm). The models have their own licences, listed in the [engine's README](https://github.com/ibimal/trova#models). Your notes never leave the computer.
 - **No telemetry.** The plugin and the engine collect no usage data and send nothing anywhere.
 - **Files outside the vault.** Only if you add folders under Settings → Trova → Outside folders. The engine then indexes those folders, and Instant search shows their files.
 - **Optional local HTTP API.** Off by default. When you turn it on, the plugin serves read-only search, Ask and related-notes endpoints on `127.0.0.1`, protected by a token shown in the settings.
@@ -101,7 +101,7 @@ Every list and graph follows Obsidian's own rule. A click opens a note in the cu
 
 | Data | Location |
 | --- | --- |
-| Engine index and models | Managed by the engine; see its [README](https://github.com/ibimal/trova/tree/main/packages/engine#where-data-lives) |
+| Engine index and models | Managed by the engine; see its [README](https://github.com/ibimal/trova#where-data-lives) |
 | Settings, pins, hides, pane filters, folder context, Vault care choices | The plugin's `data.json`, synced with the vault. When the plugin repairs damaged entries, it first copies the file to `data.backup-<time>.json` |
 | Query history, last-opened times, basket, today's Rediscover pick, pane layout | Obsidian's local storage, per device |
 | State of open tabs: the similarity graph's centre note, size and lock; Vault care's group | Obsidian's workspace layout, per device |
@@ -128,22 +128,29 @@ npm run lint
 
 `npm run dev` rebuilds `main.js` on every change. To try a build, copy `main.js`, `manifest.json` and `styles.css` into a vault's `.obsidian/plugins/trova/` folder and reload Obsidian. A git-ignored `test-vault/` folder in this repository is a convenient place for that vault.
 
-`docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/packages/contract); keep the two identical, and copy any change across. `test/contract.test.ts` and the notes in `test/fixture.ts` are copied from there too. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
+`docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/src/contract); keep the two identical, and copy any change across. `test/contract.test.ts` and the notes in `test/fixture.ts` are copied from there too. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
 
-To release a version:
+To release a version, run `npm version` with `patch`, `minor` or `major`, then push the commit and the tag:
 
-1. Set the new version in `manifest.json` and `package.json`, and add it to `versions.json` with the lowest Obsidian version it supports.
-2. Commit, then tag the commit with the version, without a "v", and push the tag:
+```bash
+npm version patch
+```
 
-   ```bash
-   git tag 0.1.0
-   ```
+```bash
+git push --follow-tags
+```
 
-   ```bash
-   git push origin 0.1.0
-   ```
+`npm version` sets the version in `package.json`, `manifest.json` and `versions.json` (with the lowest Obsidian version it supports, from `manifest.json`'s `minAppVersion`), commits them, and tags the commit with the bare version, as Obsidian requires. GitHub Actions then check that the tag matches `manifest.json` and `versions.json`, run the tests, build the plugin, and create a draft release with `main.js`, `manifest.json` and `styles.css` attached. Review the draft on GitHub and publish it.
 
-3. GitHub Actions checks that the tag matches `manifest.json` and `versions.json`, runs the tests, builds the plugin, and creates a draft release with `main.js`, `manifest.json` and `styles.css` attached. Review the draft on GitHub and publish it.
+The first release, 0.1.0, already has its version everywhere; tag it directly:
+
+```bash
+git tag 0.1.0
+```
+
+```bash
+git push origin 0.1.0
+```
 
 ## Licence
 
