@@ -10,7 +10,7 @@ import { t } from "../i18n/en.js";
 import { idle } from "../indexer.js";
 import type TrovaPlugin from "../main.js";
 import { pairKey } from "../settings.js";
-import { banner, folderOf, linkFor, navigableInMainArea, onOpen, passEnterKeys, showMenu } from "../ui.js";
+import { banner, folderOf, linkFor, localDay, navigableInMainArea, onOpen, passEnterKeys, showMenu } from "../ui.js";
 
 export const CARE_VIEW = "trova-care";
 export type CareGroup = "duplicates" | "orphans" | "rediscover";
@@ -51,7 +51,7 @@ function savedRediscover(plugin: TrovaPlugin): { day: string; items: RediscoverI
 /** Rediscover: strong connections to recently opened notes that were not opened for a long time. */
 async function pickRediscover(plugin: TrovaPlugin, signal?: AbortSignal): Promise<RediscoverItem[]> {
   const now = Date.now();
-  const today = new Date(now).toISOString().slice(0, 10);
+  const today = localDay(new Date(now));
   const saved = savedRediscover(plugin);
   if (saved?.day === today) return saved.items;
   if (!plugin.engine.ready) return [];
@@ -272,7 +272,7 @@ export class VaultCareView extends ItemView {
   private async loadCounts(): Promise<void> {
     await Promise.all([this.loadDuplicates(), this.loadOrphans()]);
     this.loaded = true;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDay();
     const saved = savedRediscover(this.plugin);
     if (saved?.day === today) this.rediscoverCount = saved.items.length;
     this.renderTiles();

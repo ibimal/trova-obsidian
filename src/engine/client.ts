@@ -1,5 +1,6 @@
-// EngineClient: fetch with AbortController, NDJSON streams and Server-Sent Events. `requestUrl`
-// cannot stream, so everything uses fetch.
+// EngineClient: fetch with AbortController, NDJSON streams and Server-Sent Events. Obsidian's
+// `requestUrl` returns only whole responses and cannot be aborted, so everything uses fetch. The
+// engine listens on 127.0.0.1 and allows the app://obsidian.md origin.
 
 import { EngineError, type EngineEvent, type EngineEventName, type ErrorBody, type ResultBatch } from "../contract/index.js";
 

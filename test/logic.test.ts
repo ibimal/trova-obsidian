@@ -317,3 +317,12 @@ describe("small pure helpers", () => {
     expect(r).toMatchObject({ id: `${C}:a.md#x`, source: `${C}:a.md`, label: "strong", block: { headings: ["X"] } });
   });
 });
+
+describe("local dates", () => {
+  it("uses the user's own time zone, not UTC", async () => {
+    const { localDay, localStamp } = await import("../src/ui.js");
+    const d = new Date(2026, 0, 5, 23, 7);
+    expect(localDay(d)).toBe("2026-01-05");
+    expect(localStamp(d)).toBe("2026-01-05 2307");
+  });
+});

@@ -14,10 +14,11 @@ Trova searches your vault by keyword and by meaning, on your own machine. It add
 
 ## Requirements
 
-- Obsidian 1.9.0 or later. The Bases view needs 1.10.
-- For everything except Instant search: the Trova engine, `trova-cli`, on the same computer. It needs Node 22 or later; Node 24 is the verified version. The engine is checked on macOS on Apple Silicon; other platforms are not tested yet.
+- Obsidian 1.9.0 or later, on a computer. The Bases view needs 1.10. This version is desktop only: Obsidian on phones and tablets does not offer it.
+- For everything except Instant search: the Trova engine, `trova-cli`, on the same computer. It needs Node 22 or later; Node 24 is the verified version.
+- The plugin and the engine are checked on macOS on Apple Silicon. Windows and Linux are not tested yet.
 
-Without the engine, Instant search still works from the plugin's own keyword index, and Ask falls back to keyword matches and says so. Related notes, semantic results, the similarity graph, the topic map and the near-duplicate scan need the engine. On mobile, only Instant search runs.
+Without the engine, Instant search still works from the plugin's own keyword index, and Ask falls back to keyword matches and says so. Related notes, semantic results, the similarity graph, the topic map and the near-duplicate scan need the engine.
 
 ## Install
 
@@ -31,13 +32,59 @@ Without the engine, Instant search still works from the plugin's own keyword ind
 
 The plugin looks for `trova` on your `PATH` and in the usual install folders. If it does not find it, set the path under Settings → Trova → Engine binary path.
 
-On desktop the plugin starts the engine when the vault opens, so the welcome screen can show what will be indexed and whether the models still need downloading. Nothing is indexed or downloaded until you click Start. "Continue without engine" disconnects the plugin and never starts the engine again; an engine it already started exits by itself after 30 minutes with no client.
+The plugin starts the engine when the vault opens, so the welcome screen can show what will be indexed and whether the models still need downloading. Nothing is indexed or downloaded until you click Start. "Continue without engine" disconnects the plugin and never starts the engine again; an engine it already started exits by itself after 30 minutes with no client.
+
+## Commands
+
+Open the command palette and type "Trova". You can give any command a hotkey under Settings → Hotkeys; the plugin sets none itself.
+
+| Command | What it does |
+| --- | --- |
+| Instant search | Search the vault as you type |
+| In-file search | Search the open note |
+| Ask, Ask about selection | Ask a question about the vault, or about the selected text |
+| Open Connections and Ask | Open the side pane |
+| Connections for selection | Related notes for the selected text |
+| Random strong connection | Open a note closely related to the active one |
+| Open Context basket, Copy basket | Show the basket, or copy its contents |
+| Add current note to Context basket, Add section at cursor to Context basket | Fill the basket |
+| Open Vault care (duplicates, orphans, Rediscover), Open Rediscover | Open Vault care, or its Rediscover pick |
+| Open topic map, Open similarity graph | Open the canvases |
+| Reindex now, Pause or resume indexing | Control the index |
+| Show welcome screen | Show the first-run screen again |
+
+## Update
+
+Update the plugin from Settings → Community plugins once it is listed there, or replace its three files with those of a newer release. Update the engine in a terminal:
+
+```bash
+npm install -g trova-cli@latest
+```
+
+If the plugin needs a newer engine, the welcome screen says so and shows this command.
+
+## Uninstall
+
+1. Disable and uninstall Trova under Settings → Community plugins.
+2. Remove the engine:
+
+   ```bash
+   npm uninstall -g trova-cli
+   ```
+
+3. Delete the engine's index, `~/.cache/trova/`. The models are in qmd's model cache, `~/.cache/qmd/models/`; delete them too, unless you also use [qmd](https://github.com/tobi/qmd) itself, which shares that folder.
+
+## Troubleshooting
+
+- **The welcome screen says the engine is not installed, but it is.** Obsidian started from the Dock does not see your terminal's `PATH`. The plugin also searches the usual install folders; if it still misses `trova`, run `which trova` (`where trova` on Windows) in a terminal and paste the result under Settings → Trova → Engine binary path.
+- **The engine does not start, or stops.** Run `trova doctor` in a terminal. It checks the Node version, SQLite, the models and the index. Node 22.12.0 crashes in the SQLite library the engine uses; update Node.
+- **Something else.** Click Trova in the status bar. When the engine is off or has failed, the popover has a "Copy debug info" button; paste its output into a [GitHub issue](https://github.com/ibimal/trova-obsidian/issues).
 
 ## What the plugin does on your computer
 
 Obsidian asks plugins to state these things.
 
-- **It runs a separate program.** On desktop the plugin starts the `trova` engine that you installed, as a background process. It never downloads or installs programs itself.
+- **It runs a separate program.** The plugin starts the `trova` engine that you installed, as a background process. It never downloads or installs programs itself.
 - **Network.** The plugin talks only to the engine, on `127.0.0.1`, with a token that only your user account can read. The engine downloads its models from Hugging Face once, after you click Start (about 330 MB, and about 1.7 GB more for Deep mode, which the plugin downloads only after you confirm). The models have their own licences, listed in the [engine's README](https://github.com/ibimal/trova/tree/main/packages/engine#models). Your notes never leave the computer.
 - **No telemetry.** The plugin and the engine collect no usage data and send nothing anywhere.
 - **Files outside the vault.** Only if you add folders under Settings → Trova → Outside folders. The engine then indexes those folders, and Instant search shows their files.
@@ -81,7 +128,20 @@ npm run lint
 
 `docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/packages/contract); its header names the commit. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
 
-Releases are built by GitHub Actions: pushing a tag that equals the version in `manifest.json` (for example `0.1.0`, with no "v") creates a release with the three files attached.
+To release a version:
+
+1. Set the new version in `manifest.json` and `package.json`, and add it to `versions.json` with the lowest Obsidian version it supports.
+2. Commit, then tag the commit with the version, without a "v", and push the tag:
+
+   ```bash
+   git tag 0.1.0
+   ```
+
+   ```bash
+   git push origin 0.1.0
+   ```
+
+3. GitHub Actions checks that the tag matches `manifest.json` and `versions.json`, runs the tests, builds the plugin, and creates a draft release with `main.js`, `manifest.json` and `styles.css` attached. Review the draft on GitHub and publish it.
 
 ## Licence
 

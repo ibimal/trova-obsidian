@@ -1,7 +1,7 @@
 // Trova: lifecycle, command and view registration. `onload` registers and returns; the worker,
 // the engine connection and indexing start inside workspace.onLayoutReady.
 
-import { MarkdownView, Modal, Notice, Platform, Plugin, TFile, type Editor, type WorkspaceLeaf } from "obsidian";
+import { MarkdownView, Modal, Notice, Platform, Plugin, TFile, normalizePath, type Editor, type WorkspaceLeaf } from "obsidian";
 import {
   findBlock,
   parseId,
@@ -32,7 +32,7 @@ import { QueryController, type ControllerDeps } from "./query/controller.js";
 import type { TrovaSettings } from "./settings.js";
 import { TrovaSettingTab } from "./settingsTab.js";
 import { DataStore, LocalState } from "./state/store.js";
-import { linkFor, openTarget, type OpenIn, type OpenTarget } from "./ui.js";
+import { linkFor, localStamp, openTarget, type OpenIn, type OpenTarget } from "./ui.js";
 import { BASKET_VIEW, BasketView } from "./views/BasketView.js";
 import { CONNECTIONS_VIEW, ConnectionsView, resultHeading, resultHeadingPath, sectionAt } from "./views/ConnectionsView.js";
 import { GRAPH_VIEW, GraphView } from "./views/GraphView.js";
@@ -603,10 +603,11 @@ export default class TrovaPlugin extends Plugin {
     try {
       const { text, tokens } = await this.basket.assemble(format, (done, total) => button?.setText(t("copying", { done, total })));
       if (format === "note") {
-        const folder = this.settings.contextNoteFolder.replace(/^\/+|\/+$/g, "") || this.app.fileManager.getNewFileParent("").path.replace(/^\/$/, "");
+        const typed = this.settings.contextNoteFolder.trim();
+        const folder = typed ? normalizePath(typed).replace(/^\/+|\/+$/g, "") : this.app.fileManager.getNewFileParent("").path.replace(/^\/$/, "");
         if (folder && !this.app.vault.getAbstractFileByPath(folder)) await this.app.vault.createFolder(folder);
-        const stamp = new Date().toISOString().slice(0, 16).replace("T", " ").replace(":", "");
-        const path = `${folder ? `${folder}/` : ""}Context ${stamp}.md`;
+        const stamp = localStamp();
+        const path = normalizePath(`${folder ? `${folder}/` : ""}Context ${stamp}.md`);
         const file = await this.app.vault.create(path, text);
         new Notice(t("basketSaved", { path }));
         await this.app.workspace.getLeaf("tab").openFile(file);

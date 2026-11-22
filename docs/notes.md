@@ -20,7 +20,7 @@ The plugin implements a written features and API specification that is not publi
 
 ## Not built
 
-- Mobile runs Instant search from the worker and nothing else. Semantic search on mobile waits for the planned Rust engine and its WebAssembly build.
+- Mobile. Version 0.1.0 is desktop only (`isDesktopOnly: true`). The code keeps a mobile path that runs Instant search from the worker and nothing else, but it has not been run on a phone, and on iOS before 16.4 Instant search would fail: its regular expressions use lookbehind, which those versions do not support. Semantic search on mobile waits for the planned Rust engine and its WebAssembly build.
 - The end-to-end layer of the test plan (a scripted Obsidian instance). The plugin's logic is tested with a mocked `obsidian` module. Its views have no automated tests in this repository; they were checked in a running Obsidian.
 
 ## Findings

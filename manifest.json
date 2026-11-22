@@ -3,7 +3,8 @@
   "name": "Trova",
   "version": "0.1.0",
   "minAppVersion": "1.9.0",
-  "description": "Instant search, related notes and Ask, a Context basket and Vault care on one local index. Nothing leaves your machine.",
+  "description": "Search notes by keyword and meaning, see related notes, ask questions and find near-duplicates, all on your own computer.",
   "author": "Bimal",
-  "isDesktopOnly": false
+  "authorUrl": "https://github.com/ibimal",
+  "isDesktopOnly": true
 }

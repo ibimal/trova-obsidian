@@ -305,7 +305,7 @@ export const en = {
   scopeNotes: "{n} notes",
   scopeExcluded: "Excluded folders: {folders}",
   scopeNoneExcluded: "No folders are excluded",
-  scopeDownload: "The embedding model downloads once, about 300 MB. Nothing downloads before you click Start.",
+  scopeDownload: "The embedding model downloads once, about 330 MB. Nothing downloads before you click Start.",
   start: "Start",
   finishNotice: "Trova indexed {sources} sources ({embedded} embedded).",
   setHotkeys: "Set hotkeys",

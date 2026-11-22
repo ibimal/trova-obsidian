@@ -269,3 +269,15 @@ export function hashText(text: string): string {
   }
   return ((h2 >>> 0).toString(16) + (h1 >>> 0).toString(16)).padStart(16, "0");
 }
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** The date in the user's own time zone, as YYYY-MM-DD. */
+export function localDay(d = new Date()): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** The date and time in the user's own time zone, as YYYY-MM-DD HHmm, for file names. */
+export function localStamp(d = new Date()): string {
+  return `${localDay(d)} ${pad2(d.getHours())}${pad2(d.getMinutes())}`;
+}
