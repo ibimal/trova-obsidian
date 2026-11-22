@@ -1034,17 +1034,10 @@ export class ConnectionsView extends ItemView {
     const box = el.createDiv({ cls: "trova-alert", attr: { role: "note" } });
     setIcon(box.createSpan({ cls: "trova-alert-icon", attr: { "aria-hidden": "true" } }), "copy");
     box.createSpan({ cls: "trova-alert-text", text });
-    box
-      .createEl("button", { text: t("compare") })
-      .addEventListener(
-        "click",
-        () =>
-          void this.plugin.openBeside(dup.otherId, {
-            besidePath: path,
-            reuse: true,
-            own: dup.ownId,
-          }),
-      );
+    const compare = box.createEl("button", { text: t("compare") });
+    compare.addEventListener("click", () => {
+      void this.plugin.openBeside(dup.otherId, { besidePath: path, reuse: true, own: dup.ownId });
+    });
   }
 
   private renderResult(list: HTMLElement, r: Result, pinned: boolean): void {
