@@ -124,7 +124,7 @@ npm test
 npm run lint
 ```
 
-`npm run lint` checks the code against Obsidian's own ESLint rules (`eslint-plugin-obsidianmd`), the rules Obsidian's review uses. `npm run format` formats the code with [Oxfmt](https://oxc.rs/docs/guide/usage/formatter), at the version and settings the engine repository uses, so the shared contract stays identical; `npm run format:check` checks it, as CI does.
+`npm run lint` checks the code against Obsidian's own ESLint rules (`eslint-plugin-obsidianmd`), the rules Obsidian's review uses. `npm run format` formats the code with [Oxfmt](https://oxc.rs/docs/guide/usage/formatter), at the version and settings the engine repository uses, so the shared contract stays identical; `npm run format:check` checks it, as CI does. Update Oxfmt only together with the engine's Vite+, as [its `docs/development.md`](https://github.com/ibimal/trova/blob/main/docs/development.md#updating-vite) describes.
 
 `npm run dev` rebuilds `main.js` on every change. To try a build, copy `main.js`, `manifest.json` and `styles.css` into a vault's `.obsidian/plugins/trova/` folder and reload Obsidian. A git-ignored `test-vault/` folder in this repository is a convenient place for that vault.
 

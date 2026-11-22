@@ -17,6 +17,8 @@ updates:
         update-types: [version-update:semver-major]
       # CodeMirror is pinned to the versions the obsidian package requires; it moves with obsidian.
       - dependency-name: "@codemirror/*"
+      # Oxfmt matches the version bundled in the engine repository's Vite+; it moves with that.
+      - dependency-name: oxfmt
   - package-ecosystem: github-actions
     directory: /
     schedule:
