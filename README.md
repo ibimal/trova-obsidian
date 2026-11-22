@@ -8,7 +8,7 @@ Trova searches your vault by keyword and by meaning, on your own machine. It add
 - **Connections and Ask.** A side pane that lists the notes and sections related to the active note, or to the text you select. Type a question in its search box and it answers with the passages that match, ranked by keyword and meaning; Esc goes back to the related notes.
 - **Similarity graph.** The active note, its related notes and the links between them on one canvas. A smaller copy sits in a drawer at the bottom of the Connections pane.
 - **Context basket.** Collect notes and sections, then copy them as one block of text, for example to paste into an AI chat. It shows the estimated token count.
-- **Vault care.** Near-duplicate notes, orphan notes and a daily Rediscover pick, in one tab. "Not a duplicate" and "Keep unlinked" are remembered, with Undo.
+- **Vault care.** Near-duplicate notes, orphan notes and a daily Rediscover pick (off until you turn it on in the settings), in one tab. "Not a duplicate" and "Keep unlinked" are remembered, with Undo.
 - **Topic map.** Your notes grouped by topic on a canvas that pans and zooms with thousands of notes.
 - **Bases view.** A Bases view named "Trova related" adds a similarity Score column and a Related column.
 
@@ -32,7 +32,7 @@ Without the engine, Instant search still works from the plugin's own keyword ind
 
 The plugin looks for `trova` on your `PATH` and in the usual install folders. If it does not find it, set the path under Settings → Trova → Engine binary path.
 
-The plugin starts the engine when the vault opens, so the welcome screen can show what will be indexed and whether the models still need downloading. Nothing is indexed or downloaded until you click Start. "Continue without engine" disconnects the plugin and never starts the engine again; an engine it already started exits by itself after 30 minutes with no client.
+The plugin starts the engine when the vault opens, so the welcome screen can show what will be indexed and whether the models still need downloading. Nothing is indexed or downloaded until you click Start. "Continue without engine" disconnects the plugin, which then does not start the engine again until you choose "Show welcome screen"; an engine it already started exits by itself after 30 minutes with no client.
 
 ## Commands
 
@@ -128,7 +128,7 @@ npm run lint
 
 `npm run dev` rebuilds `main.js` on every change. To try a build, copy `main.js`, `manifest.json` and `styles.css` into a vault's `.obsidian/plugins/trova/` folder and reload Obsidian. A git-ignored `test-vault/` folder in this repository is a convenient place for that vault.
 
-`docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/packages/contract); its header names the commit. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
+`docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/packages/contract); keep the two identical, and copy any change across. `test/contract.test.ts` and the notes in `test/fixture.ts` are copied from there too. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
 
 To release a version:
 

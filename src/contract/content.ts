@@ -44,10 +44,6 @@ export function parseId(id: string): ParsedId | null {
   return { collection, path, source: `${collection}:${path}`, headingPath: rest.slice(hash + 1) };
 }
 
-export function isBlockId(id: string): boolean {
-  return parseId(id)?.headingPath !== undefined;
-}
-
 /** A vault's collection is named "vault-" plus the first 8 hex characters of the SHA-256 of its absolute path. */
 export async function vaultCollectionName(absolutePath: string): Promise<string> {
   const bytes = new TextEncoder().encode(absolutePath);

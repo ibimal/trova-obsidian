@@ -50,7 +50,6 @@ export class EditorSuggest<T> {
   constructor(public app: unknown) {}
   declare _t: T;
 }
-export class Setting {}
 export const Keymap = {
   isModifier: (e: { metaKey?: boolean }, mod: string) => mod === "Mod" && !!e.metaKey,
   isModEvent: (e?: { metaKey?: boolean; altKey?: boolean; shiftKey?: boolean } | null) =>

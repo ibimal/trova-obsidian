@@ -15,7 +15,6 @@ export const TYPO_TWO_EDITS_MIN_LENGTH = 9;
 export const SEMANTIC_ROWS_DELAY_MS = 150;
 export const SEMANTIC_ROWS_MIN_WORDS = 3;
 export const SEMANTIC_ROWS_MAX = 5;
-export const FIELD_WEIGHTS = { filename: 4, aliases: 3, headings: 2, body: 1 } as const;
 export const QMD_BM25_WEIGHTS = { path: 1.5, title: 4.0, body: 1.0 } as const;
 
 // ---------- Connections ----------
@@ -57,7 +56,6 @@ export const BLEND_ALPHA = { top3: 0.75, top10: 0.6, rest: 0.4 } as const;
 // ---------- Vault care ----------
 export const LINK_SUGGEST_TITLE_WEIGHT = 0.5;
 export const LINK_SUGGEST_SIMILARITY_WEIGHT = 0.5;
-export const MENTION_MIN_CHARS = 3;
 export const DUPLICATE_BLOCK_COSINE = 0.92;
 export const DUPLICATE_BLOCK_MIN_WORDS = 40;
 export const DUPLICATE_SOURCE_COSINE = 0.95;

@@ -45,7 +45,6 @@ export interface TrovaSettings {
   httpApiPort: number;
   httpApiToken: string;
   debugLog: boolean;
-  onboarded: boolean;
 }
 
 export const DEFAULT_SETTINGS: TrovaSettings = {
@@ -84,7 +83,6 @@ export const DEFAULT_SETTINGS: TrovaSettings = {
   httpApiPort: 51361,
   httpApiToken: "",
   debugLog: false,
-  onboarded: false,
 };
 
 /** Synced plugin state, stored in data.json. */

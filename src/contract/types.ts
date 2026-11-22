@@ -1,5 +1,6 @@
-// Types for the /v1 engine contract. The plugin, the engine and the CLI all import these,
-// so the two sides of the API cannot drift.
+// Types for the /v1 engine contract. The engine and the CLI import these. The Obsidian plugin
+// (github.com/ibimal/trova-obsidian) keeps a copy in src/contract/, so a change to the /v1 API
+// must be copied there too.
 
 export const API_VERSION = "1.0";
 export const API_MAJOR = 1;

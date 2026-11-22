@@ -1,26 +1,8 @@
-// The fixture vault: about 200 notes that cover duplicate headings, notes without headings, long
-// notes, frontmatter of every type, aliases, tags, links, an excluded note, a canvas, a PDF and
-// non-English text. Generation is deterministic. Copied from the trova repository
-// (packages/eval/src/fixture.ts), where `trova eval` uses the same notes.
-
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-
-export interface EvalQuery {
-  id: string;
-  query: string;
-  shape: "short" | "long";
-  surface: "instant" | "ask" | "related";
-  anchor?: string;
-  /** Source or block path (relative to the collection) -> graded relevance 1 to 3. */
-  relevant: Record<string, 1 | 2 | 3>;
-}
-
-export interface Fixture {
-  dir: string;
-  notes: string[];
-  queries: EvalQuery[];
-}
+// The fixture vault's notes: about 200 notes that cover duplicate headings, notes without
+// headings, long notes, frontmatter of every type, aliases, tags, links, an excluded note, a
+// canvas, a PDF and non-English text. Generation is deterministic. Copied from the trova
+// repository (packages/eval/src/fixture.ts), which also holds the evaluation queries and the code
+// that writes the notes to disk for `trova eval`.
 
 interface Topic {
   key: string;
@@ -30,7 +12,7 @@ interface Topic {
   question: string;
 }
 
-export const TOPICS: Topic[] = [
+const TOPICS: Topic[] = [
   { key: "keyboard", folder: "Tools", title: "Keyboard", terms: ["keyboard", "remap", "layer", "homerow", "modifier", "keymap", "firmware", "chord"], question: "how do I remap modifier keys on a keyboard layer" },
   { key: "search", folder: "Search", title: "Retrieval", terms: ["retrieval", "ranking", "fusion", "bm25", "embedding", "rerank", "recall", "index"], question: "what improves ranking when combining bm25 with embedding retrieval" },
   { key: "garden", folder: "Garden", title: "Garden", terms: ["tomato", "compost", "seedling", "mulch", "prune", "harvest", "trellis", "soil"], question: "when should tomato seedlings move into compost rich soil" },
@@ -67,7 +49,7 @@ function paragraph(topic: Topic, random: () => number, sentences = 4): string {
 }
 
 /** A minimal PDF with one text line per page, enough for the PDF extractor. */
-export function makePdf(pages: string[]): Buffer {
+function makePdf(pages: string[]): Buffer {
   const objects: string[] = [];
   const kids = pages.map((_, i) => `${3 + i * 2} 0 R`).join(" ");
   objects[0] = "<< /Type /Catalog /Pages 2 0 R >>";
@@ -201,51 +183,4 @@ export function fixtureNotes(): Record<string, string | Buffer> {
   });
   files["Papers/Fusion.pdf"] = makePdf(["Reciprocal rank fusion outperforms single rankers", "Second page discusses the xylophone benchmark"]);
   return files;
-}
-
-export function fixtureQueries(): EvalQuery[] {
-  const queries: EvalQuery[] = [];
-  const notes = fixtureNotes();
-  const paths = Object.keys(notes).filter((p) => p.endsWith(".md"));
-  for (const topic of TOPICS) {
-    const mine = paths.filter((p) => p.startsWith(`${topic.folder}/${topic.title} `));
-    const text = (p: string) => String(notes[p]).toLowerCase();
-    const pair = topic.terms.slice(0, 2);
-    const relevantShort: Record<string, 1 | 2 | 3> = {};
-    for (const p of mine) if (pair.every((w) => text(p).includes(w))) relevantShort[p] = 2;
-    queries.push({ id: `${topic.key}-short`, query: pair.join(" "), shape: "short", surface: "instant", relevant: relevantShort });
-    const relevantLong: Record<string, 1 | 2 | 3> = {};
-    for (const p of mine) relevantLong[p] = 1;
-    queries.push({ id: `${topic.key}-long`, query: topic.question, shape: "long", surface: "ask", relevant: relevantLong });
-    const anchor = mine[0]!;
-    const relevantRelated: Record<string, 1 | 2 | 3> = {};
-    for (const p of mine.slice(1)) relevantRelated[p] = 1;
-    queries.push({ id: `${topic.key}-related`, query: "", shape: "long", surface: "related", anchor, relevant: relevantRelated });
-  }
-  queries.push({ id: "kanata-title", query: "kanata", shape: "short", surface: "instant", relevant: { "Tools/Kanata.md": 3, "Mentions.md": 1 } });
-  queries.push({ id: "chunk-size", query: "what did I decide about chunk size", shape: "long", surface: "ask", relevant: { "Trova.md": 3 } });
-  return queries;
-}
-
-/** Writes the fixture vault to a folder and returns its paths and evaluation queries. */
-export function writeFixtureVault(dir: string): Fixture {
-  const files = fixtureNotes();
-  for (const [path, content] of Object.entries(files)) {
-    const target = join(dir, path);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, content);
-  }
-  return { dir, notes: Object.keys(files), queries: fixtureQueries() };
-}
-
-/** Writes a generated vault of `count` notes, for performance runs. */
-export function writeGeneratedVault(dir: string, count: number): void {
-  const random = rng(count);
-  for (let i = 0; i < count; i++) {
-    const topic = TOPICS[i % TOPICS.length]!;
-    const path = join(dir, topic.folder, `${Math.floor(i / 500)}`, `${topic.title} ${i}.md`);
-    mkdirSync(dirname(path), { recursive: true });
-    const body = `# ${topic.terms[i % topic.terms.length]} ${i}\n${paragraph(topic, random, 6)}\n\n## Details\n${paragraph(topic, random, 6)}\n\nSee also [[${topic.title} ${(i + 8) % count}]].\n`;
-    writeFileSync(path, body);
-  }
 }

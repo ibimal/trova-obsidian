@@ -27,7 +27,7 @@ The plugin implements a written features and API specification that is not publi
 
 ### Bases custom functions
 
-**Not supported.** The typings expose `Plugin.registerBasesView(viewId, registration)` and the `BasesView` class. They expose nothing that registers a formula function. Package 14 therefore ships as a custom Bases view (`src/features/bases.ts`): a table with the note, its similarity score to the active note, and its top three related notes.
+**Not supported.** The typings expose `Plugin.registerBasesView(viewId, registration)` and the `BasesView` class. They expose nothing that registers a formula function. `trova_score()` and `trova_related()` therefore ship as a custom Bases view (`src/features/bases.ts`): a table with the note, its similarity score to the active note, and its top three related notes.
 
 ### Worker timings on 10,000 generated notes
 

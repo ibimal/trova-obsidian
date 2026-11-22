@@ -107,7 +107,6 @@ export const en = {
   modeAuto: "Auto",
   modeFast: "Fast",
   modeDeep: "Deep",
-  explain: "Explain",
   history: "History",
   saveAsSearch: "Save as search",
   refining: "refining",
