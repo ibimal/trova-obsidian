@@ -2093,9 +2093,7 @@ body button.trova-key-hint:hover {
   font-size: var(--font-ui-smaller);
   white-space: nowrap;
   cursor: var(--cursor);
-}
-/* The tag is a link to the pair: its tint and text darken on hover and focus, like other links here, without an underline. */
-.trova-care button.trova-care-tag {
+  /* The tag is a link to the pair: its tint and text darken on hover and focus, like other links here, without an underline. */
   transition:
     background-color var(--trova-ease),
     color var(--trova-ease);

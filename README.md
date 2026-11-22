@@ -126,7 +126,7 @@ npm test
 npm run lint
 ```
 
-`npm run lint` checks the code against Obsidian's own ESLint rules (`eslint-plugin-obsidianmd`), the rules Obsidian's review uses. `npm run format` formats the code with [Oxfmt](https://oxc.rs/docs/guide/usage/formatter), at the version and settings the engine repository uses, so the shared contract stays identical; `npm run format:check` checks it, as CI does. Update Oxfmt only together with the engine's Vite+, as [its `docs/development.md`](https://github.com/ibimal/trova/blob/main/docs/development.md#updating-vite) describes.
+`npm run lint` checks the code against Obsidian's own ESLint rules (`eslint-plugin-obsidianmd`), with two stricter local rules where Obsidian's review is stricter than the published rules, and checks `styles.css` with Stylelint as the review does (no `!important`, and browser features of the Chromium versions Obsidian runs on). The review can still find more than these checks, so run it before each release, as below. `npm run format` formats the code with [Oxfmt](https://oxc.rs/docs/guide/usage/formatter), at the version and settings the engine repository uses, so the shared contract stays identical; `npm run format:check` checks it, as CI does. Update Oxfmt only together with the engine's Vite+, as [its `docs/development.md`](https://github.com/ibimal/trova/blob/main/docs/development.md#updating-vite) describes.
 
 `npm run dev` rebuilds `main.js` on every change. To try a build, copy `main.js`, `manifest.json` and `styles.css` into a vault's `.obsidian/plugins/trova/` folder and reload Obsidian. A git-ignored `test-vault/` folder in this repository is a convenient place for that vault.
 
@@ -134,7 +134,11 @@ npm run lint
 
 Each release's files carry a GitHub build provenance attestation, which shows they were built from this repository by its release workflow. To check one, download it and run `gh attestation verify main.js --repo ibimal/trova-obsidian`.
 
-To release a version, run `npm version` with `patch`, `minor` or `major`, then push the commit and the tag:
+To release a version:
+
+1. Push your changes to `main` and let CI pass.
+2. On the plugin's page in the [Obsidian community directory](https://community.obsidian.md), choose **Review branch** for `main`, and fix anything it reports. This runs Obsidian's own review before anything is published.
+3. Run `npm version` with `patch`, `minor` or `major`, then push the commit and the tag:
 
 ```bash
 npm version patch
@@ -144,17 +148,7 @@ npm version patch
 git push --follow-tags
 ```
 
-`npm version` sets the version in `package.json`, `manifest.json` and `versions.json` (with the lowest Obsidian version it supports, from `manifest.json`'s `minAppVersion`), commits them, and tags the commit with the bare version, as Obsidian requires. GitHub Actions then check that the tag matches `manifest.json` and `versions.json`, run the tests, build the plugin, and create a draft release with `main.js`, `manifest.json` and `styles.css` attached. Review the draft on GitHub and publish it.
-
-The first release, 0.1.0, already has its version everywhere; tag it directly:
-
-```bash
-git tag 0.1.0
-```
-
-```bash
-git push origin 0.1.0
-```
+`npm version` sets the version in `package.json`, `manifest.json` and `versions.json` (with the lowest Obsidian version it supports, from `manifest.json`'s `minAppVersion`), commits them, and tags the commit with the bare version, as Obsidian requires. GitHub Actions then check that the tag matches `manifest.json` and `versions.json`, run the type check, lint, format check and tests, build the plugin, attest the build, and create a draft release with `main.js`, `manifest.json` and `styles.css` attached. Review the draft on GitHub and publish it.
 
 ## Licence
 

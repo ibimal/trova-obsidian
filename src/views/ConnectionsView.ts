@@ -1822,9 +1822,7 @@ export class ConnectionsView extends ItemView {
       if (!sideBySide && status.top < pane.bottom && status.bottom > pane.top)
         overlap = Math.ceil(pane.bottom - status.top);
     }
-    const value = overlap > 0 ? `${overlap}px` : "";
-    if (el.style.paddingBottom === value) return;
-    if (value) el.setCssProps({ "padding-bottom": value });
+    if (overlap > 0) el.setCssProps({ "padding-bottom": `${overlap}px` });
     else el.style.removeProperty("padding-bottom");
   }
 }
