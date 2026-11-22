@@ -326,3 +326,27 @@ describe("local dates", () => {
     expect(localStamp(d)).toBe("2026-01-05 2307");
   });
 });
+
+describe("settings text fields", () => {
+  it("parses field weights, and rejects anything but four numbers of 0 or more", async () => {
+    const { parseFieldWeights } = await import("../src/settingsTab.js");
+    expect(parseFieldWeights(" 4, 3 ,2,1 ")).toEqual({ filename: 4, aliases: 3, headings: 2, body: 1 });
+    expect(parseFieldWeights("4, 3, 2")).toBeNull();
+    expect(parseFieldWeights("4, 3, x, 1")).toBeNull();
+    expect(parseFieldWeights("4, -1, 2, 1")).toBeNull();
+  });
+
+  it("parses folder context lines and skips lines without a description", async () => {
+    const { parseFolderContext } = await import("../src/settingsTab.js");
+    expect(parseFolderContext("Projects/Trova: Design notes\nNo colon\nEmpty:   \n Inbox : To sort: later ")).toEqual({ "Projects/Trova": "Design notes", Inbox: "To sort: later" });
+  });
+
+  it("names outside folders after their last path segment", async () => {
+    const { parseOutsideFolders } = await import("../src/settingsTab.js");
+    expect(parseOutsideFolders("/Users/me/Documents/Research Papers\n\nC:\\Work\\Notes\\\n/")).toEqual([
+      { path: "/Users/me/Documents/Research Papers", name: "folder-research-papers" },
+      { path: "C:\\Work\\Notes\\", name: "folder-notes" },
+      { path: "/", name: "folder-x" },
+    ]);
+  });
+});

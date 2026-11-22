@@ -37,6 +37,11 @@ const RANGES: Partial<Record<keyof TrovaSettings, { min: number; max: number; in
 
 const FILTER_OPS: readonly FilterOp[] = ["eq", "ne", "lt", "lte", "gt", "gte", "contains", "in"];
 
+/** The range a numeric setting may take, or undefined when it has none. */
+export function settingRange(key: keyof TrovaSettings): { min: number; max: number; integer?: boolean } | undefined {
+  return RANGES[key];
+}
+
 /**
  * A numeric setting brought into its allowed range, rounded when it must be whole. The settings
  * tab uses the same limits as the load check, so a typed value is never "repaired" later.

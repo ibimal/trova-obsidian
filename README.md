@@ -10,11 +10,11 @@ Trova searches your vault by keyword and by meaning, on your own machine. It add
 - **Context basket.** Collect notes and sections, then copy them as one block of text, for example to paste into an AI chat. It shows the estimated token count.
 - **Vault care.** Near-duplicate notes, orphan notes and a daily Rediscover pick, in one tab. "Not a duplicate" and "Keep unlinked" are remembered, with Undo.
 - **Topic map.** Your notes grouped by topic on a canvas that pans and zooms with thousands of notes.
-- **Bases view.** On Obsidian 1.10 or later, a Bases view named "Trova related" adds a similarity Score column and a Related column.
+- **Bases view.** A Bases view named "Trova related" adds a similarity Score column and a Related column.
 
 ## Requirements
 
-- Obsidian 1.9.0 or later, on a computer. The Bases view needs 1.10. This version is desktop only: Obsidian on phones and tablets does not offer it.
+- Obsidian 1.13.4 or later, on a computer. This version is desktop only: Obsidian on phones and tablets does not offer it.
 - For everything except Instant search: the Trova engine, `trova-cli`, on the same computer. It needs Node 22 or later; Node 24 is the verified version.
 - The plugin and the engine are checked on macOS on Apple Silicon. Windows and Linux are not tested yet.
 
@@ -52,6 +52,8 @@ Open the command palette and type "Trova". You can give any command a hotkey und
 | Open topic map, Open similarity graph | Open the canvases |
 | Reindex now, Pause or resume indexing | Control the index |
 | Show welcome screen | Show the first-run screen again |
+
+All settings are under Settings → Trova, and Obsidian's settings search finds each of them.
 
 ## Update
 

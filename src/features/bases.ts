@@ -1,30 +1,20 @@
-// Bases integration. Obsidian's Bases API (1.10) lets a plugin register a view, but not custom
+// Bases integration. Obsidian's Bases API lets a plugin register a view, but not custom
 // functions, so `trova_score()` and `trova_related()` ship as a Bases view with a Score
 // column (similarity to the active note) and a Related column (top related notes per row).
 
-import * as obsidian from "obsidian";
-import type { TFile } from "obsidian";
+import { BasesView, type QueryController } from "obsidian";
 import { onOpen } from "../ui.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 
 const MAX_ROWS = 60;
 
-interface BasesViewLike {
-  data: { data: { file: TFile }[] };
-  app: obsidian.App;
-}
-
 export function registerBases(plugin: TrovaPlugin): boolean {
-  const BasesView = (obsidian as unknown as { BasesView?: abstract new (controller: unknown) => obsidian.Component & BasesViewLike }).BasesView;
-  const register = (plugin as unknown as { registerBasesView?: (id: string, reg: unknown) => boolean }).registerBasesView;
-  if (typeof BasesView !== "function" || typeof register !== "function") return false;
-
   class RelatedBasesView extends BasesView {
     type = "trova-related";
     private run = 0;
     constructor(
-      controller: unknown,
+      controller: QueryController,
       private el: HTMLElement,
     ) {
       super(controller);
@@ -74,13 +64,9 @@ export function registerBases(plugin: TrovaPlugin): boolean {
     }
   }
 
-  try {
-    return register.call(plugin, "trova-related", {
-      name: t("basesName"),
-      icon: "waypoints",
-      factory: (controller: unknown, containerEl: HTMLElement) => new RelatedBasesView(controller, containerEl),
-    });
-  } catch {
-    return false;
-  }
+  return plugin.registerBasesView("trova-related", {
+    name: t("basesName"),
+    icon: "waypoints",
+    factory: (controller, containerEl) => new RelatedBasesView(controller, containerEl),
+  });
 }

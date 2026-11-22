@@ -2,7 +2,7 @@
   "id": "trova",
   "name": "Trova",
   "version": "0.1.0",
-  "minAppVersion": "1.9.0",
+  "minAppVersion": "1.13.4",
   "description": "Search notes by keyword and meaning, see related notes, ask questions and find near-duplicates, all on your own computer.",
   "author": "Bimal",
   "authorUrl": "https://github.com/ibimal",
