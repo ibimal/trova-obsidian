@@ -4,9 +4,17 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Minor and patch updates arrive together; each major update gets its own pull request.
     groups:
-      dev-dependencies:
-        dependency-type: development
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # TypeScript 7 is the native compiler, which typescript-eslint and node-llama-cpp do not support yet.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # The Node types follow the oldest supported Node version, 22.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
