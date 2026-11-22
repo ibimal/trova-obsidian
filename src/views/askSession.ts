@@ -3,12 +3,35 @@
 // shows a block's related blocks in the same list.
 
 import { MarkdownView, Notice, setIcon } from "obsidian";
-import { ASK_STOPWORDS, labelForRank, parseQuery, pickAskMode, type AskRequest, type DocumentBody, type Lane, type ParsedQuery, type Result, type ResultBatch } from "../contract/index.js";
+import {
+  ASK_STOPWORDS,
+  labelForRank,
+  parseQuery,
+  pickAskMode,
+  type AskRequest,
+  type DocumentBody,
+  type Lane,
+  type ParsedQuery,
+  type Result,
+  type ResultBatch,
+} from "../contract/index.js";
 import { fromWorker, fuseLanes } from "../query/controller.js";
 import { EngineOffline } from "../engine/manager.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
-import { ConfirmModal, banner, folderOf, onOpen, quietLabel, reducedMotion, renderBadges, renderHighlighted, showMenu, skeletonAfter, type OpenIn } from "../ui.js";
+import {
+  ConfirmModal,
+  banner,
+  folderOf,
+  onOpen,
+  quietLabel,
+  reducedMotion,
+  renderBadges,
+  renderHighlighted,
+  showMenu,
+  skeletonAfter,
+  type OpenIn,
+} from "../ui.js";
 
 export type AskMode = "auto" | "fast" | "deep";
 
@@ -56,7 +79,11 @@ export function deepOnEnter(question: string, mode: AskMode): boolean {
 export type RerankRetry = "idle" | "running" | "failed";
 
 /** "Rerank now" is offered only for a typed question whose Deep pass ran out of time. */
-export function canRerankNow(question: string, note: ResultBatch["note"], retry: RerankRetry): boolean {
+export function canRerankNow(
+  question: string,
+  note: ResultBatch["note"],
+  retry: RerankRetry,
+): boolean {
   return question !== "" && note === "rerank_skipped" && retry !== "running";
 }
 
@@ -146,7 +173,10 @@ export class AskSession {
   }
 
   /** Runs a question. A new run aborts the previous one before it starts. */
-  async run(raw: string, opts: { mode?: AskMode; record?: boolean; label?: string; preview?: boolean } = {}): Promise<void> {
+  async run(
+    raw: string,
+    opts: { mode?: AskMode; record?: boolean; label?: string; preview?: boolean } = {},
+  ): Promise<void> {
     this.cancelPreview();
     const question = raw.trim().replace(/^\?\s*/, "");
     this.abort?.abort();
@@ -168,19 +198,30 @@ export class AskSession {
     this.neighbours.clear();
     this.keywordOnly = false;
     const mode = opts.mode ?? this.mode;
-    if (opts.record !== false) this.plugin.local.addHistory({ query: question, mode, at: Date.now() });
+    if (opts.record !== false)
+      this.plugin.local.addHistory({ query: question, mode, at: Date.now() });
     this.host.changed();
     if (!this.plugin.engine.ready) {
       await this.keywordFallback(question, abort.signal);
       return;
     }
-    const cancelSkeleton = skeletonAfter(this.host.listEl(), () => !this.final && this.results.length === 0 && !abort.signal.aborted);
+    const cancelSkeleton = skeletonAfter(
+      this.host.listEl(),
+      () => !this.final && this.results.length === 0 && !abort.signal.aborted,
+    );
     try {
       const query = parseQuery(question, { mode: "ask", knownKeys: this.plugin.knownKeys() }).query;
       // Auto is resolved here with the engine's own rule, so the Deep hint and the search always
       // agree on the mode. History keeps "auto".
       const sent = mode === "auto" ? pickAskMode(query) : mode;
-      const req: AskRequest = { query, mode: sent, collections: this.plugin.engine.collections(), limit: ASK_ANSWERS, fuzzy: this.plugin.settings.typoTolerance > 0, deadlineMs: this.plugin.settings.askDeepSeconds * 1000 };
+      const req: AskRequest = {
+        query,
+        mode: sent,
+        collections: this.plugin.engine.collections(),
+        limit: ASK_ANSWERS,
+        fuzzy: this.plugin.settings.typoTolerance > 0,
+        deadlineMs: this.plugin.settings.askDeepSeconds * 1000,
+      };
       for await (const batch of this.plugin.engine.ask(req, abort.signal)) {
         if (abort.signal.aborted) return;
         this.applyBatch(batch);
@@ -197,7 +238,8 @@ export class AskSession {
       this.carried = false;
       this.results = [];
     }
-    if (this.error === "offline" && this.results.length === 0) return this.keywordFallback(question, abort.signal);
+    if (this.error === "offline" && this.results.length === 0)
+      return this.keywordFallback(question, abort.signal);
     this.final = true;
     this.host.changed();
   }
@@ -211,20 +253,66 @@ export class AskSession {
     // The fallback sets its own results, so nothing carried over from a preview remains.
     this.carried = false;
     const parsed = parseQuery(question, { mode: "ask", knownKeys: plugin.knownKeys() }).query;
-    const query: ParsedQuery = { ...parsed, mode: "instant", lane: undefined, must: parsed.must.map((g) => g.filter((term) => term.kind !== "word" || !ASK_STOPWORDS.has(term.text.toLowerCase()))).filter((g) => g.length > 0) };
-    const search = (q: ParsedQuery) => plugin.worker.call("search", [q, { limit: ASK_ANSWERS, fuzzy: plugin.settings.typoTolerance, weights: plugin.settings.fieldWeights, bodies: "all" }], signal);
+    const query: ParsedQuery = {
+      ...parsed,
+      mode: "instant",
+      lane: undefined,
+      must: parsed.must
+        .map((g) =>
+          g.filter((term) => term.kind !== "word" || !ASK_STOPWORDS.has(term.text.toLowerCase())),
+        )
+        .filter((g) => g.length > 0),
+    };
+    const search = (q: ParsedQuery) =>
+      plugin.worker.call(
+        "search",
+        [
+          q,
+          {
+            limit: ASK_ANSWERS,
+            fuzzy: plugin.settings.typoTolerance,
+            weights: plugin.settings.fieldWeights,
+            bodies: "all",
+          },
+        ],
+        signal,
+      );
     try {
-      let reply = query.must.length > 0 || query.filters.length > 0 ? await search(query) : { title: [], body: [] };
-      if (new Set([...reply.title, ...reply.body].map((h) => h.path)).size < 3 && query.must.length > 1) reply = await search({ ...query, must: [query.must.flat()] });
+      let reply =
+        query.must.length > 0 || query.filters.length > 0
+          ? await search(query)
+          : { title: [], body: [] };
+      if (
+        new Set([...reply.title, ...reply.body].map((h) => h.path)).size < 3 &&
+        query.must.length > 1
+      )
+        reply = await search({ ...query, must: [query.must.flat()] });
       if (signal.aborted) return;
-      const rows = fuseLanes({ title: reply.title.map((h) => fromWorker(h, plugin.collection)), body: reply.body.map((h) => fromWorker(h, plugin.collection)), engine: [] }, (path) => plugin.local.daysSinceOpened(path), false);
+      const rows = fuseLanes(
+        {
+          title: reply.title.map((h) => fromWorker(h, plugin.collection)),
+          body: reply.body.map((h) => fromWorker(h, plugin.collection)),
+          engine: [],
+        },
+        (path) => plugin.local.daysSinceOpened(path),
+        false,
+      );
       this.results = rows.slice(0, ASK_ANSWERS).map((row, i): Result => ({
         id: row.blockId ?? row.id,
         source: row.id,
         path: row.path,
         title: row.title,
         collection: row.collection,
-        ...(row.blockId ? { block: { id: row.blockId, headings: row.headings, start: row.offset ?? 0, end: Number.MAX_SAFE_INTEGER } } : {}),
+        ...(row.blockId
+          ? {
+              block: {
+                id: row.blockId,
+                headings: row.headings,
+                start: row.offset ?? 0,
+                end: Number.MAX_SAFE_INTEGER,
+              },
+            }
+          : {}),
         snippet: row.snippet,
         highlights: row.highlights,
         scores: { fused: row.score, fusedRank: i + 1 },
@@ -263,7 +351,16 @@ export class AskSession {
     this.keywordOnly = false;
     this.host.changed();
     try {
-      const res = await this.plugin.engine.related({ anchor: r.block ? { block: r.block.id } : { source: r.source }, granularity: "block", limit: ASK_ANSWERS, collections: this.plugin.engine.collections(), loose: true }, abort.signal);
+      const res = await this.plugin.engine.related(
+        {
+          anchor: r.block ? { block: r.block.id } : { source: r.source },
+          granularity: "block",
+          limit: ASK_ANSWERS,
+          collections: this.plugin.engine.collections(),
+          loose: true,
+        },
+        abort.signal,
+      );
       if (abort.signal.aborted) return;
       this.results = res.results;
     } catch (err) {
@@ -290,8 +387,18 @@ export class AskSession {
     this.host.changed();
     let reranked = false;
     try {
-      const query = parseQuery(this.question, { mode: "ask", knownKeys: this.plugin.knownKeys() }).query;
-      const req: AskRequest = { query, mode: "deep", collections: this.plugin.engine.collections(), limit: ASK_ANSWERS, fuzzy: this.plugin.settings.typoTolerance > 0, deadlineMs: RERANK_RETRY_MS };
+      const query = parseQuery(this.question, {
+        mode: "ask",
+        knownKeys: this.plugin.knownKeys(),
+      }).query;
+      const req: AskRequest = {
+        query,
+        mode: "deep",
+        collections: this.plugin.engine.collections(),
+        limit: ASK_ANSWERS,
+        fuzzy: this.plugin.settings.typoTolerance > 0,
+        deadlineMs: RERANK_RETRY_MS,
+      };
       for await (const batch of this.plugin.engine.ask(req, abort.signal)) {
         if (abort.signal.aborted) return;
         if (batch.stage !== "rerank") continue;
@@ -313,7 +420,10 @@ export class AskSession {
     const list = this.host.listEl();
     const before = new Map<string, DOMRect>();
     const animate = batch.stage === "rerank" && !reducedMotion();
-    if (animate) list.querySelectorAll<HTMLElement>("[data-id]").forEach((el) => before.set(el.dataset["id"]!, el.getBoundingClientRect()));
+    if (animate)
+      list
+        .querySelectorAll<HTMLElement>("[data-id]")
+        .forEach((el) => before.set(el.dataset["id"]!, el.getBoundingClientRect()));
     if (this.carried) {
       // The first batch of a new question replaces the previous question's answers, even empty.
       this.carried = false;
@@ -332,7 +442,10 @@ export class AskSession {
       if (!old) return;
       const dy = old.top - el.getBoundingClientRect().top;
       if (Math.abs(dy) < 1) return;
-      el.animate([{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }], { duration: 220, easing: "ease-out" });
+      el.animate([{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }], {
+        duration: 220,
+        easing: "ease-out",
+      });
     });
   }
 
@@ -340,13 +453,25 @@ export class AskSession {
 
   renderStatus(el: HTMLElement): void {
     const snapshot = this.plugin.engine.snapshot;
-    const keywordNote = () => this.keywordOnly && el.createDiv({ cls: "trova-stale-note", text: t("askKeywordOnly") });
+    const keywordNote = () =>
+      this.keywordOnly && el.createDiv({ cls: "trova-stale-note", text: t("askKeywordOnly") });
     if (snapshot.state === "disabled") {
       banner(el, t("needsEngine"));
       return void keywordNote();
     }
     if (!this.plugin.engine.ready || this.error === "offline") {
-      banner(el, t("engineOffBanner"), { label: t("startEngine"), run: () => void this.plugin.engine.connect(true).then(() => void (this.question && this.run(this.question, { record: false, label: this.label }))) });
+      banner(el, t("engineOffBanner"), {
+        label: t("startEngine"),
+        run: () =>
+          void this.plugin.engine
+            .connect(true)
+            .then(
+              () =>
+                void (
+                  this.question && this.run(this.question, { record: false, label: this.label })
+                ),
+            ),
+      });
       return void keywordNote();
     }
     if (this.error) return void banner(el, `${t("internalError")}: ${this.error}`);
@@ -356,19 +481,37 @@ export class AskSession {
       banner(el, t("deepMissing"), {
         label: t("downloadModels"),
         run: () =>
-          new ConfirmModal(this.plugin.app, t("downloadConfirmTitle"), t("downloadConfirmBody"), [], t("download"), () => {
-            void this.plugin.engine.downloadModels().catch((e: Error) => new Notice(e.message));
-          }).open(),
+          new ConfirmModal(
+            this.plugin.app,
+            t("downloadConfirmTitle"),
+            t("downloadConfirmBody"),
+            [],
+            t("download"),
+            () => {
+              void this.plugin.engine.downloadModels().catch((e: Error) => new Notice(e.message));
+            },
+          ).open(),
       });
     }
     if (this.note === "rerank_skipped") {
       // The answers shown are the fused ones; the user can ask for the reranked order.
       const box = el.createDiv({ cls: "trova-rerank-note", attr: { role: "status" } });
-      const text = this.retry === "running" ? t("reranking") : this.retry === "failed" ? t("rerankFailed") : t("rerankSkippedLine");
+      const text =
+        this.retry === "running"
+          ? t("reranking")
+          : this.retry === "failed"
+            ? t("rerankFailed")
+            : t("rerankSkippedLine");
       box.createSpan({ cls: "trova-rerank-text", text });
-      if (this.retry === "running") box.createSpan({ cls: "trova-spinner is-busy", attr: { "aria-hidden": "true" } });
+      if (this.retry === "running")
+        box.createSpan({ cls: "trova-spinner is-busy", attr: { "aria-hidden": "true" } });
       else if (this.question && this.plugin.engine.ready) {
-        box.createEl("button", { cls: "trova-small-button", text: this.retry === "failed" ? t("tryAgain") : t("rerankNow") }).addEventListener("click", () => void this.rerankNow());
+        box
+          .createEl("button", {
+            cls: "trova-small-button",
+            text: this.retry === "failed" ? t("tryAgain") : t("rerankNow"),
+          })
+          .addEventListener("click", () => void this.rerankNow());
       }
     }
     if (this.explain && this.expansions.length) {
@@ -383,7 +526,8 @@ export class AskSession {
    * "Deep · refining…" while a run is still improving them. Empty before the engine says which.
    */
   modeText(): string {
-    const name = this.ranMode === "deep" ? t("modeDeep") : this.ranMode === "fast" ? t("modeFast") : "";
+    const name =
+      this.ranMode === "deep" ? t("modeDeep") : this.ranMode === "fast" ? t("modeFast") : "";
     if (this.final) return name;
     return name ? `${name} · ${t("refining")}…` : `${t("refining")}…`;
   }
@@ -393,7 +537,13 @@ export class AskSession {
    * would run a Deep search. The pane then offers "↵ Deep".
    */
   offersDeep(): boolean {
-    return this.previewed && this.final && this.plugin.engine.ready && !this.keywordOnly && deepOnEnter(this.question, this.mode);
+    return (
+      this.previewed &&
+      this.final &&
+      this.plugin.engine.ready &&
+      !this.keywordOnly &&
+      deepOnEnter(this.question, this.mode)
+    );
   }
 
   /** Runs the shown question as Enter does: in the selected mode, saved to history. */
@@ -420,7 +570,16 @@ export class AskSession {
   private renderRow(list: HTMLElement, r: Result): void {
     const group = list.createDiv({ cls: "trova-conn trova-answer", attr: { role: "listitem" } });
     group.dataset["id"] = r.id;
-    const head = group.createDiv({ cls: "trova-conn-head", attr: { tabindex: "0", draggable: "true", "data-row": "", "data-key": r.id, "data-path": r.path } });
+    const head = group.createDiv({
+      cls: "trova-conn-head",
+      attr: {
+        tabindex: "0",
+        draggable: "true",
+        "data-row": "",
+        "data-key": r.id,
+        "data-path": r.path,
+      },
+    });
     if (r.path === this.host.selectedPath()) head.addClass("is-selected");
     const near = this.neighbours.get(r.id);
     const open = !!near;
@@ -428,7 +587,14 @@ export class AskSession {
     const setOpen = (next: boolean) => {
       if (expandable && next !== open) void this.toggleNeighbours(r);
     };
-    const toggle = head.createEl("button", { cls: "trova-conn-toggle", attr: { "aria-label": open ? t("hideNearby") : t("showNeighbours"), "aria-expanded": String(open), tabindex: "-1" } });
+    const toggle = head.createEl("button", {
+      cls: "trova-conn-toggle",
+      attr: {
+        "aria-label": open ? t("hideNearby") : t("showNeighbours"),
+        "aria-expanded": String(open),
+        tabindex: "-1",
+      },
+    });
     setIcon(toggle, open ? "chevron-down" : "chevron-right");
     if (!expandable) toggle.addClass("is-hidden");
     else head.setAttribute("aria-expanded", String(open));
@@ -441,10 +607,18 @@ export class AskSession {
     const where = r.block?.headings.length ? `› ${r.block.headings.join(" › ")}` : folderOf(r.path);
     if (where) head.createSpan({ cls: "trova-row-path", text: where });
     // The match lanes are detail; they show with the ranking details. The type badge always shows.
-    if (r.type || this.explain) renderBadges(head.createSpan({ cls: "trova-badges" }), this.explain ? r.matchedBy : [], r.type);
+    if (r.type || this.explain)
+      renderBadges(
+        head.createSpan({ cls: "trova-badges" }),
+        this.explain ? r.matchedBy : [],
+        r.type,
+      );
     const actions = head.createSpan({ cls: "trova-row-actions" });
     const action = (icon: string, label: string, run: () => void) => {
-      const b = actions.createEl("button", { cls: "clickable-icon", attr: { "aria-label": label, tabindex: "-1" } });
+      const b = actions.createEl("button", {
+        cls: "clickable-icon",
+        attr: { "aria-label": label, tabindex: "-1" },
+      });
       setIcon(b, icon);
       b.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -457,27 +631,78 @@ export class AskSession {
     const openAnswer = (where: OpenIn) => void this.plugin.openResult(r, where, this.question);
     const menu = (e: MouseEvent) =>
       showMenu(e, (m) => {
-        m.addItem((i) => i.setTitle(t("open")).setIcon("file").onClick(() => openAnswer(false)));
-        m.addItem((i) => i.setTitle(t("openNewTab")).setIcon("file-plus").onClick(() => openAnswer("tab")));
-        m.addItem((i) => i.setTitle(t("insertLink")).setIcon("link").onClick(() => this.plugin.insertLink(r)));
-        m.addItem((i) => i.setTitle(t("addToBasket")).setIcon("shopping-basket").onClick(() => this.plugin.addResultToBasket(r)));
-        if (r.block) m.addItem((i) => i.setTitle(t("addBlockNeighbours")).setIcon("list-plus").onClick(() => this.plugin.addResultToBasket(r, true)));
-        if (expandable) m.addItem((i) => i.setTitle(open ? t("hideNearby") : t("showNeighbours")).setIcon("chevrons-up-down").onClick(() => setOpen(!open)));
-        m.addItem((i) => i.setTitle(t("moreLikeThis")).setIcon("sparkles").onClick(() => void this.moreLike(r)));
+        m.addItem((i) =>
+          i
+            .setTitle(t("open"))
+            .setIcon("file")
+            .onClick(() => openAnswer(false)),
+        );
+        m.addItem((i) =>
+          i
+            .setTitle(t("openNewTab"))
+            .setIcon("file-plus")
+            .onClick(() => openAnswer("tab")),
+        );
+        m.addItem((i) =>
+          i
+            .setTitle(t("insertLink"))
+            .setIcon("link")
+            .onClick(() => this.plugin.insertLink(r)),
+        );
+        m.addItem((i) =>
+          i
+            .setTitle(t("addToBasket"))
+            .setIcon("shopping-basket")
+            .onClick(() => this.plugin.addResultToBasket(r)),
+        );
+        if (r.block)
+          m.addItem((i) =>
+            i
+              .setTitle(t("addBlockNeighbours"))
+              .setIcon("list-plus")
+              .onClick(() => this.plugin.addResultToBasket(r, true)),
+          );
+        if (expandable)
+          m.addItem((i) =>
+            i
+              .setTitle(open ? t("hideNearby") : t("showNeighbours"))
+              .setIcon("chevrons-up-down")
+              .onClick(() => setOpen(!open)),
+          );
+        m.addItem((i) =>
+          i
+            .setTitle(t("moreLikeThis"))
+            .setIcon("sparkles")
+            .onClick(() => void this.moreLike(r)),
+        );
       });
-    head.addEventListener("dragstart", (e) => e.dataTransfer?.setData("text/plain", this.plugin.linkText(r)));
-    this.host.wireRow(head, { path: r.path, open: openAnswer, insertLink: () => this.plugin.insertLink(r), menu, expand: setOpen, toggle: () => setOpen(!open) });
+    head.addEventListener("dragstart", (e) =>
+      e.dataTransfer?.setData("text/plain", this.plugin.linkText(r)),
+    );
+    this.host.wireRow(head, {
+      path: r.path,
+      open: openAnswer,
+      insertLink: () => this.plugin.insertLink(r),
+      menu,
+      expand: setOpen,
+      toggle: () => setOpen(!open),
+    });
 
     // The answer itself, on the title's edge. A click on it opens the answer like the title does.
     const body = group.createDiv({ cls: "trova-answer-body" });
     const heading = r.block?.headings.at(-1);
-    renderHighlighted(body.createDiv({ cls: "trova-row-snippet" }), stripHeading(r.snippet, heading), shiftHighlights(r.snippet, r.highlights, heading));
+    renderHighlighted(
+      body.createDiv({ cls: "trova-row-snippet" }),
+      stripHeading(r.snippet, heading),
+      shiftHighlights(r.snippet, r.highlights, heading),
+    );
     if (r.context) body.createDiv({ cls: "trova-row-context", text: r.context });
     onOpen(body, openAnswer);
 
     if (this.explain) {
       const ex = body.createDiv({ cls: "trova-explain" });
-      const fmt = (v: number | undefined, digits = 3) => (v === undefined ? "–" : v.toFixed(digits));
+      const fmt = (v: number | undefined, digits = 3) =>
+        v === undefined ? "–" : v.toFixed(digits);
       const cells: [string, string][] = [
         [t("explainLex"), fmt(r.scores.lex, 2)],
         [t("explainVec"), fmt(r.scores.vec)],
@@ -491,10 +716,36 @@ export class AskSession {
     // Nearby sections use the related note's section style.
     if (!near?.neighbours) return;
     for (const n of [...near.neighbours.before, ...near.neighbours.after]) {
-      const section = group.createDiv({ cls: "trova-conn-block", attr: { tabindex: "0", "data-row": "", "data-key": `${r.id}~${n.block?.start ?? 0}`, "data-path": r.path } });
-      section.createDiv({ cls: "trova-row-heading", text: n.block?.headings.join(" › ") || r.title });
-      section.createDiv({ cls: "trova-row-snippet", text: n.content.replace(/^#+\s.*\n/, "").trim().slice(0, 280) });
-      const openSection = (where: OpenIn) => void this.plugin.open({ path: r.path, root: this.plugin.rootOf(r.collection ?? ""), headings: n.block?.headings, offset: n.block?.start }, where);
+      const section = group.createDiv({
+        cls: "trova-conn-block",
+        attr: {
+          tabindex: "0",
+          "data-row": "",
+          "data-key": `${r.id}~${n.block?.start ?? 0}`,
+          "data-path": r.path,
+        },
+      });
+      section.createDiv({
+        cls: "trova-row-heading",
+        text: n.block?.headings.join(" › ") || r.title,
+      });
+      section.createDiv({
+        cls: "trova-row-snippet",
+        text: n.content
+          .replace(/^#+\s.*\n/, "")
+          .trim()
+          .slice(0, 280),
+      });
+      const openSection = (where: OpenIn) =>
+        void this.plugin.open(
+          {
+            path: r.path,
+            root: this.plugin.rootOf(r.collection ?? ""),
+            headings: n.block?.headings,
+            offset: n.block?.start,
+          },
+          where,
+        );
       this.host.wireRow(section, {
         path: r.path,
         open: openSection,
@@ -522,10 +773,16 @@ export class AskSession {
     const history = this.plugin.local.history();
     showMenu(e, (menu) => {
       if (history.length === 0) menu.addItem((i) => i.setTitle(t("noHistory")).setDisabled(true));
-      for (const h of history.slice(0, 20)) menu.addItem((i) => i.setTitle(historyTitle(h.query)).onClick(() => run(h.query, h.mode)));
+      for (const h of history.slice(0, 20))
+        menu.addItem((i) => i.setTitle(historyTitle(h.query)).onClick(() => run(h.query, h.mode)));
       if (history.length) {
         menu.addSeparator();
-        menu.addItem((i) => i.setTitle(t("clear")).setIcon("trash").onClick(() => this.plugin.local.clearHistory()));
+        menu.addItem((i) =>
+          i
+            .setTitle(t("clear"))
+            .setIcon("trash")
+            .onClick(() => this.plugin.local.clearHistory()),
+        );
       }
     });
   }
@@ -564,20 +821,26 @@ export function stripHeading(snippet: string, heading?: string): string {
   const cut = /^(?:…|\.\.\.)\s*/.exec(snippet);
   if (cut && heading) {
     const after = snippet.slice(cut[0].length);
-    if (after.toLowerCase().startsWith(heading.toLowerCase())) return after.slice(heading.length).trimStart() || snippet;
+    if (after.toLowerCase().startsWith(heading.toLowerCase()))
+      return after.slice(heading.length).trimStart() || snippet;
   }
   const marker = /^#{1,6}\s+/.exec(snippet);
   if (!marker) return snippet;
   let rest: string | null = null;
   const after = snippet.slice(marker[0].length);
-  if (heading && after.toLowerCase().startsWith(heading.toLowerCase())) rest = after.slice(heading.length);
+  if (heading && after.toLowerCase().startsWith(heading.toLowerCase()))
+    rest = after.slice(heading.length);
   else if (after.includes("\n")) rest = after.slice(after.indexOf("\n"));
   const text = rest?.trimStart() ?? "";
   return text ? text : snippet;
 }
 
 /** Moves highlight ranges to match `stripHeading`, dropping ranges inside the removed heading. */
-export function shiftHighlights(snippet: string, highlights: [number, number][], heading?: string): [number, number][] {
+export function shiftHighlights(
+  snippet: string,
+  highlights: [number, number][],
+  heading?: string,
+): [number, number][] {
   const cut = snippet.length - stripHeading(snippet, heading).length;
   if (cut === 0) return highlights;
   return highlights.filter(([s]) => s >= cut).map(([s, e]) => [s - cut, e - cut]);

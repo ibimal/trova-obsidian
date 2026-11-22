@@ -2,11 +2,28 @@
 // rows come from the worker and the engine's lex lane; semantic rows join in their own section.
 
 import { Modal, Notice, Platform, TFile, setIcon, type Editor } from "obsidian";
-import { findInText, parseQuery, pickAskMode, queryRanges, queryText, type LineMatch } from "../contract/index.js";
+import {
+  findInText,
+  parseQuery,
+  pickAskMode,
+  queryRanges,
+  queryText,
+  type LineMatch,
+} from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 import { stableOrder, type InstantState, type Row } from "../query/controller.js";
-import { banner, folderOf, linkFor, openIn, quietLabel, renderBadges, renderHighlighted, skeletonAfter, type OpenIn } from "../ui.js";
+import {
+  banner,
+  folderOf,
+  linkFor,
+  openIn,
+  quietLabel,
+  renderBadges,
+  renderHighlighted,
+  skeletonAfter,
+  type OpenIn,
+} from "../ui.js";
 
 const MAX_ROWS = 50;
 const MAX_INFILE_ROWS = 200;
@@ -32,7 +49,9 @@ interface Item {
 
 /** A shortcut as this platform writes it: ⌘ ⌥ ⇧ on a Mac, Ctrl+ Alt+ Shift+ elsewhere. */
 function key(shortcut: string): string {
-  return Platform.isMacOS ? shortcut : shortcut.replace("⌘", "Ctrl+").replace("⌥", "Alt+").replace("⇧", "Shift+");
+  return Platform.isMacOS
+    ? shortcut
+    : shortcut.replace("⌘", "Ctrl+").replace("⌥", "Alt+").replace("⇧", "Shift+");
 }
 
 /** The id of the "Ask this as a question" row. */
@@ -70,7 +89,11 @@ export class InstantModal extends Modal {
   private frame = 0;
   private editor: Editor | null;
   private sourcePath: string;
-  private inFile: { path: string; title: string; saved: { raw: string; selectedId: string | null } | null } | null = null;
+  private inFile: {
+    path: string;
+    title: string;
+    saved: { raw: string; selectedId: string | null } | null;
+  } | null = null;
   private inFileText = "";
   private noFuzzy = false;
   private cancelSkeleton: (() => void) | null = null;
@@ -108,13 +131,27 @@ export class InstantModal extends Modal {
     this.underlay = bar.createDiv({ cls: "trova-underlay", attr: { "aria-hidden": "true" } });
     this.input = bar.createEl("input", {
       cls: "trova-input",
-      attr: { type: "text", role: "combobox", "aria-expanded": "true", "aria-controls": `${this.uid}-list`, "aria-autocomplete": "list", spellcheck: "false", placeholder: t("instantPlaceholder") },
+      attr: {
+        type: "text",
+        role: "combobox",
+        "aria-expanded": "true",
+        "aria-controls": `${this.uid}-list`,
+        "aria-autocomplete": "list",
+        spellcheck: "false",
+        placeholder: t("instantPlaceholder"),
+      },
     });
     quietLabel(this.input, t("cmdInstant"));
     this.noticeEl = contentEl.createDiv({ cls: "trova-notices" });
-    this.listEl = contentEl.createDiv({ cls: "trova-list", attr: { role: "listbox", id: `${this.uid}-list` } });
+    this.listEl = contentEl.createDiv({
+      cls: "trova-list",
+      attr: { role: "listbox", id: `${this.uid}-list` },
+    });
     quietLabel(this.listEl, t("cmdInstant"));
-    this.liveEl = contentEl.createDiv({ cls: "trova-live", attr: { "aria-live": "polite", role: "status" } });
+    this.liveEl = contentEl.createDiv({
+      cls: "trova-live",
+      attr: { "aria-live": "polite", role: "status" },
+    });
     this.hintEl = contentEl.createDiv({ cls: "trova-hints" });
 
     this.input.addEventListener("input", () => {
@@ -130,8 +167,12 @@ export class InstantModal extends Modal {
     this.scope.register([], "ArrowUp", (e) => this.move(-1, e));
     this.scope.register(["Ctrl"], "n", (e) => this.move(1, e));
     this.scope.register(["Ctrl"], "p", (e) => this.move(-1, e));
-    this.scope.register(["Ctrl"], "j", (e) => (this.plugin.settings.vimKeys ? this.move(1, e) : undefined));
-    this.scope.register(["Ctrl"], "k", (e) => (this.plugin.settings.vimKeys ? this.move(-1, e) : undefined));
+    this.scope.register(["Ctrl"], "j", (e) =>
+      this.plugin.settings.vimKeys ? this.move(1, e) : undefined,
+    );
+    this.scope.register(["Ctrl"], "k", (e) =>
+      this.plugin.settings.vimKeys ? this.move(-1, e) : undefined,
+    );
     // Open keys follow Obsidian's rule: Mod for a new tab, Mod+Alt for a split, Mod+Alt+Shift for a window.
     this.scope.register([], "Enter", (e) => this.act("open", e));
     this.scope.register(["Mod"], "Enter", (e) => this.act("open", e, "tab"));
@@ -149,7 +190,13 @@ export class InstantModal extends Modal {
       e.preventDefault();
       const item = this.selected();
       const path = item?.row?.path ?? item?.path;
-      if (!this.inFile && path && path.endsWith(".md") && (!item?.row || item.row.collection === this.plugin.collection)) void this.enterInFile(path, true);
+      if (
+        !this.inFile &&
+        path &&
+        path.endsWith(".md") &&
+        (!item?.row || item.row.collection === this.plugin.collection)
+      )
+        void this.enterInFile(path, true);
       return false;
     });
     this.scope.register([], "Escape", () => {
@@ -164,7 +211,10 @@ export class InstantModal extends Modal {
     if (this.opts.inFilePath) {
       void this.enterInFile(this.opts.inFilePath, false);
     } else {
-      const restore = this.plugin.settings.restoreQuery && lastSession && Date.now() - lastSession.at < this.plugin.settings.restoreQuerySeconds * 1000;
+      const restore =
+        this.plugin.settings.restoreQuery &&
+        lastSession &&
+        Date.now() - lastSession.at < this.plugin.settings.restoreQuerySeconds * 1000;
       const initial = this.opts.query ?? (restore ? lastSession!.raw : "");
       if (this.opts.query === undefined && restore) this.selectedId = lastSession!.selectedId;
       this.input.value = initial;
@@ -181,7 +231,11 @@ export class InstantModal extends Modal {
     this.cancelSkeleton?.();
     if (!this.inFile || this.inFile.saved) {
       const raw = this.inFile?.saved ? this.inFile.saved.raw : this.input.value;
-      lastSession = { raw, selectedId: this.inFile?.saved ? this.inFile.saved.selectedId : this.selectedId, at: Date.now() };
+      lastSession = {
+        raw,
+        selectedId: this.inFile?.saved ? this.inFile.saved.selectedId : this.selectedId,
+        at: Date.now(),
+      };
     }
     this.contentEl.empty();
   }
@@ -195,9 +249,14 @@ export class InstantModal extends Modal {
 
   /** A query joins the history when the user acts on one of its results. */
   private remember(): void {
-    const raw = (this.inFile?.saved ? this.inFile.saved.raw : this.inFile ? "" : this.input.value).trim();
+    const raw = (
+      this.inFile?.saved ? this.inFile.saved.raw : this.inFile ? "" : this.input.value
+    ).trim();
     if (!raw) return;
-    this.plugin.local.set(HISTORY_KEY, [raw, ...this.history().filter((q) => q !== raw)].slice(0, HISTORY_MAX));
+    this.plugin.local.set(
+      HISTORY_KEY,
+      [raw, ...this.history().filter((q) => q !== raw)].slice(0, HISTORY_MAX),
+    );
   }
 
   private walkHistory(step: number, e: KeyboardEvent): false {
@@ -235,7 +294,10 @@ export class InstantModal extends Modal {
       this.items = [];
       this.listEl.empty();
       this.noticeEl.empty();
-      this.listEl.createDiv({ cls: "trova-empty", text: `↵ ${t("cmdAsk")}: ${raw.replace(/^\s*\?\s*/, "")}` });
+      this.listEl.createDiv({
+        cls: "trova-empty",
+        text: `↵ ${t("cmdAsk")}: ${raw.replace(/^\s*\?\s*/, "")}`,
+      });
       this.setHintMode("normal");
       return;
     }
@@ -264,7 +326,10 @@ export class InstantModal extends Modal {
     for (const d of diagnostics) {
       if (d.start < at) continue;
       this.underlay.appendText(raw.slice(at, d.start));
-      const span = this.underlay.createSpan({ cls: "trova-squiggle", text: raw.slice(d.start, d.end) });
+      const span = this.underlay.createSpan({
+        cls: "trova-squiggle",
+        text: raw.slice(d.start, d.end),
+      });
       span.setAttr("aria-label", d.message);
       span.setAttr("title", d.message);
       at = d.end;
@@ -279,7 +344,10 @@ export class InstantModal extends Modal {
     const items: Item[] = [];
     const seen = new Set<string>();
     for (const path of local.recentPaths(12)) {
-      if (app.vault.getAbstractFileByPath(path) instanceof TFile && !this.plugin.indexer.isExcluded(path)) {
+      if (
+        app.vault.getAbstractFileByPath(path) instanceof TFile &&
+        !this.plugin.indexer.isExcluded(path)
+      ) {
         items.push({ id: `recent:${path}`, path, section: "recent" });
         seen.add(path);
       }
@@ -299,7 +367,11 @@ export class InstantModal extends Modal {
     const prev = this.items.filter((i) => i.section === "main").map((i) => i.id);
     const locked = this.userMoved ? this.selectedId : this.hoveredId;
     const byId = new Map(state.rows.map((r) => [r.id, r]));
-    const order = stableOrder(prev, state.rows.slice(0, MAX_ROWS).map((r) => r.id), locked);
+    const order = stableOrder(
+      prev,
+      state.rows.slice(0, MAX_ROWS).map((r) => r.id),
+      locked,
+    );
     const items: Item[] = order.map((id) => ({ id, row: byId.get(id)!, section: "main" as const }));
     for (const row of state.semantic) items.push({ id: row.id, row, section: "semantic" });
     // A question-like query also offers Ask, above the notes. When it finds no notes at all, the
@@ -335,7 +407,9 @@ export class InstantModal extends Modal {
     this.renderList(state.pending || state.refining);
     if (!state.pending) {
       const n = this.items.filter((i) => i.section !== "ask").length;
-      this.liveEl.setText(n === 0 ? t("noMatches") : n === 1 ? t("resultCountOne") : t("resultsCount", { n }));
+      this.liveEl.setText(
+        n === 0 ? t("noMatches") : n === 1 ? t("resultCountOne") : t("resultsCount", { n }),
+      );
     }
   }
 
@@ -353,7 +427,10 @@ export class InstantModal extends Modal {
     // The first note is selected, never the Ask row, so Enter keeps opening the top result. The
     // Ask row is selected only when it is alone, or when the user moved to it.
     const firstNote = this.items.find((i) => i.section !== "ask");
-    if (!this.items.some((i) => i.id === this.selectedId) || (this.selectedId === ASK_ITEM && !this.userMoved && firstNote)) {
+    if (
+      !this.items.some((i) => i.id === this.selectedId) ||
+      (this.selectedId === ASK_ITEM && !this.userMoved && firstNote)
+    ) {
       this.selectedId = (firstNote ?? this.items[0])?.id ?? null;
     }
     const askOnly = this.items.length === 1 && this.items[0]!.section === "ask";
@@ -361,7 +438,11 @@ export class InstantModal extends Modal {
 
     if (this.items.length === 0) {
       if (pending) return;
-      if (this.inFile) list.createDiv({ cls: "trova-empty", text: this.input.value.trim() ? t("noMatchesInFile") : "" });
+      if (this.inFile)
+        list.createDiv({
+          cls: "trova-empty",
+          text: this.input.value.trim() ? t("noMatchesInFile") : "",
+        });
       else if (this.input.value.trim()) this.renderNoResults(list);
       this.input.removeAttribute("aria-activedescendant");
       return;
@@ -370,10 +451,25 @@ export class InstantModal extends Modal {
     this.items.forEach((item, index) => {
       if (item.section !== section) {
         section = item.section;
-        const title = section === "semantic" ? t("relatedByMeaning") : section === "recent" ? t("recent") : section === "pinned" ? t("pinned") : "";
-        if (title) list.createDiv({ cls: "trova-section", text: title, attr: { role: "presentation" } });
+        const title =
+          section === "semantic"
+            ? t("relatedByMeaning")
+            : section === "recent"
+              ? t("recent")
+              : section === "pinned"
+                ? t("pinned")
+                : "";
+        if (title)
+          list.createDiv({ cls: "trova-section", text: title, attr: { role: "presentation" } });
       }
-      const el = list.createDiv({ cls: "trova-row", attr: { role: "option", id: `${this.uid}-opt-${index}`, "aria-selected": String(item.id === this.selectedId) } });
+      const el = list.createDiv({
+        cls: "trova-row",
+        attr: {
+          role: "option",
+          id: `${this.uid}-opt-${index}`,
+          "aria-selected": String(item.id === this.selectedId),
+        },
+      });
       if (item.id === this.selectedId) el.addClass("is-selected");
       el.dataset["id"] = item.id;
       if (item.section === "ask") this.renderAsk(el);
@@ -412,22 +508,32 @@ export class InstantModal extends Modal {
     renderHighlighted(head.createSpan({ cls: "trova-row-title" }), row.title, row.titleHighlights);
     if (row.alias) head.createSpan({ cls: "trova-row-alias", text: row.alias });
     const folder = folderOf(row.path);
-    const where = row.collection !== this.plugin.collection ? `${row.collection}: ${folder}` : folder;
+    const where =
+      row.collection !== this.plugin.collection ? `${row.collection}: ${folder}` : folder;
     if (where) head.createSpan({ cls: "trova-row-path", text: where });
     renderBadges(head.createSpan({ cls: "trova-badges" }), row.matchedBy, row.type);
-    if (row.headings.length) el.createDiv({ cls: "trova-row-heading", text: row.headings.join(" › ") });
-    if (row.snippet) renderHighlighted(el.createDiv({ cls: "trova-row-snippet" }), row.snippet, row.highlights);
+    if (row.headings.length)
+      el.createDiv({ cls: "trova-row-heading", text: row.headings.join(" › ") });
+    if (row.snippet)
+      renderHighlighted(el.createDiv({ cls: "trova-row-snippet" }), row.snippet, row.highlights);
     if (row.context) el.createDiv({ cls: "trova-row-context", text: row.context });
   }
 
   /** "Ask this as a question": runs the query as a question in the Connections and Ask panel. */
   private renderAsk(el: HTMLElement): void {
     el.addClass("trova-ask-row");
-    setIcon(el.createSpan({ cls: "trova-ask-row-icon", attr: { "aria-hidden": "true" } }), "message-circle-question");
+    setIcon(
+      el.createSpan({ cls: "trova-ask-row-icon", attr: { "aria-hidden": "true" } }),
+      "message-circle-question",
+    );
     const text = el.createDiv({ cls: "trova-ask-row-text" });
     text.createDiv({ cls: "trova-row-title", text: t("askAsQuestion") });
     text.createDiv({ cls: "trova-row-path", text: t("askRowDetail") });
-    el.createEl("kbd", { cls: "trova-ask-row-key", text: key("⌘⇧↵"), attr: { "aria-hidden": "true" } });
+    el.createEl("kbd", {
+      cls: "trova-ask-row-key",
+      text: key("⌘⇧↵"),
+      attr: { "aria-hidden": "true" },
+    });
   }
 
   /** Closes Instant search and runs its query as a question in the panel. */
@@ -453,7 +559,11 @@ export class InstantModal extends Modal {
   private renderMatch(el: HTMLElement, match: LineMatch): void {
     el.addClass("trova-row-infile");
     el.createSpan({ cls: "trova-line-no", text: String(match.line + 1) });
-    renderHighlighted(el.createDiv({ cls: "trova-row-snippet trova-pre" }), match.context, match.highlights);
+    renderHighlighted(
+      el.createDiv({ cls: "trova-row-snippet trova-pre" }),
+      match.context,
+      match.highlights,
+    );
   }
 
   private renderNoResults(list: HTMLElement): void {
@@ -470,7 +580,12 @@ export class InstantModal extends Modal {
     withKey(t("askAsQuestion"), "⌘⇧↵").addEventListener("click", () => this.askNow());
     if (this.state && this.state.query.filters.length > 0) {
       buttons.createEl("button", { text: t("removeFilters") }).addEventListener("click", () => {
-        this.input.value = [queryText(this.state!.query), ...this.state!.query.mustNot.map((m) => `-${m.text}`)].join(" ").trim();
+        this.input.value = [
+          queryText(this.state!.query),
+          ...this.state!.query.mustNot.map((m) => `-${m.text}`),
+        ]
+          .join(" ")
+          .trim();
         this.onQuery();
         this.input.focus();
       });
@@ -496,7 +611,10 @@ export class InstantModal extends Modal {
   private move(delta: number, e: KeyboardEvent): false {
     e.preventDefault();
     if (this.items.length === 0) return false;
-    const at = Math.max(0, this.items.findIndex((i) => i.id === this.selectedId));
+    const at = Math.max(
+      0,
+      this.items.findIndex((i) => i.id === this.selectedId),
+    );
     const next = (at + delta + this.items.length) % this.items.length;
     this.selectedId = this.items[next]!.id;
     this.userMoved = true;
@@ -508,10 +626,27 @@ export class InstantModal extends Modal {
     this.hintEl.empty();
     // Only the keys that do something here: with no note to act on, the note keys are left out.
     const hints: [string, string][] = this.inFile
-      ? [["↵", t("hintOpen")], ["esc", t("hintBack")]]
+      ? [
+          ["↵", t("hintOpen")],
+          ["esc", t("hintBack")],
+        ]
       : this.hintMode === "askOnly"
-        ? [["↵", t("hintAsk")], ["⇧↵", t("hintCreate")], ["⌥↑", t("cmdHistoryPrev")], ["esc", t("hintClose")]]
-        : [["↵", t("hintOpen")], ["⌘↵", t("hintNewTab")], ...(this.hintMode === "ask" ? ([["⌘⇧↵", t("hintAsk")]] as [string, string][]) : []), ["⌥↵", t("hintInsertLink")], ["⇧↵", t("hintCreate")], ["tab", t("hintInFile")], ["⌘B", t("hintBasket")], ["⌥↑", t("cmdHistoryPrev")]];
+        ? [
+            ["↵", t("hintAsk")],
+            ["⇧↵", t("hintCreate")],
+            ["⌥↑", t("cmdHistoryPrev")],
+            ["esc", t("hintClose")],
+          ]
+        : [
+            ["↵", t("hintOpen")],
+            ["⌘↵", t("hintNewTab")],
+            ...(this.hintMode === "ask" ? ([["⌘⇧↵", t("hintAsk")]] as [string, string][]) : []),
+            ["⌥↵", t("hintInsertLink")],
+            ["⇧↵", t("hintCreate")],
+            ["tab", t("hintInFile")],
+            ["⌘B", t("hintBasket")],
+            ["⌥↑", t("cmdHistoryPrev")],
+          ];
     for (const [shortcut, label] of hints) {
       const hint = this.hintEl.createSpan({ cls: "trova-hint" });
       hint.createEl("kbd", { text: key(shortcut) });
@@ -529,7 +664,9 @@ export class InstantModal extends Modal {
     this.inFile = { path, title: file.basename, saved };
     this.inFileText = await this.app.vault.cachedRead(file);
     // The words of the result query carry over, without filters.
-    this.input.value = fromResults ? queryText(parseQuery(saved!.raw).query) : (this.opts.query ?? "");
+    this.input.value = fromResults
+      ? queryText(parseQuery(saved!.raw).query)
+      : (this.opts.query ?? "");
     this.input.placeholder = t("inFilePlaceholder", { title: file.basename });
     this.underlay.empty();
     this.noticeEl.empty();
@@ -555,16 +692,25 @@ export class InstantModal extends Modal {
     const query = parseQuery(this.input.value).query;
     const matches = this.input.value.trim() ? findInText(this.inFileText, query) : [];
     // A long note can match hundreds of lines; the list shows the first 200.
-    this.items = matches.slice(0, MAX_INFILE_ROWS).map((match) => ({ id: `m:${match.offset}`, match, section: "infile" as const }));
+    this.items = matches
+      .slice(0, MAX_INFILE_ROWS)
+      .map((match) => ({ id: `m:${match.offset}`, match, section: "infile" as const }));
     this.renderList();
-    if (matches.length > MAX_INFILE_ROWS) this.listEl.createDiv({ cls: "trova-section", text: `+${matches.length - MAX_INFILE_ROWS}` });
-    this.liveEl.setText(matches.length === 1 ? t("resultCountOne") : t("resultsCount", { n: matches.length }));
+    if (matches.length > MAX_INFILE_ROWS)
+      this.listEl.createDiv({ cls: "trova-section", text: `+${matches.length - MAX_INFILE_ROWS}` });
+    this.liveEl.setText(
+      matches.length === 1 ? t("resultCountOne") : t("resultsCount", { n: matches.length }),
+    );
   }
 
   // ---------- actions ----------
 
   /** Runs a row action; `where` says where "open" opens: the current tab, or a new tab, split or window. */
-  private act(action: "open" | "link" | "create" | "basket", e: Event, where: OpenIn = false): false {
+  private act(
+    action: "open" | "link" | "create" | "basket",
+    e: Event,
+    where: OpenIn = false,
+  ): false {
     e.preventDefault();
     const raw = this.input.value;
     if (action === "create") {
@@ -586,7 +732,9 @@ export class InstantModal extends Modal {
     this.remember();
     if (item.match && this.inFile) {
       // Enter scrolls the editor to the match; the modal keeps its state for Esc-back.
-      const range = queryRanges(this.inFileText, parseQuery(raw).query).find((r) => r[0] === item.match!.offset);
+      const range = queryRanges(this.inFileText, parseQuery(raw).query).find(
+        (r) => r[0] === item.match!.offset,
+      );
       const length = range ? range[1] - range[0] : 1;
       void this.plugin.open({ path: this.inFile.path, offset: item.match.offset, length }, where);
       if (!this.inFile.saved) this.close();
@@ -595,7 +743,10 @@ export class InstantModal extends Modal {
     const path = item.row?.path ?? item.path!;
     const headings = item.row?.headings ?? [];
     if (action === "basket") {
-      const block = item.row?.blockId && headings.length ? { headingPath: item.row.blockId.slice(item.row.id.length + 1), headings } : undefined;
+      const block =
+        item.row?.blockId && headings.length
+          ? { headingPath: item.row.blockId.slice(item.row.id.length + 1), headings }
+          : undefined;
       new Notice(this.plugin.basket.add(path, block) ? t("addedToBasket") : t("alreadyInBasket"));
       return false;
     }
@@ -604,7 +755,9 @@ export class InstantModal extends Modal {
         new Notice(t("noEditor"));
         return false;
       }
-      this.editor.replaceSelection(linkFor(this.app, path, headings[headings.length - 1], this.sourcePath));
+      this.editor.replaceSelection(
+        linkFor(this.app, path, headings[headings.length - 1], this.sourcePath),
+      );
       this.close();
       return false;
     }
@@ -639,7 +792,9 @@ export class InstantModal extends Modal {
   }
 
   private async createNote(): Promise<void> {
-    const name = (queryText(parseQuery(this.input.value).query) || this.input.value).replace(/[\\/:*?"<>|#^[\]]/g, " ").trim();
+    const name = (queryText(parseQuery(this.input.value).query) || this.input.value)
+      .replace(/[\\/:*?"<>|#^[\]]/g, " ")
+      .trim();
     if (!name) return;
     this.close();
     const folder = this.app.fileManager.getNewFileParent(this.sourcePath);

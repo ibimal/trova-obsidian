@@ -1,7 +1,17 @@
 // Trova: lifecycle, command and view registration. `onload` registers and returns; the worker,
 // the engine connection and indexing start inside workspace.onLayoutReady.
 
-import { MarkdownView, Modal, Notice, Platform, Plugin, TFile, normalizePath, type Editor, type WorkspaceLeaf } from "obsidian";
+import {
+  MarkdownView,
+  Modal,
+  Notice,
+  Platform,
+  Plugin,
+  TFile,
+  normalizePath,
+  type Editor,
+  type WorkspaceLeaf,
+} from "obsidian";
 import {
   findBlock,
   parseId,
@@ -34,7 +44,13 @@ import { TrovaSettingTab } from "./settingsTab.js";
 import { DataStore, LocalState } from "./state/store.js";
 import { linkFor, localStamp, openTarget, type OpenIn, type OpenTarget } from "./ui.js";
 import { BASKET_VIEW, BasketView } from "./views/BasketView.js";
-import { CONNECTIONS_VIEW, ConnectionsView, resultHeading, resultHeadingPath, sectionAt } from "./views/ConnectionsView.js";
+import {
+  CONNECTIONS_VIEW,
+  ConnectionsView,
+  resultHeading,
+  resultHeadingPath,
+  sectionAt,
+} from "./views/ConnectionsView.js";
 import { GRAPH_VIEW, GraphView } from "./views/GraphView.js";
 import { InstantModal } from "./views/InstantModal.js";
 import { OnboardingModal } from "./views/Onboarding.js";
@@ -54,14 +70,20 @@ class PromptModal extends Modal {
   }
   override onOpen(): void {
     this.titleEl.setText(this.label);
-    const input = this.contentEl.createEl("input", { type: "text", value: this.initial, cls: "trova-prompt" });
+    const input = this.contentEl.createEl("input", {
+      type: "text",
+      value: this.initial,
+      cls: "trova-prompt",
+    });
     const submit = () => {
       this.close();
       this.done(input.value);
     };
     input.addEventListener("keydown", (e) => e.key === "Enter" && submit());
     const buttons = this.contentEl.createDiv({ cls: "modal-button-container" });
-    buttons.createEl("button", { text: t("confirm"), cls: "mod-cta" }).addEventListener("click", submit);
+    buttons
+      .createEl("button", { text: t("confirm"), cls: "mod-cta" })
+      .addEventListener("click", submit);
     input.focus();
     input.select();
   }
@@ -94,12 +116,20 @@ export default class TrovaPlugin extends Plugin {
   declare settings: TrovaSettings;
 
   override async onload(): Promise<void> {
-    this.store = new DataStore({ load: () => this.loadData(), save: (data) => this.saveData(data), backup: () => this.backupData() });
+    this.store = new DataStore({
+      load: () => this.loadData(),
+      save: (data) => this.saveData(data),
+      backup: () => this.backupData(),
+    });
     await this.store.load();
-    if (this.store.backupName) new Notice(t("dataRepaired", { file: this.store.backupName }), 12_000);
+    if (this.store.backupName)
+      new Notice(t("dataRepaired", { file: this.store.backupName }), 12_000);
     else if (this.store.loadFailed) new Notice(t("dataUnreadable"), 12_000);
     this.settings = this.store.settings;
-    this.local = new LocalState({ load: (key) => this.app.loadLocalStorage(key) as unknown, save: (key, value) => this.app.saveLocalStorage(key, value) });
+    this.local = new LocalState({
+      load: (key) => this.app.loadLocalStorage(key) as unknown,
+      save: (key, value) => this.app.saveLocalStorage(key, value),
+    });
     this.basket = new Basket(this.app, this.local);
     // The worker starts in onLayoutReady; until then calls run on a small inline index.
     this.worker = startInline();
@@ -108,20 +138,36 @@ export default class TrovaPlugin extends Plugin {
       mode: () => this.settings.engineMode,
       endpoint: () => {
         if (this.settings.engineMode === "external") {
-          return this.settings.engineAddress ? { base: this.settings.engineAddress.replace(/\/+$/, ""), token: this.settings.engineToken, api: "" } : null;
+          return this.settings.engineAddress
+            ? {
+                base: this.settings.engineAddress.replace(/\/+$/, ""),
+                token: this.settings.engineToken,
+                api: "",
+              }
+            : null;
         }
         const info = readDaemonInfo();
-        return info ? { base: `http://127.0.0.1:${info.port}`, token: info.token, api: info.api } : null;
+        return info
+          ? { base: `http://127.0.0.1:${info.port}`, token: info.token, api: info.api }
+          : null;
       },
       findBinary: () => findBinary(this.settings.engineBinaryPath),
-      spawn: (binary) => spawnDaemon(binary, this.settings.debugLog, this.settings.embeddingModel, this.settings.gpu),
+      spawn: (binary) =>
+        spawnDaemon(
+          binary,
+          this.settings.debugLog,
+          this.settings.embeddingModel,
+          this.settings.gpu,
+        ),
       collections: () => this.collectionRequests(),
       mayIndex: () => this.local.onboarded && this.local.get<boolean>("no-engine") !== true,
       log: (message) => this.settings.debugLog && console.debug(`[trova] ${message}`),
     });
     this.indexer = new VaultIndexer({
       app: this.app,
-      worker: new Proxy({} as WorkerHost, { get: (_t, prop) => (this.worker as unknown as Record<string | symbol, unknown>)[prop] }),
+      worker: new Proxy({} as WorkerHost, {
+        get: (_t, prop) => (this.worker as unknown as Record<string | symbol, unknown>)[prop],
+      }),
       scope: () => ({ include: this.settings.includeGlobs, exclude: this.settings.excludeGlobs }),
       engineIndexes: () => this.engine.ready,
       onChange: (change) => this.engine.queueSync(change),
@@ -143,9 +189,14 @@ export default class TrovaPlugin extends Plugin {
     this.registerView(CARE_VIEW, (leaf) => new VaultCareView(leaf, this));
     this.registerView(TOPIC_VIEW, (leaf) => new TopicMapView(leaf, this));
     this.registerView(GRAPH_VIEW, (leaf) => new GraphView(leaf, this));
-    this.registerHoverLinkSource(CONNECTIONS_VIEW, { display: t("connectionsTitle"), defaultMod: true });
+    this.registerHoverLinkSource(CONNECTIONS_VIEW, {
+      display: t("connectionsTitle"),
+      defaultMod: true,
+    });
     this.addSettingTab(new TrovaSettingTab(this.app, this));
-    this.addRibbonIcon("search", `${t("name")}: ${t("cmdInstant")}`, () => new InstantModal(this).open());
+    this.addRibbonIcon("search", `${t("name")}: ${t("cmdInstant")}`, () =>
+      new InstantModal(this).open(),
+    );
     this.statusBar = new StatusBar(this, this.addStatusBarItem());
     this.registerCommands();
     this.registerMenus();
@@ -156,7 +207,8 @@ export default class TrovaPlugin extends Plugin {
     const suggest = new LinkSuggest(this);
     this.registerEditorSuggest(suggest);
     // Obsidian asks suggesters in order; ours must come before the built-in `[[` suggester.
-    const suggests = (this.app.workspace as unknown as { editorSuggest?: { suggests?: unknown[] } }).editorSuggest?.suggests;
+    const suggests = (this.app.workspace as unknown as { editorSuggest?: { suggests?: unknown[] } })
+      .editorSuggest?.suggests;
     if (Array.isArray(suggests) && suggests.includes(suggest)) {
       suggests.splice(suggests.indexOf(suggest), 1);
       suggests.unshift(suggest);
@@ -192,7 +244,9 @@ export default class TrovaPlugin extends Plugin {
   }
 
   private async startBackground(): Promise<void> {
-    const basePath = (this.app.vault.adapter as unknown as { getBasePath?: () => string }).getBasePath?.();
+    const basePath = (
+      this.app.vault.adapter as unknown as { getBasePath?: () => string }
+    ).getBasePath?.();
     this.collection = await vaultCollectionName(basePath ?? `mobile:${this.app.vault.getName()}`);
     this.engine.vaultCollection = this.collection;
     try {
@@ -225,22 +279,35 @@ export default class TrovaPlugin extends Plugin {
   }
 
   private async collectionRequests(): Promise<CollectionAddRequest[]> {
-    const basePath = (this.app.vault.adapter as unknown as { getBasePath?: () => string }).getBasePath?.() ?? "";
+    const basePath =
+      (this.app.vault.adapter as unknown as { getBasePath?: () => string }).getBasePath?.() ?? "";
     const attachments = this.settings.attachmentTypes.map((a) => a.toLowerCase());
     const out: CollectionAddRequest[] = [
       {
         name: this.collection,
         path: basePath,
-        options: { kind: "vault", include: this.settings.includeGlobs, exclude: this.indexer.excludeGlobs(), attachments },
+        options: {
+          kind: "vault",
+          include: this.settings.includeGlobs,
+          exclude: this.indexer.excludeGlobs(),
+          attachments,
+        },
         context: this.store.data.folderContext,
       },
     ];
-    for (const f of this.settings.outsideFolders) out.push({ name: f.name, path: f.path, options: { kind: "folder", attachments: attachments.filter((a) => a !== "image") } });
+    for (const f of this.settings.outsideFolders)
+      out.push({
+        name: f.name,
+        path: f.path,
+        options: { kind: "folder", attachments: attachments.filter((a) => a !== "image") },
+      });
     return out;
   }
 
   /** Applies a settings change without a restart. */
-  applySettings(effect: "none" | "scope" | "engine" | "editor" | "http" | "debug" | "connections"): void {
+  applySettings(
+    effect: "none" | "scope" | "engine" | "editor" | "http" | "debug" | "connections",
+  ): void {
     if (effect === "scope") {
       this.indexer.refreshScope();
       void this.indexer.reindexAll();
@@ -249,7 +316,8 @@ export default class TrovaPlugin extends Plugin {
     } else if (effect === "engine") {
       if (!this.engine.ready && this.engineWanted()) void this.engine.connect(true);
       else void this.engine.reregister();
-      if (this.engine.ready) void this.engine.setPaused(!this.settings.backgroundIndexing).catch(() => undefined);
+      if (this.engine.ready)
+        void this.engine.setPaused(!this.settings.backgroundIndexing).catch(() => undefined);
     } else if (effect === "editor") {
       this.badges.invalidate();
       this.app.workspace.updateOptions();
@@ -261,7 +329,8 @@ export default class TrovaPlugin extends Plugin {
       this.httpApi?.stop();
       this.httpApi = null;
       if (this.settings.httpApi) {
-        if (!this.settings.httpApiToken) this.store.updateSettings({ httpApiToken: this.newToken() });
+        if (!this.settings.httpApiToken)
+          this.store.updateSettings({ httpApiToken: this.newToken() });
         this.httpApi = new HttpApi(this);
         this.httpApi.start(this.settings.httpApiPort, this.settings.httpApiToken).then(
           () => new Notice(t("httpApiOn", { port: this.settings.httpApiPort })),
@@ -278,10 +347,18 @@ export default class TrovaPlugin extends Plugin {
   }
 
   private watchBattery(): void {
-    const nav = navigator as unknown as { getBattery?: () => Promise<{ charging: boolean; addEventListener(e: string, cb: () => void): void }> };
+    const nav = navigator as unknown as {
+      getBattery?: () => Promise<{
+        charging: boolean;
+        addEventListener(e: string, cb: () => void): void;
+      }>;
+    };
     void nav.getBattery?.().then((battery) => {
       const apply = () => {
-        if (this.settings.pauseOnBattery && this.engine.ready) void this.engine.setPaused(!battery.charging || !this.settings.backgroundIndexing).catch(() => undefined);
+        if (this.settings.pauseOnBattery && this.engine.ready)
+          void this.engine
+            .setPaused(!battery.charging || !this.settings.backgroundIndexing)
+            .catch(() => undefined);
       };
       battery.addEventListener("chargingchange", apply);
       apply();
@@ -291,7 +368,9 @@ export default class TrovaPlugin extends Plugin {
   private registerVaultEvents(): void {
     const { vault, metadataCache, workspace } = this.app;
     const ready = () => workspace.layoutReady;
-    this.registerEvent(vault.on("create", (f) => ready() && f instanceof TFile && void this.indexer.onModify(f)));
+    this.registerEvent(
+      vault.on("create", (f) => ready() && f instanceof TFile && void this.indexer.onModify(f)),
+    );
     this.registerEvent(
       vault.on("modify", (f) => {
         if (!(f instanceof TFile)) return;
@@ -316,10 +395,18 @@ export default class TrovaPlugin extends Plugin {
         this.store.renameSource(this.sourceId(oldPath), this.sourceId(f.path));
         this.local.renameOpened(oldPath, f.path);
         this.connections.dropPath(oldPath);
-        this.basket.setAll(this.basket.items.map((i) => (i.path === oldPath ? { ...i, path: f.path, key: i.key.replace(oldPath, f.path), title: f.basename } : i)));
+        this.basket.setAll(
+          this.basket.items.map((i) =>
+            i.path === oldPath
+              ? { ...i, path: f.path, key: i.key.replace(oldPath, f.path), title: f.basename }
+              : i,
+          ),
+        );
       }),
     );
-    this.registerEvent(metadataCache.on("changed", (f, data) => void this.indexer.onCacheChanged(f, data)));
+    this.registerEvent(
+      metadataCache.on("changed", (f, data) => void this.indexer.onCacheChanged(f, data)),
+    );
     this.registerEvent(workspace.on("file-open", (f) => f && this.local.markOpened(f.path)));
     let editTimer: number | null = null;
     this.registerEvent(
@@ -342,7 +429,10 @@ export default class TrovaPlugin extends Plugin {
     if (event === "results.stale") {
       const sources = (data["sources"] as string[] | undefined) ?? [];
       // The engine has indexed these sources, so they leave the worker's overlay.
-      const paths = sources.map((s) => parseId(s)).filter((p) => p?.collection === this.collection).map((p) => p!.path);
+      const paths = sources
+        .map((s) => parseId(s))
+        .filter((p) => p?.collection === this.collection)
+        .map((p) => p!.path);
       if (paths.length) void this.worker.clearDirty(paths);
       this.connections.markStale(sources);
     } else if (event === "index.ready") {
@@ -357,9 +447,16 @@ export default class TrovaPlugin extends Plugin {
           const c = status?.collections.find((x) => x.name === this.collection);
           const notice = new Notice("", 15000);
           const el = notice.messageEl ?? (notice as unknown as { noticeEl: HTMLElement }).noticeEl;
-          el.createDiv({ text: t("finishNotice", { sources: (c?.sources ?? 0).toLocaleString(), embedded: (c?.embedded ?? 0).toLocaleString() }) });
+          el.createDiv({
+            text: t("finishNotice", {
+              sources: (c?.sources ?? 0).toLocaleString(),
+              embedded: (c?.embedded ?? 0).toLocaleString(),
+            }),
+          });
           el.createDiv({ cls: "trova-row-path", text: t("hotkeysHint") });
-          el.createEl("button", { text: t("setHotkeys") }).addEventListener("click", () => this.openSettings("hotkeys"));
+          el.createEl("button", { text: t("setHotkeys") }).addEventListener("click", () =>
+            this.openSettings("hotkeys"),
+          );
         });
       }
     }
@@ -375,7 +472,10 @@ export default class TrovaPlugin extends Plugin {
     const files = this.app.vault.getMarkdownFiles();
     for (let i = 0; i < files.length; i++) {
       if (i % 500 === 499) await idle();
-      for (const k of Object.keys(this.app.metadataCache.getFileCache(files[i]!)?.frontmatter ?? {})) keys.add(k.toLowerCase());
+      for (const k of Object.keys(
+        this.app.metadataCache.getFileCache(files[i]!)?.frontmatter ?? {},
+      ))
+        keys.add(k.toLowerCase());
     }
     keys.delete("position");
     this.frontmatterKeys = keys;
@@ -383,17 +483,38 @@ export default class TrovaPlugin extends Plugin {
 
   /** Image OCR comes from the Text Extractor plugin, when it is installed. The engine stores the text. */
   private async pushOcrText(): Promise<void> {
-    if (this.ocrRunning || !this.engine.ready || !this.settings.attachmentTypes.includes("image")) return;
-    const extractor = (this.app as unknown as { plugins: { plugins: Record<string, { api?: { extractText(file: TFile): Promise<string>; canFileBeExtracted?(path: string): boolean } }> } }).plugins.plugins["text-extractor"]?.api;
+    if (this.ocrRunning || !this.engine.ready || !this.settings.attachmentTypes.includes("image"))
+      return;
+    const extractor = (
+      this.app as unknown as {
+        plugins: {
+          plugins: Record<
+            string,
+            {
+              api?: {
+                extractText(file: TFile): Promise<string>;
+                canFileBeExtracted?(path: string): boolean;
+              };
+            }
+          >;
+        };
+      }
+    ).plugins.plugins["text-extractor"]?.api;
     if (!extractor) return;
     this.ocrRunning = true;
     try {
       const stored = this.local.get<unknown>("ocr");
       const pushed: Record<string, number> = {};
       if (typeof stored === "object" && stored !== null && !Array.isArray(stored)) {
-        for (const [path, at] of Object.entries(stored)) if (typeof at === "number") pushed[path] = at;
+        for (const [path, at] of Object.entries(stored))
+          if (typeof at === "number") pushed[path] = at;
       }
-      const images = this.app.vault.getFiles().filter((f) => /^(png|jpe?g|webp|gif|bmp)$/i.test(f.extension) && !this.indexer.isExcluded(f.path));
+      const images = this.app.vault
+        .getFiles()
+        .filter(
+          (f) =>
+            /^(png|jpe?g|webp|gif|bmp)$/i.test(f.extension) && !this.indexer.isExcluded(f.path),
+        );
       for (const file of images) {
         if (!this.engine.ready) break;
         if (pushed[file.path] === file.stat.mtime) continue;
@@ -437,18 +558,37 @@ export default class TrovaPlugin extends Plugin {
   indexedPercent(): number {
     const p = this.indexer.progress;
     let pct = p.running && p.total > 0 ? Math.floor((p.done / p.total) * 100) : 100;
-    const c = this.engine.ready ? this.engine.snapshot.status?.collections.find((x) => x.name === this.collection) : undefined;
-    if (c && c.sources > 0 && c.embedded < c.sources && this.engine.snapshot.status!.jobs.length > 0) pct = Math.min(pct, Math.floor((c.embedded / c.sources) * 100));
+    const c = this.engine.ready
+      ? this.engine.snapshot.status?.collections.find((x) => x.name === this.collection)
+      : undefined;
+    if (
+      c &&
+      c.sources > 0 &&
+      c.embedded < c.sources &&
+      this.engine.snapshot.status!.jobs.length > 0
+    )
+      pct = Math.min(pct, Math.floor((c.embedded / c.sources) * 100));
     return pct;
   }
 
   bookmarkedPaths(): string[] {
-    const items = (this.app as unknown as { internalPlugins?: { plugins?: Record<string, { instance?: { items?: { type: string; path?: string; items?: unknown[] }[] } }> } }).internalPlugins?.plugins?.["bookmarks"]?.instance?.items ?? [];
+    const items =
+      (
+        this.app as unknown as {
+          internalPlugins?: {
+            plugins?: Record<
+              string,
+              { instance?: { items?: { type: string; path?: string; items?: unknown[] }[] } }
+            >;
+          };
+        }
+      ).internalPlugins?.plugins?.["bookmarks"]?.instance?.items ?? [];
     const out: string[] = [];
     const walk = (list: { type: string; path?: string; items?: unknown[] }[]) => {
       for (const item of list) {
         if (item.type === "file" && item.path) out.push(item.path);
-        else if (item.type === "group" && Array.isArray(item.items)) walk(item.items as typeof list);
+        else if (item.type === "group" && Array.isArray(item.items))
+          walk(item.items as typeof list);
       }
     };
     walk(items);
@@ -456,21 +596,50 @@ export default class TrovaPlugin extends Plugin {
   }
 
   dailyFolder(): string | null {
-    const options = (this.app as unknown as { internalPlugins?: { plugins?: Record<string, { enabled?: boolean; instance?: { options?: { folder?: string } } }> } }).internalPlugins?.plugins;
-    const folder = options?.["daily-notes"]?.enabled ? options["daily-notes"].instance?.options?.folder : undefined;
+    const options = (
+      this.app as unknown as {
+        internalPlugins?: {
+          plugins?: Record<
+            string,
+            { enabled?: boolean; instance?: { options?: { folder?: string } } }
+          >;
+        };
+      }
+    ).internalPlugins?.plugins;
+    const folder = options?.["daily-notes"]?.enabled
+      ? options["daily-notes"].instance?.options?.folder
+      : undefined;
     return folder ? folder.replace(/^\/+|\/+$/g, "") : null;
   }
 
   private templatesFolder(): string | null {
-    const options = (this.app as unknown as { internalPlugins?: { plugins?: Record<string, { enabled?: boolean; instance?: { options?: { folder?: string } } }> } }).internalPlugins?.plugins;
-    const folder = options?.["templates"]?.enabled ? options["templates"].instance?.options?.folder : undefined;
+    const options = (
+      this.app as unknown as {
+        internalPlugins?: {
+          plugins?: Record<
+            string,
+            { enabled?: boolean; instance?: { options?: { folder?: string } } }
+          >;
+        };
+      }
+    ).internalPlugins?.plugins;
+    const folder = options?.["templates"]?.enabled
+      ? options["templates"].instance?.options?.folder
+      : undefined;
     return folder ? folder.replace(/^\/+|\/+$/g, "") : null;
   }
 
   /** Daily notes, templates and the folders from the settings are left out of orphans and Rediscover. */
   isCareExcluded(path: string): boolean {
-    const folders = [this.dailyFolder(), this.templatesFolder(), ...this.settings.careExcludedFolders].filter((f): f is string => !!f);
-    return folders.some((f) => path === f || path.startsWith(`${f.replace(/\/+$/, "")}/`)) || this.indexer.isExcluded(path, this.fileCache(path));
+    const folders = [
+      this.dailyFolder(),
+      this.templatesFolder(),
+      ...this.settings.careExcludedFolders,
+    ].filter((f): f is string => !!f);
+    return (
+      folders.some((f) => path === f || path.startsWith(`${f.replace(/\/+$/, "")}/`)) ||
+      this.indexer.isExcluded(path, this.fileCache(path))
+    );
   }
 
   open(target: OpenTarget, where: OpenIn = false): Promise<void> {
@@ -488,7 +657,10 @@ export default class TrovaPlugin extends Plugin {
       const start = r.block?.start ?? 0;
       const end = r.block?.end ?? content.length;
       let hit: [number, number] | undefined;
-      if (query) hit = queryRanges(content, parseQuery(query, { mode: "ask" }).query).find((x) => x[0] >= start && x[1] <= end);
+      if (query)
+        hit = queryRanges(content, parseQuery(query, { mode: "ask" }).query).find(
+          (x) => x[0] >= start && x[1] <= end,
+        );
       if (!hit && r.highlights[0]) {
         // Find the highlighted text of the snippet inside the block.
         const word = r.snippet.slice(r.highlights[0][0], r.highlights[0][1]);
@@ -515,23 +687,38 @@ export default class TrovaPlugin extends Plugin {
    * shows the note is focused instead of a new split. With `own`, a section shown in that pane, the
    * pane also scrolls to it and marks it, so both sides of a section pair are in view.
    */
-  async openBeside(id: string, opts: { beside?: WorkspaceLeaf; besidePath?: string; reuse?: boolean; own?: string } = {}): Promise<WorkspaceLeaf | null> {
+  async openBeside(
+    id: string,
+    opts: { beside?: WorkspaceLeaf; besidePath?: string; reuse?: boolean; own?: string } = {},
+  ): Promise<WorkspaceLeaf | null> {
     const target = await this.targetFor(id);
     if (!target) return null;
     const { workspace } = this.app;
     const main = (leaf: WorkspaceLeaf) => leaf.getRoot() === workspace.rootSplit;
-    const showing = (path: string) => workspace.getLeavesOfType("markdown").filter((l) => main(l) && (l.view as MarkdownView).file?.path === path);
-    const base = opts.beside ?? (opts.besidePath ? showing(opts.besidePath)[0] : undefined) ?? workspace.getMostRecentLeaf(workspace.rootSplit) ?? undefined;
+    const showing = (path: string) =>
+      workspace
+        .getLeavesOfType("markdown")
+        .filter((l) => main(l) && (l.view as MarkdownView).file?.path === path);
+    const base =
+      opts.beside ??
+      (opts.besidePath ? showing(opts.besidePath)[0] : undefined) ??
+      workspace.getMostRecentLeaf(workspace.rootSplit) ??
+      undefined;
     if (target.root) {
       await this.open(target, true);
       return null;
     }
     if (opts.own && base && parseId(opts.own)?.headingPath !== undefined) {
       const own = await this.targetFor(opts.own);
-      if (own && !own.root && (base.view as MarkdownView).file?.path === own.path) await openTarget(this.app, own, false, base);
+      if (own && !own.root && (base.view as MarkdownView).file?.path === own.path)
+        await openTarget(this.app, own, false, base);
     }
     const existing = opts.reuse ? showing(target.path).find((l) => l !== base) : undefined;
-    const leaf = existing ?? (base ? workspace.createLeafBySplit(base, "vertical") : workspace.getLeaf("split", "vertical"));
+    const leaf =
+      existing ??
+      (base
+        ? workspace.createLeafBySplit(base, "vertical")
+        : workspace.getLeaf("split", "vertical"));
     await openTarget(this.app, target, false, leaf);
     workspace.setActiveLeaf(leaf, { focus: true });
     return leaf;
@@ -556,7 +743,12 @@ export default class TrovaPlugin extends Plugin {
     if (!parsed) return null;
     const target: OpenTarget = { path: parsed.path, root: this.rootOf(parsed.collection) };
     const file = this.app.vault.getAbstractFileByPath(parsed.path);
-    if (!target.root && parsed.headingPath !== undefined && file instanceof TFile && file.extension === "md") {
+    if (
+      !target.root &&
+      parsed.headingPath !== undefined &&
+      file instanceof TFile &&
+      file.extension === "md"
+    ) {
       const content = await this.app.vault.cachedRead(file);
       const block = findBlock(splitBlocks(content), parsed.headingPath);
       if (block) {
@@ -571,7 +763,12 @@ export default class TrovaPlugin extends Plugin {
   }
 
   linkText(r: Result): string {
-    return linkFor(this.app, r.path, resultHeading(r), this.app.workspace.getActiveFile()?.path ?? "");
+    return linkFor(
+      this.app,
+      r.path,
+      resultHeading(r),
+      this.app.workspace.getActiveFile()?.path ?? "",
+    );
   }
 
   private recentEditor(): Editor | null {
@@ -591,8 +788,15 @@ export default class TrovaPlugin extends Plugin {
   addResultToBasket(r: Result, neighbours = false): void {
     if (r.collection && r.collection !== this.collection) return;
     const headingPath = resultHeadingPath(r);
-    const block = r.block && headingPath !== undefined ? { headingPath, headings: r.block.headings } : undefined;
-    new Notice(this.basket.add(r.path, block, neighbours && !!block) ? t("addedToBasket") : t("alreadyInBasket"));
+    const block =
+      r.block && headingPath !== undefined
+        ? { headingPath, headings: r.block.headings }
+        : undefined;
+    new Notice(
+      this.basket.add(r.path, block, neighbours && !!block)
+        ? t("addedToBasket")
+        : t("alreadyInBasket"),
+    );
   }
 
   /** Copies the basket, or saves it as a note. The button shows progress and the editor stays usable. */
@@ -601,11 +805,16 @@ export default class TrovaPlugin extends Plugin {
     const label = button?.textContent ?? "";
     if (button) button.disabled = true;
     try {
-      const { text, tokens } = await this.basket.assemble(format, (done, total) => button?.setText(t("copying", { done, total })));
+      const { text, tokens } = await this.basket.assemble(format, (done, total) =>
+        button?.setText(t("copying", { done, total })),
+      );
       if (format === "note") {
         const typed = this.settings.contextNoteFolder.trim();
-        const folder = typed ? normalizePath(typed).replace(/^\/+|\/+$/g, "") : this.app.fileManager.getNewFileParent("").path.replace(/^\/$/, "");
-        if (folder && !this.app.vault.getAbstractFileByPath(folder)) await this.app.vault.createFolder(folder);
+        const folder = typed
+          ? normalizePath(typed).replace(/^\/+|\/+$/g, "")
+          : this.app.fileManager.getNewFileParent("").path.replace(/^\/$/, "");
+        if (folder && !this.app.vault.getAbstractFileByPath(folder))
+          await this.app.vault.createFolder(folder);
         const stamp = localStamp();
         const path = normalizePath(`${folder ? `${folder}/` : ""}Context ${stamp}.md`);
         const file = await this.app.vault.create(path, text);
@@ -639,7 +848,9 @@ export default class TrovaPlugin extends Plugin {
   }
 
   openSettings(tab = "trova"): void {
-    const setting = (this.app as unknown as { setting?: { open(): void; openTabById(id: string): void } }).setting;
+    const setting = (
+      this.app as unknown as { setting?: { open(): void; openTabById(id: string): void } }
+    ).setting;
     setting?.open();
     setting?.openTabById(tab);
   }
@@ -661,11 +872,16 @@ export default class TrovaPlugin extends Plugin {
    * current tab of the main area, as Obsidian opens its own Graph view, so Back returns to the
    * note it replaced. `state` is applied to the view either way.
    */
-  private async reveal<T>(type: string, side: "right" | "main", state?: Record<string, unknown>): Promise<T | null> {
+  private async reveal<T>(
+    type: string,
+    side: "right" | "main",
+    state?: Record<string, unknown>,
+  ): Promise<T | null> {
     const { workspace } = this.app;
     let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(type)[0] ?? null;
     if (!leaf) leaf = side === "right" ? workspace.getRightLeaf(false) : workspace.getLeaf(false);
-    if (leaf && (state || leaf.view.getViewType() !== type)) await leaf.setViewState({ type, active: true, state });
+    if (leaf && (state || leaf.view.getViewType() !== type))
+      await leaf.setViewState({ type, active: true, state });
     if (!leaf) return null;
     await workspace.revealLeaf(leaf);
     return leaf.view as unknown as T;
@@ -706,12 +922,19 @@ export default class TrovaPlugin extends Plugin {
     const file = this.app.vault.getAbstractFileByPath(anchor.path);
     if (!(file instanceof TFile)) return;
     const content = await this.app.vault.cachedRead(file);
-    const block = anchor.kind === "block" ? findBlock(splitBlocks(content), anchor.headingPath) : undefined;
-    const text = (block ? content.slice(block.start, block.end) : content).replace(/^---[\s\S]*?\n---\n/, "");
+    const block =
+      anchor.kind === "block" ? findBlock(splitBlocks(content), anchor.headingPath) : undefined;
+    const text = (block ? content.slice(block.start, block.end) : content).replace(
+      /^---[\s\S]*?\n---\n/,
+      "",
+    );
     // The anchor's text becomes a vector query, so the whole passage is the question. The pane
     // shows a readable name instead of the passage.
-    const name = anchor.kind === "block" && anchor.headings.length ? anchor.headings.at(-1)! : file.basename;
-    await this.openAsk(`vec: ${text.replace(/\s+/g, " ").replace(/"/g, "").slice(0, 600)}`, { label: t("aboutLabel", { name }) });
+    const name =
+      anchor.kind === "block" && anchor.headings.length ? anchor.headings.at(-1)! : file.basename;
+    await this.openAsk(`vec: ${text.replace(/\s+/g, " ").replace(/"/g, "").slice(0, 600)}`, {
+      label: t("aboutLabel", { name }),
+    });
   }
 
   private selection(): { path: string; text: string } | null {
@@ -722,7 +945,8 @@ export default class TrovaPlugin extends Plugin {
   }
 
   private registerCommands(): void {
-    const add = (id: string, name: string, callback: () => void) => this.addCommand({ id, name, callback });
+    const add = (id: string, name: string, callback: () => void) =>
+      this.addCommand({ id, name, callback });
     add("instant-search", t("cmdInstant"), () => new InstantModal(this).open());
     this.addCommand({
       id: "in-file-search",
@@ -730,7 +954,11 @@ export default class TrovaPlugin extends Plugin {
       checkCallback: (checking) => {
         const file = this.app.workspace.getActiveFile();
         if (!file || file.extension !== "md") return false;
-        if (!checking) new InstantModal(this, { inFilePath: file.path, query: this.selection()?.text.split("\n")[0] ?? "" }).open();
+        if (!checking)
+          new InstantModal(this, {
+            inFilePath: file.path,
+            query: this.selection()?.text.split("\n")[0] ?? "",
+          }).open();
         return true;
       },
     });
@@ -744,7 +972,9 @@ export default class TrovaPlugin extends Plugin {
     add("connections-selection", t("cmdConnectionsSelection"), () => {
       const sel = this.selection();
       if (!sel) return void new Notice(t("noSelection"));
-      void this.reveal<ConnectionsView>(CONNECTIONS_VIEW, "right").then((view) => view?.showSelection(sel.path, sel.text));
+      void this.reveal<ConnectionsView>(CONNECTIONS_VIEW, "right").then((view) =>
+        view?.showSelection(sel.path, sel.text),
+      );
     });
     add("random-connection", t("cmdRandom"), () => void this.randomStrong());
     add("open-basket", t("cmdBasket"), () => void this.reveal(BASKET_VIEW, "right"));
@@ -757,7 +987,11 @@ export default class TrovaPlugin extends Plugin {
     add("vault-care", t("cmdVaultCare"), () => void this.openVaultCare());
     add("rediscover", t("cmdRediscover"), () => void this.openVaultCare("rediscover"));
     add("topic-map", t("cmdTopicMap"), () => void this.reveal(TOPIC_VIEW, "main"));
-    add("similarity-graph", t("cmdGraph"), () => void this.openGraph(this.app.workspace.getActiveFile()?.path));
+    add(
+      "similarity-graph",
+      t("cmdGraph"),
+      () => void this.openGraph(this.app.workspace.getActiveFile()?.path),
+    );
     add("reindex", t("cmdReindex"), () => {
       void this.indexer.reindexAll();
       for (const c of this.engine.collections()) this.engine.queueSync({ full: true }, c);
@@ -771,17 +1005,26 @@ export default class TrovaPlugin extends Plugin {
   private addCursorBlockToBasket(): void {
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!view?.file) return void new Notice(t("noEditor"));
-    const headings = (this.app.metadataCache.getFileCache(view.file)?.headings ?? []).map((h) => ({ heading: h.heading, level: h.level, line: h.position.start.line }));
+    const headings = (this.app.metadataCache.getFileCache(view.file)?.headings ?? []).map((h) => ({
+      heading: h.heading,
+      level: h.level,
+      line: h.position.start.line,
+    }));
     const section = sectionAt(headings, view.editor.getCursor().line);
-    new Notice(this.basket.add(view.file.path, section) ? t("addedToBasket") : t("alreadyInBasket"));
+    new Notice(
+      this.basket.add(view.file.path, section) ? t("addedToBasket") : t("alreadyInBasket"),
+    );
   }
 
   private async randomStrong(): Promise<void> {
     const file = this.app.workspace.getActiveFile();
     if (!file) return void new Notice(t("noActiveNote"));
-    const view = await this.connections.related({ kind: "note", path: file.path }).catch(() => null);
+    const view = await this.connections
+      .related({ kind: "note", path: file.path })
+      .catch(() => null);
     const strong = (view?.results ?? []).filter((r) => r.label === "strong");
-    if (strong.length === 0) return void new Notice(view?.state === "offline" ? t("engineOffBanner") : t("noStrong"));
+    if (strong.length === 0)
+      return void new Notice(view?.state === "offline" ? t("engineOffBanner") : t("noStrong"));
     const pick = strong[Math.floor(Math.random() * strong.length)]!;
     await this.openResult(pick.blocks?.[0] ?? pick, false);
   }
@@ -792,19 +1035,51 @@ export default class TrovaPlugin extends Plugin {
         const text = editor.getSelection().trim();
         const path = info.file?.path;
         if (text && path) {
-          menu.addItem((i) => i.setTitle(`${t("name")}: ${t("cmdAskSelection")}`).setIcon("message-circle-question").onClick(() => void this.openAsk(text.replace(/\s+/g, " ").slice(0, 600))));
           menu.addItem((i) =>
-            i.setTitle(`${t("name")}: ${t("cmdConnectionsSelection")}`).setIcon("waypoints").onClick(() => void this.reveal<ConnectionsView>(CONNECTIONS_VIEW, "right").then((v) => v?.showSelection(path, text))),
+            i
+              .setTitle(`${t("name")}: ${t("cmdAskSelection")}`)
+              .setIcon("message-circle-question")
+              .onClick(() => void this.openAsk(text.replace(/\s+/g, " ").slice(0, 600))),
+          );
+          menu.addItem((i) =>
+            i
+              .setTitle(`${t("name")}: ${t("cmdConnectionsSelection")}`)
+              .setIcon("waypoints")
+              .onClick(
+                () =>
+                  void this.reveal<ConnectionsView>(CONNECTIONS_VIEW, "right").then((v) =>
+                    v?.showSelection(path, text),
+                  ),
+              ),
           );
         }
-        if (path) menu.addItem((i) => i.setTitle(`${t("name")}: ${t("cmdAddBlockToBasket")}`).setIcon("shopping-basket").onClick(() => this.addCursorBlockToBasket()));
+        if (path)
+          menu.addItem((i) =>
+            i
+              .setTitle(`${t("name")}: ${t("cmdAddBlockToBasket")}`)
+              .setIcon("shopping-basket")
+              .onClick(() => this.addCursorBlockToBasket()),
+          );
       }),
     );
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         if (!(file instanceof TFile) || file.extension !== "md") return;
-        menu.addItem((i) => i.setTitle(`${t("name")}: ${t("addToBasket")}`).setIcon("shopping-basket").onClick(() => new Notice(this.basket.add(file.path) ? t("addedToBasket") : t("alreadyInBasket"))));
-        menu.addItem((i) => i.setTitle(`${t("name")}: ${t("graphOpenHere")}`).setIcon("git-fork").onClick(() => void this.openGraph(file.path)));
+        menu.addItem((i) =>
+          i
+            .setTitle(`${t("name")}: ${t("addToBasket")}`)
+            .setIcon("shopping-basket")
+            .onClick(
+              () =>
+                new Notice(this.basket.add(file.path) ? t("addedToBasket") : t("alreadyInBasket")),
+            ),
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle(`${t("name")}: ${t("graphOpenHere")}`)
+            .setIcon("git-fork")
+            .onClick(() => void this.openGraph(file.path)),
+        );
       }),
     );
   }

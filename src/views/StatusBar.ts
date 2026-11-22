@@ -13,27 +13,58 @@ export interface StatusLine {
 }
 
 /** The status bar text for an engine snapshot and the worker's indexing progress. */
-export function statusLine(s: EngineSnapshot, worker: { done: number; total: number; running: boolean }, engineWanted: boolean): StatusLine {
+export function statusLine(
+  s: EngineSnapshot,
+  worker: { done: number; total: number; running: boolean },
+  engineWanted: boolean,
+): StatusLine {
   const n = (v: number) => v.toLocaleString("en-US");
   if (s.state === "disabled" || (!engineWanted && s.state !== "ready")) {
-    if (worker.running) return { kind: "progress", text: t("stProgress", { done: n(worker.done), total: n(worker.total) }) };
+    if (worker.running)
+      return {
+        kind: "progress",
+        text: t("stProgress", { done: n(worker.done), total: n(worker.total) }),
+      };
     return { kind: "ready", text: t("stReady") };
   }
-  if (s.state === "offline" || s.state === "not-found" || s.state === "wrong-version") return { kind: "off", text: t("stOff") };
+  if (s.state === "offline" || s.state === "not-found" || s.state === "wrong-version")
+    return { kind: "off", text: t("stOff") };
   if (s.error) return { kind: "error", text: t("stError") };
   const models = s.status?.models;
-  const downloading = models ? [models.embed, models.rerank, models.expand].find((m) => m.state === "downloading") : undefined;
-  if (downloading) return { kind: "model", text: downloading.progress !== undefined ? t("stModel", { pct: Math.round(downloading.progress * 100) }) : t("stModelNoPct") };
+  const downloading = models
+    ? [models.embed, models.rerank, models.expand].find((m) => m.state === "downloading")
+    : undefined;
+  if (downloading)
+    return {
+      kind: "model",
+      text:
+        downloading.progress !== undefined
+          ? t("stModel", { pct: Math.round(downloading.progress * 100) })
+          : t("stModelNoPct"),
+    };
   if (s.status?.paused) return { kind: "paused", text: t("stPaused") };
-  if (s.progress && s.progress.total > 0 && s.progress.done < s.progress.total) return { kind: "progress", text: t("stProgress", { done: n(s.progress.done), total: n(s.progress.total) }) };
-  if (worker.running) return { kind: "progress", text: t("stProgress", { done: n(worker.done), total: n(worker.total) }) };
+  if (s.progress && s.progress.total > 0 && s.progress.done < s.progress.total)
+    return {
+      kind: "progress",
+      text: t("stProgress", { done: n(s.progress.done), total: n(s.progress.total) }),
+    };
+  if (worker.running)
+    return {
+      kind: "progress",
+      text: t("stProgress", { done: n(worker.done), total: n(worker.total) }),
+    };
   return { kind: "ready", text: t("stReady") };
 }
 
 export class StatusBar {
   private popover: HTMLElement | null = null;
   private closer = (e: MouseEvent) => {
-    if (this.popover && !this.popover.contains(e.target as Node) && !this.el.contains(e.target as Node)) this.close();
+    if (
+      this.popover &&
+      !this.popover.contains(e.target as Node) &&
+      !this.el.contains(e.target as Node)
+    )
+      this.close();
   };
 
   constructor(
@@ -52,7 +83,11 @@ export class StatusBar {
   }
 
   line(): StatusLine {
-    return statusLine(this.plugin.engine.snapshot, this.plugin.indexer.progress, this.plugin.engineWanted());
+    return statusLine(
+      this.plugin.engine.snapshot,
+      this.plugin.indexer.progress,
+      this.plugin.engineWanted(),
+    );
   }
 
   update(): void {
@@ -69,7 +104,10 @@ export class StatusBar {
     this.renderPopover();
     const rect = this.el.getBoundingClientRect();
     const win = doc.defaultView ?? window;
-    this.popover.setCssProps({ bottom: `${win.innerHeight - rect.top + 6}px`, right: `${Math.max(8, win.innerWidth - rect.right)}px` });
+    this.popover.setCssProps({
+      bottom: `${win.innerHeight - rect.top + 6}px`,
+      right: `${Math.max(8, win.innerWidth - rect.right)}px`,
+    });
     doc.addEventListener("mousedown", this.closer, true);
     void this.plugin.engine.refreshStatus();
   }
@@ -98,17 +136,42 @@ export class StatusBar {
     const status = s.status;
     if (status && engine.ready) {
       for (const c of status.collections) {
-        row(`${c.name === this.plugin.collection ? this.plugin.app.vault.getName() : c.name}: ${t("popSources", { n: c.sources.toLocaleString(), e: c.embedded.toLocaleString() })}`);
-        row(t("popLastIndex", { when: c.lastIndexed ? new Date(c.lastIndexed).toLocaleString() : t("popNever") }));
+        row(
+          `${c.name === this.plugin.collection ? this.plugin.app.vault.getName() : c.name}: ${t("popSources", { n: c.sources.toLocaleString(), e: c.embedded.toLocaleString() })}`,
+        );
+        row(
+          t("popLastIndex", {
+            when: c.lastIndexed ? new Date(c.lastIndexed).toLocaleString() : t("popNever"),
+          }),
+        );
         if (c.oversized?.length) row(t("popOversized", { n: c.oversized.length }));
       }
       row(t("popModel", { id: status.models.embed.id ?? "?", state: status.models.embed.state }));
-      row(t("popEngine", { name: status.engine.name, version: status.engine.version, backend: status.engine.backend }));
-      if (status.reembedding) row(t("reembedding", { pct: Math.round((status.reembedding.done / Math.max(1, status.reembedding.total)) * 100) }));
+      row(
+        t("popEngine", {
+          name: status.engine.name,
+          version: status.engine.version,
+          backend: status.engine.backend,
+        }),
+      );
+      if (status.reembedding)
+        row(
+          t("reembedding", {
+            pct: Math.round(
+              (status.reembedding.done / Math.max(1, status.reembedding.total)) * 100,
+            ),
+          }),
+        );
       if (line.kind === "paused") button(t("resume"), "play", () => void engine.setPaused(false));
-      else if (line.kind === "progress") button(t("pause"), "pause", () => void engine.setPaused(true));
+      else if (line.kind === "progress")
+        button(t("pause"), "pause", () => void engine.setPaused(true));
       const job = status.jobs.find((j) => j.kind === "models");
-      if (line.kind === "model" && job) button(t("cancel"), "x", () => void engine.cancelJob(job.jobId).then(() => engine.refreshStatus()));
+      if (line.kind === "model" && job)
+        button(
+          t("cancel"),
+          "x",
+          () => void engine.cancelJob(job.jobId).then(() => engine.refreshStatus()),
+        );
     } else {
       row(t("popWorker", { n: indexer.progress.total.toLocaleString() }));
     }
@@ -121,7 +184,26 @@ export class StatusBar {
     }
     if (line.kind === "error" || line.kind === "off") {
       button(t("copyDebug"), "copy", () => {
-        const info = { plugin: this.plugin.manifest.version, state: s.state, reason: s.reason, error: s.error, status: s.status, worker: indexer.progress, platform: Platform.isMacOS ? "macOS" : Platform.isWin ? "Windows" : Platform.isLinux ? "Linux" : Platform.isIosApp ? "iOS" : Platform.isAndroidApp ? "Android" : "other", obsidian: apiVersion };
+        const info = {
+          plugin: this.plugin.manifest.version,
+          state: s.state,
+          reason: s.reason,
+          error: s.error,
+          status: s.status,
+          worker: indexer.progress,
+          platform: Platform.isMacOS
+            ? "macOS"
+            : Platform.isWin
+              ? "Windows"
+              : Platform.isLinux
+                ? "Linux"
+                : Platform.isIosApp
+                  ? "iOS"
+                  : Platform.isAndroidApp
+                    ? "Android"
+                    : "other",
+          obsidian: apiVersion,
+        };
         void navigator.clipboard.writeText(JSON.stringify(info, null, 2));
         new Notice(t("debugCopied"));
       });

@@ -6,7 +6,16 @@
 
 import type { Filter, FilterOp, Lane, ParsedQuery, QueryDiagnostic, Term } from "./types.js";
 
-export const RESERVED_KEYS = ["path", "ext", "tag", "in", "modified", "created", "is", "links"] as const;
+export const RESERVED_KEYS = [
+  "path",
+  "ext",
+  "tag",
+  "in",
+  "modified",
+  "created",
+  "is",
+  "links",
+] as const;
 const LANES = ["lex", "vec", "hyde"] as const;
 const DAY_MS = 86_400_000;
 
@@ -67,7 +76,13 @@ function tokenize(input: string, offset: number): Token[] {
       negated = true;
       i++;
     }
-    if (!escapedLead && input[i] === "=" && i + 1 < n && !isSpace(input[i + 1]!) && input[i + 1] !== '"') {
+    if (
+      !escapedLead &&
+      input[i] === "=" &&
+      i + 1 < n &&
+      !isSpace(input[i + 1]!) &&
+      input[i + 1] !== '"'
+    ) {
       exact = true;
       i++;
     }
@@ -100,7 +115,14 @@ function tokenize(input: string, offset: number): Token[] {
           i += 2;
           continue;
         }
-        if (ch === ":" && key === undefined && !exact && KEY_RE.test(text) && i + 1 < n && !isSpace(input[i + 1]!)) {
+        if (
+          ch === ":" &&
+          key === undefined &&
+          !exact &&
+          KEY_RE.test(text) &&
+          i + 1 < n &&
+          !isSpace(input[i + 1]!)
+        ) {
           // A URL such as http://x is a word, not a filter.
           if (input[i + 1] === "/" && input[i + 2] === "/") {
             text += ch;
@@ -153,7 +175,13 @@ function tokenize(input: string, offset: number): Token[] {
   return tokens;
 }
 
-const CMP_OPS: Record<string, FilterOp> = { ">": "gt", "<": "lt", ">=": "gte", "<=": "lte", "=": "eq" };
+const CMP_OPS: Record<string, FilterOp> = {
+  ">": "gt",
+  "<": "lt",
+  ">=": "gte",
+  "<=": "lte",
+  "=": "eq",
+};
 
 export function parseDay(value: string): number | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -191,7 +219,9 @@ function buildFilter(tok: Token, now: number): FilterOutcome {
       return { filter: { field: "ext", op: "in", value: items, ...negate } };
     }
     case "tag": {
-      const items = splitList(value).map((t) => t.replace(/^#/, "").toLowerCase()).filter(Boolean);
+      const items = splitList(value)
+        .map((t) => t.replace(/^#/, "").toLowerCase())
+        .filter(Boolean);
       if (items.length === 0) return { bad: "tag: needs a tag, such as tag:#zettel" };
       return items.length === 1
         ? { filter: { field: "tag", op: "eq", value: items[0]!, ...negate } }
@@ -206,9 +236,11 @@ function buildFilter(tok: Token, now: number): FilterOutcome {
     case "modified":
     case "created": {
       const rel = parseRelative(value);
-      if (rel !== null && !tok.cmp) return { filter: { field: key, op: "gte", value: now - rel, ...negate } };
+      if (rel !== null && !tok.cmp)
+        return { filter: { field: key, op: "gte", value: now - rel, ...negate } };
       const day = parseDay(value);
-      if (day === null) return { bad: `"${value}" is not a date. Use YYYY-MM-DD or a span such as 7d` };
+      if (day === null)
+        return { bad: `"${value}" is not a date. Use YYYY-MM-DD or a span such as 7d` };
       const op = cmpOp ?? "eq";
       if (op === "eq") return { filter: { field: key, op: "eq", value, ...negate } };
       // ">" means after that day ends; "<" means before it starts.
@@ -221,13 +253,19 @@ function buildFilter(tok: Token, now: number): FilterOutcome {
       return { filter: { field: "is", op: "eq", value: v, ...negate } };
     }
     case "links": {
-      const target = value.replace(/^\[\[/, "").replace(/\]\]$/, "").split("|")[0]!.split("#")[0]!.trim();
+      const target = value
+        .replace(/^\[\[/, "")
+        .replace(/\]\]$/, "")
+        .split("|")[0]!
+        .split("#")[0]!
+        .trim();
       if (!target) return { bad: "links: needs a note, such as links:[[Project plan]]" };
       return { filter: { field: "links", op: "eq", value: target, ...negate } };
     }
     default: {
       const op = cmpOp ?? "eq";
-      const num = value.trim() !== "" && !tok.quoted && Number.isFinite(Number(value)) ? Number(value) : null;
+      const num =
+        value.trim() !== "" && !tok.quoted && Number.isFinite(Number(value)) ? Number(value) : null;
       if (op !== "eq" && num === null && parseDay(value) === null) {
         return { bad: `"${tok.cmp}" needs a number or a date, not "${value}"` };
       }
@@ -343,7 +381,10 @@ export function parseQuery(raw: string, opts: ParseOptions = {}): ParseResult {
 
 /** The free text of a query, without filters and exclusions. The vector lane embeds this. */
 export function queryText(q: ParsedQuery): string {
-  return q.must.map((g) => g.map((t) => t.text).join(" ")).join(" ").trim();
+  return q.must
+    .map((g) => g.map((t) => t.text).join(" "))
+    .join(" ")
+    .trim();
 }
 
 /** The number of words the user typed as search terms. */
@@ -359,6 +400,10 @@ export function isEmptyQuery(q: ParsedQuery): boolean {
 export function replaceWord(q: ParsedQuery, from: string, to: string): ParsedQuery {
   return {
     ...q,
-    must: q.must.map((g) => g.map((t) => (t.kind === "word" && t.text.toLowerCase() === from.toLowerCase() ? { ...t, text: to } : t))),
+    must: q.must.map((g) =>
+      g.map((t) =>
+        t.kind === "word" && t.text.toLowerCase() === from.toLowerCase() ? { ...t, text: to } : t,
+      ),
+    ),
   };
 }

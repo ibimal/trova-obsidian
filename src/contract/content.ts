@@ -37,7 +37,11 @@ export function parseId(id: string): ParsedId | null {
   const rest = id.slice(colon + 1);
   // A path may contain "#" only when its extension follows; split at the first "#" after the extension.
   const ext = /\.[A-Za-z0-9]+#/.exec(rest);
-  const hash = ext ? ext.index + ext[0].length - 1 : /\.[A-Za-z0-9]+$/.test(rest) ? -1 : rest.indexOf("#");
+  const hash = ext
+    ? ext.index + ext[0].length - 1
+    : /\.[A-Za-z0-9]+$/.test(rest)
+      ? -1
+      : rest.indexOf("#");
   if (hash === -1) return rest ? { collection, path: rest, source: id } : null;
   const path = rest.slice(0, hash);
   if (!path) return null;
@@ -128,7 +132,13 @@ export function splitBlocks(text: string): Block[] {
     const count = (seen.get(path) ?? 0) + 1;
     seen.set(path, count);
     if (count > 1) path = `${path}~${count}`;
-    blocks.push({ headingPath: path, headings, level: h.level, start: h.at, end: i + 1 < heads.length ? heads[i + 1]!.at : text.length });
+    blocks.push({
+      headingPath: path,
+      headings,
+      level: h.level,
+      start: h.at,
+      end: i + 1 < heads.length ? heads[i + 1]!.at : text.length,
+    });
   });
   return blocks;
 }
@@ -209,7 +219,11 @@ export function extractInlineTags(text: string): string[] {
 }
 
 export function normaliseTags(value: unknown): string[] {
-  const items = Array.isArray(value) ? value : typeof value === "string" ? value.split(/[\s,]+/) : [];
+  const items = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/[\s,]+/)
+      : [];
   return items.map((t) => String(t).trim().replace(/^#/, "").toLowerCase()).filter(Boolean);
 }
 
@@ -256,7 +270,8 @@ export function createLinkResolver(paths: Iterable<string>): LinkResolver {
   const byName = new Map<string, string>();
   const put = (key: string, path: string) => {
     const prev = byName.get(key);
-    if (!prev || path.length < prev.length || (path.length === prev.length && path < prev)) byName.set(key, path);
+    if (!prev || path.length < prev.length || (path.length === prev.length && path < prev))
+      byName.set(key, path);
   };
   for (const p of paths) {
     exact.set(p.toLowerCase(), p);
@@ -292,12 +307,20 @@ export interface Mention {
  * existing links. Names shorter than `minChars` are ignored.
  */
 export function findMentions(text: string, names: string[], minChars = 3): Mention[] {
-  const usable = [...new Set(names.map((n) => n.trim()).filter((n) => n.length >= minChars))].sort((a, b) => b.length - a.length);
+  const usable = [...new Set(names.map((n) => n.trim()).filter((n) => n.length >= minChars))].sort(
+    (a, b) => b.length - a.length,
+  );
   if (usable.length === 0) return [];
   const skip: [number, number][] = [...fencedRanges(text)];
   const fmEnd = frontmatterEnd(text);
   if (fmEnd) skip.push([0, fmEnd]);
-  for (const re of [/`[^`\n]+`/g, /!?\[\[[^\]\n]+\]\]/g, /!?\[[^\]\n]*\]\([^)\n]*\)/g, /<[^>\n]+>/g, /https?:\/\/\S+/g]) {
+  for (const re of [
+    /`[^`\n]+`/g,
+    /!?\[\[[^\]\n]+\]\]/g,
+    /!?\[[^\]\n]*\]\([^)\n]*\)/g,
+    /<[^>\n]+>/g,
+    /https?:\/\/\S+/g,
+  ]) {
     let m: RegExpExecArray | null;
     while ((m = re.exec(text))) skip.push([m.index, m.index + m[0].length]);
   }

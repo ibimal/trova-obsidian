@@ -3,15 +3,34 @@
 import { SearchIndex } from "./index.js";
 import type { WorkerApi, WorkerRequest, WorkerResponse } from "./protocol.js";
 
-type Async<T> = { [K in keyof T]: T[K] extends (...a: infer A) => infer R ? (...a: A) => Promise<R> : never };
+type Async<T> = {
+  [K in keyof T]: T[K] extends (...a: infer A) => infer R ? (...a: A) => Promise<R> : never;
+};
 
 export interface WorkerHost extends Async<WorkerApi> {
   /** Like `search`, but rejects with an AbortError when the signal aborts. */
-  call<K extends keyof WorkerApi>(method: K, args: Parameters<WorkerApi[K]>, signal?: AbortSignal): Promise<ReturnType<WorkerApi[K]>>;
+  call<K extends keyof WorkerApi>(
+    method: K,
+    args: Parameters<WorkerApi[K]>,
+    signal?: AbortSignal,
+  ): Promise<ReturnType<WorkerApi[K]>>;
   terminate(): void;
 }
 
-const METHODS: (keyof WorkerApi)[] = ["upsertMeta", "upsertBodies", "remove", "rename", "clearDirty", "markDirty", "search", "suggest", "mentions", "inFile", "orphans", "stats"];
+const METHODS: (keyof WorkerApi)[] = [
+  "upsertMeta",
+  "upsertBodies",
+  "remove",
+  "rename",
+  "clearDirty",
+  "markDirty",
+  "search",
+  "suggest",
+  "mentions",
+  "inFile",
+  "orphans",
+  "stats",
+];
 
 function abortError(): Error {
   const err = new Error("Aborted");
@@ -19,7 +38,11 @@ function abortError(): Error {
   return err;
 }
 
-function build(send: (req: WorkerRequest, done: (res: WorkerResponse) => void) => void, terminate: () => void, cancel: (id: number) => void = () => undefined): WorkerHost {
+function build(
+  send: (req: WorkerRequest, done: (res: WorkerResponse) => void) => void,
+  terminate: () => void,
+  cancel: (id: number) => void = () => undefined,
+): WorkerHost {
   let seq = 0;
   const call = (method: keyof WorkerApi, args: unknown[], signal?: AbortSignal): Promise<unknown> =>
     new Promise((resolve, reject) => {
@@ -44,7 +67,8 @@ function build(send: (req: WorkerRequest, done: (res: WorkerResponse) => void) =
       });
     });
   const host = { call, terminate } as unknown as WorkerHost & Record<string, unknown>;
-  for (const m of METHODS) (host as Record<string, unknown>)[m] = (...args: unknown[]) => call(m, args);
+  for (const m of METHODS)
+    (host as Record<string, unknown>)[m] = (...args: unknown[]) => call(m, args);
   return host;
 }
 
@@ -82,7 +106,9 @@ export function startInline(): WorkerHost {
     (req, done) => {
       queueMicrotask(() => {
         try {
-          const fn = (index as unknown as Record<string, (...a: unknown[]) => unknown>)[req.method]!;
+          const fn = (index as unknown as Record<string, (...a: unknown[]) => unknown>)[
+            req.method
+          ]!;
           done({ id: req.id, result: fn.apply(index, req.args) });
         } catch (err) {
           done({ id: req.id, error: (err as Error).message });

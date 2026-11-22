@@ -5,10 +5,18 @@
 // bodies, and a search that was cancelled while it waited is dropped without running.
 
 import { SearchIndex } from "./index.js";
-import { READ_METHODS, type WorkerMessage, type WorkerRequest, type WorkerResponse } from "./protocol.js";
+import {
+  READ_METHODS,
+  type WorkerMessage,
+  type WorkerRequest,
+  type WorkerResponse,
+} from "./protocol.js";
 
 const index = new SearchIndex();
-const scope = self as unknown as { onmessage: ((e: MessageEvent<WorkerMessage>) => void) | null; postMessage(msg: WorkerResponse): void };
+const scope = self as unknown as {
+  onmessage: ((e: MessageEvent<WorkerMessage>) => void) | null;
+  postMessage(msg: WorkerResponse): void;
+};
 const reads: WorkerRequest[] = [];
 const writes: WorkerRequest[] = [];
 let scheduled = false;

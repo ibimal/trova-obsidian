@@ -43,12 +43,15 @@ const p = (raw: string, extra = {}) => parseQuery(raw, { now: NOW, ...extra });
 
 describe("query parser: every row of the Query language table", () => {
   it("words: all words must match", () => {
-    expect(p("kanata remap").query.must).toEqual([[{ kind: "word", text: "kanata" }], [{ kind: "word", text: "remap" }]]);
+    expect(p("kanata remap").query.must).toEqual([
+      [{ kind: "word", text: "kanata" }],
+      [{ kind: "word", text: "remap" }],
+    ]);
   });
   it("quoted phrase", () => {
     expect(p('"key remapping"').query.must).toEqual([[{ kind: "phrase", text: "key remapping" }]]);
   });
-  it("exclusions: -word and -\"phrase\"", () => {
+  it('exclusions: -word and -"phrase"', () => {
     const q = p('rust -draft -"work in progress"').query;
     expect(q.must).toEqual([[{ kind: "word", text: "rust" }]]);
     expect(q.mustNot).toEqual([
@@ -68,14 +71,24 @@ describe("query parser: every row of the Query language table", () => {
       [{ kind: "word", text: "fusion" }],
     ]);
     expect(p("bm25 or splade").query.must).toHaveLength(3);
-    expect(p("a OR b OR c").query.must).toEqual([[{ kind: "word", text: "a" }, { kind: "word", text: "b" }, { kind: "word", text: "c" }]]);
+    expect(p("a OR b OR c").query.must).toEqual([
+      [
+        { kind: "word", text: "a" },
+        { kind: "word", text: "b" },
+        { kind: "word", text: "c" },
+      ],
+    ]);
   });
   it("path:", () => {
-    expect(p('path:"Projects/Trova"').query.filters).toEqual([{ field: "path", op: "contains", value: "Projects/Trova" }]);
+    expect(p('path:"Projects/Trova"').query.filters).toEqual([
+      { field: "path", op: "contains", value: "Projects/Trova" },
+    ]);
   });
   it("ext: single and list", () => {
     expect(p("ext:pdf").query.filters).toEqual([{ field: "ext", op: "in", value: ["pdf"] }]);
-    expect(p('ext:"png jpg"').query.filters).toEqual([{ field: "ext", op: "in", value: ["png", "jpg"] }]);
+    expect(p('ext:"png jpg"').query.filters).toEqual([
+      { field: "ext", op: "in", value: ["png", "jpg"] },
+    ]);
   });
   it("tag:", () => {
     expect(p("tag:#Zettel").query.filters).toEqual([{ field: "tag", op: "eq", value: "zettel" }]);
@@ -86,23 +99,35 @@ describe("query parser: every row of the Query language table", () => {
     expect(p("in:heading setup").query.must[0]![0]!.field).toBe("heading");
   });
   it("frontmatter key:value with comparisons", () => {
-    expect(p("status:active").query.filters).toEqual([{ field: "fm.status", op: "eq", value: "active" }]);
+    expect(p("status:active").query.filters).toEqual([
+      { field: "fm.status", op: "eq", value: "active" },
+    ]);
     expect(p("rating:>3").query.filters).toEqual([{ field: "fm.rating", op: "gt", value: 3 }]);
-    expect(p("rating:<=4.5").query.filters).toEqual([{ field: "fm.rating", op: "lte", value: 4.5 }]);
+    expect(p("rating:<=4.5").query.filters).toEqual([
+      { field: "fm.rating", op: "lte", value: 4.5 },
+    ]);
   });
   it("modified: and created: absolute and relative", () => {
     const abs = p("modified:>2026-10-01").query.filters[0]!;
     expect(abs.field).toBe("modified");
     expect(abs.op).toBe("gt");
     expect(abs.value).toBe(new Date(2026, 9, 1).getTime() + 86_400_000 - 1);
-    expect(p("modified:7d").query.filters).toEqual([{ field: "modified", op: "gte", value: NOW - 7 * 86_400_000 }]);
+    expect(p("modified:7d").query.filters).toEqual([
+      { field: "modified", op: "gte", value: NOW - 7 * 86_400_000 },
+    ]);
     expect(p("created:2w").query.filters[0]!.value).toBe(NOW - 14 * 86_400_000);
-    expect(p("created:2026-01-05").query.filters).toEqual([{ field: "created", op: "eq", value: "2026-01-05" }]);
+    expect(p("created:2026-01-05").query.filters).toEqual([
+      { field: "created", op: "eq", value: "2026-01-05" },
+    ]);
   });
   it("is: and links:", () => {
     expect(p("is:orphan").query.filters).toEqual([{ field: "is", op: "eq", value: "orphan" }]);
-    expect(p("links:[[Trova]]").query.filters).toEqual([{ field: "links", op: "eq", value: "Trova" }]);
-    expect(p("links:[[My Note|alias]] x").query.filters).toEqual([{ field: "links", op: "eq", value: "My Note" }]);
+    expect(p("links:[[Trova]]").query.filters).toEqual([
+      { field: "links", op: "eq", value: "Trova" },
+    ]);
+    expect(p("links:[[My Note|alias]] x").query.filters).toEqual([
+      { field: "links", op: "eq", value: "My Note" },
+    ]);
   });
   it("lane prefixes only as the first token", () => {
     const q = p("vec: how retrieval fusion works").query;
@@ -140,7 +165,9 @@ describe("query parser: malformed input", () => {
     const r = p("foo:bar kanata", { knownKeys: new Set(["status"]) });
     expect(r.query.must.map((g) => g[0]!.text)).toEqual(["foo", "bar", "kanata"]);
     expect(r.query.filters).toEqual([]);
-    expect(r.diagnostics).toEqual([expect.objectContaining({ start: 0, end: 7, code: "unknown_operator" })]);
+    expect(r.diagnostics).toEqual([
+      expect.objectContaining({ start: 0, end: 7, code: "unknown_operator" }),
+    ]);
     expect(p("status:done", { knownKeys: new Set(["status"]) }).diagnostics).toEqual([]);
   });
   it("bad filter values are underlined and the rest still runs", () => {
@@ -155,7 +182,9 @@ describe("query parser: malformed input", () => {
     expect(p("   ").query.must).toEqual([]);
     expect(p("OR").query.must).toEqual([[{ kind: "word", text: "OR" }]]);
     expect(p("a OR").query.must).toHaveLength(2);
-    expect(p('"unterminated phrase').query.must).toEqual([[{ kind: "phrase", text: "unterminated phrase" }]]);
+    expect(p('"unterminated phrase').query.must).toEqual([
+      [{ kind: "phrase", text: "unterminated phrase" }],
+    ]);
     expect(p("-").query.must).toEqual([[{ kind: "word", text: "-" }]]);
     expect(p("https://example.com/x").query.filters).toEqual([]);
     expect(p("?").query.mode).toBe("ask");
@@ -183,7 +212,13 @@ describe("ranking", () => {
     expect(labelForCosine(0.45)).toBe("related");
     expect(labelForCosine(0.3)).toBe("loose");
     expect(labelForCosine(0.29)).toBeNull();
-    expect([1, 3, 4, 10, 11].map(labelForRank)).toEqual(["strong", "strong", "related", "related", "loose"]);
+    expect([1, 3, 4, 10, 11].map(labelForRank)).toEqual([
+      "strong",
+      "strong",
+      "related",
+      "related",
+      "loose",
+    ]);
   });
   it("source score: best block plus capped bonus", () => {
     expect(sourceScore([0.7])).toBeCloseTo(0.7);
@@ -197,7 +232,19 @@ describe("ranking", () => {
     expect(pickAskMode("how fusion works")).toBe("deep");
     expect(pickAskMode(parseQuery("? why rerank").query)).toBe("deep");
     // Short questions that start with an auxiliary verb run Deep too.
-    for (const q of ["should I taper early", "do seedlings need light", "are tomatoes perennial", "will it frost", "could mulch help", "would compost burn", "has it rained", "have I pruned", "was it sown", "were they planted"]) expect(pickAskMode(q)).toBe("deep");
+    for (const q of [
+      "should I taper early",
+      "do seedlings need light",
+      "are tomatoes perennial",
+      "will it frost",
+      "could mulch help",
+      "would compost burn",
+      "has it rained",
+      "have I pruned",
+      "was it sown",
+      "were they planted",
+    ])
+      expect(pickAskMode(q)).toBe("deep");
     expect(pickAskMode("tomato soil mix")).toBe("fast");
   });
   it("position-aware blend", () => {
@@ -268,11 +315,19 @@ describe("content model", () => {
     expect(parseId(src)!.headingPath).toBeUndefined();
     expect(parseId("vault-1:C#/notes.md")!.path).toBe("C#/notes.md");
     expect(await vaultCollectionName("/Users/me/Vault")).toMatch(/^vault-[0-9a-f]{8}$/);
-    expect(await vaultCollectionName("/Users/me/Vault")).toBe(await vaultCollectionName("/Users/me/Vault"));
+    expect(await vaultCollectionName("/Users/me/Vault")).toBe(
+      await vaultCollectionName("/Users/me/Vault"),
+    );
   });
   it("splits blocks, numbers repeated paths and ignores headings in code", () => {
     const blocks = splitBlocks(DOC);
-    expect(blocks.map((b) => b.headingPath)).toEqual(["", "setup", "setup/install", "setup/install~2", "usage"]);
+    expect(blocks.map((b) => b.headingPath)).toEqual([
+      "",
+      "setup",
+      "setup/install",
+      "setup/install~2",
+      "usage",
+    ]);
     expect(blocks[2]!.headings).toEqual(["Setup", "Install"]);
     expect(DOC.slice(blocks[2]!.start, blocks[2]!.end)).toContain("not a heading");
     expect(blocks[blocks.length - 1]!.end).toBe(DOC.length);
@@ -280,18 +335,32 @@ describe("content model", () => {
     expect(blockAt(blocks, 2)!.headingPath).toBe("");
   });
   it("a note without headings is one root block; a note starting with a heading has no root block", () => {
-    expect(splitBlocks("just text")).toEqual([{ headingPath: "", headings: [], level: 0, start: 0, end: 9 }]);
+    expect(splitBlocks("just text")).toEqual([
+      { headingPath: "", headings: [], level: 0, start: 0, end: 9 },
+    ]);
     expect(splitBlocks("# A\nx").map((b) => b.headingPath)).toEqual(["a"]);
   });
   it("finds frontmatter, links and tags", () => {
     expect(frontmatterEnd(DOC)).toBe(DOC.indexOf("Intro"));
     expect(frontmatterEnd("no frontmatter")).toBe(0);
-    const text = "See [[Trova|the engine]] and [[Folder/Note#Heading]] and [md](Other%20Note.md) and [web](https://x.y).\n```\n[[code]]\n```";
-    expect(extractLinks(text).map((l) => l.target)).toEqual(["Trova", "Folder/Note", "Other Note.md"]);
-    expect(extractInlineTags("a #Zettel/sub b #123 c\n```\n#code\n```").sort()).toEqual(["zettel/sub"]);
+    const text =
+      "See [[Trova|the engine]] and [[Folder/Note#Heading]] and [md](Other%20Note.md) and [web](https://x.y).\n```\n[[code]]\n```";
+    expect(extractLinks(text).map((l) => l.target)).toEqual([
+      "Trova",
+      "Folder/Note",
+      "Other Note.md",
+    ]);
+    expect(extractInlineTags("a #Zettel/sub b #123 c\n```\n#code\n```").sort()).toEqual([
+      "zettel/sub",
+    ]);
   });
   it("resolves links like Obsidian", () => {
-    const resolve = createLinkResolver(["Tools/Kanata.md", "Trova.md", "deep/folder/Trova.md", "img/pic.png"]);
+    const resolve = createLinkResolver([
+      "Tools/Kanata.md",
+      "Trova.md",
+      "deep/folder/Trova.md",
+      "img/pic.png",
+    ]);
     expect(resolve("Kanata")).toBe("Tools/Kanata.md");
     expect(resolve("Trova")).toBe("Trova.md");
     expect(resolve("deep/folder/Trova")).toBe("deep/folder/Trova.md");
@@ -299,7 +368,8 @@ describe("content model", () => {
     expect(resolve("Missing")).toBeNull();
   });
   it("unlinked mentions skip code, links and short names", () => {
-    const text = "Kanata is great. See [[Kanata]] and `kanata` and kanatas.\n```\nkanata\n```\nAlso KB remap here.";
+    const text =
+      "Kanata is great. See [[Kanata]] and `kanata` and kanatas.\n```\nkanata\n```\nAlso KB remap here.";
     const found = findMentions(text, ["Kanata", "KB remap", "ab"]);
     expect(found.map((m) => m.name)).toEqual(["Kanata", "KB remap"]);
     expect(found[0]!.start).toBe(0);
@@ -370,19 +440,29 @@ describe("text matching", () => {
     expect(lightStem("notes")).toBe("note");
     const q = p("remap").query;
     expect(queryRanges("Key remapping with kanata", q)).toEqual([[4, 13]]);
-    expect(matchesTerms({ title: "Kanata", body: "remaps keys" }, p("kan remapping").query)).toBe(true);
+    expect(matchesTerms({ title: "Kanata", body: "remaps keys" }, p("kan remapping").query)).toBe(
+      true,
+    );
   });
   it("phrases and exact words do not prefix-match", () => {
     expect(matchesTerms({ title: "x", body: "rusty nail" }, p("=rust").query)).toBe(false);
     expect(matchesTerms({ title: "x", body: "rust nail" }, p("=rust").query)).toBe(true);
-    expect(matchesTerms({ title: "x", body: "key  remapping tool" }, p('"key remapping"').query)).toBe(true);
-    expect(matchesTerms({ title: "x", body: "keys remapping" }, p('"key remapping"').query)).toBe(false);
+    expect(
+      matchesTerms({ title: "x", body: "key  remapping tool" }, p('"key remapping"').query),
+    ).toBe(true);
+    expect(matchesTerms({ title: "x", body: "keys remapping" }, p('"key remapping"').query)).toBe(
+      false,
+    );
   });
   it("exclusions, OR and field restriction", () => {
     expect(matchesTerms({ title: "a", body: "rust draft" }, p("rust -draft").query)).toBe(false);
     expect(matchesTerms({ title: "a", body: "splade" }, p("bm25 OR splade").query)).toBe(true);
-    expect(matchesTerms({ title: "Other", body: "kanata" }, p("in:title kanata").query)).toBe(false);
-    expect(matchesTerms({ title: "Other", headings: ["Kanata setup"] }, p("in:heading kanata").query)).toBe(true);
+    expect(matchesTerms({ title: "Other", body: "kanata" }, p("in:title kanata").query)).toBe(
+      false,
+    );
+    expect(
+      matchesTerms({ title: "Other", headings: ["Kanata setup"] }, p("in:heading kanata").query),
+    ).toBe(true);
   });
   it("builds a snippet with highlights inside it", () => {
     const text = `${"lorem ipsum ".repeat(40)}Install kanata with Homebrew and ${"dolor sit ".repeat(40)}`;
@@ -405,11 +485,20 @@ describe("text matching", () => {
 
 describe("context basket", () => {
   const pieces = [
-    { path: "Tools/Kanata.md", title: "Kanata", headings: ["Setup", "Install"], start: 10, end: 30, content: "## Install\nbrew install" },
+    {
+      path: "Tools/Kanata.md",
+      title: "Kanata",
+      headings: ["Setup", "Install"],
+      start: 10,
+      end: 30,
+      content: "## Install\nbrew install",
+    },
     { path: "Trova.md", title: "Trova", content: "Whole note." },
   ];
   it("matches the golden output for each format", () => {
-    expect(formatContext(pieces, "markdown")).toBe("## [[Tools/Kanata#Install]]\n\n## Install\nbrew install\n\n## [[Trova]]\n\nWhole note.\n");
+    expect(formatContext(pieces, "markdown")).toBe(
+      "## [[Tools/Kanata#Install]]\n\n## Install\nbrew install\n\n## [[Trova]]\n\nWhole note.\n",
+    );
     expect(formatContext(pieces, "xml")).toBe(
       '<documents>\n<document path="Tools/Kanata.md" heading="Setup &gt; Install">\n## Install\nbrew install\n</document>\n<document path="Trova.md">\nWhole note.\n</document>\n</documents>\n',
     );
@@ -428,7 +517,14 @@ describe("context basket", () => {
       (path) => (path === "a.md" ? text : undefined),
     );
     expect(merged).toEqual([
-      { path: "a.md", title: "a", start: 0, end: 12, content: text.slice(0, 12), headings: undefined },
+      {
+        path: "a.md",
+        title: "a",
+        start: 0,
+        end: 12,
+        content: text.slice(0, 12),
+        headings: undefined,
+      },
       { path: "b.md", title: "b", content: "whole b" },
     ]);
   });

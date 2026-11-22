@@ -4,15 +4,53 @@
 // with answers; Esc or "Related notes" goes back. A resizable drawer at the bottom shows the
 // similarity graph of the same note, with its selection kept in step with the list.
 
-import { ItemView, Keymap, MarkdownView, Notice, Platform, TFile, debounce, setIcon, type WorkspaceLeaf } from "obsidian";
-import { parseId, slugHeading, type DuplicatePair, type DuplicatesResponse, type Filter, type Result } from "../contract/index.js";
+import {
+  ItemView,
+  Keymap,
+  MarkdownView,
+  Notice,
+  Platform,
+  TFile,
+  debounce,
+  setIcon,
+  type WorkspaceLeaf,
+} from "obsidian";
+import {
+  parseId,
+  slugHeading,
+  type DuplicatePair,
+  type DuplicatesResponse,
+  type Filter,
+  type Result,
+} from "../contract/index.js";
 import type { Anchor, RelatedView } from "../features/connections.js";
 import { confirmLinkAll, findMentions, linkMentions, mentionCount } from "../features/mentions.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
-import { banner, folderOf, isLinkKey, linkFor, onOpen, openIn, passEnterKeys, quietLabel, renderHighlighted, showMenu, skeletonAfter, undoNotice, type OpenIn } from "../ui.js";
+import {
+  banner,
+  folderOf,
+  isLinkKey,
+  linkFor,
+  onOpen,
+  openIn,
+  passEnterKeys,
+  quietLabel,
+  renderHighlighted,
+  showMenu,
+  skeletonAfter,
+  undoNotice,
+  type OpenIn,
+} from "../ui.js";
 import type { MentionHit } from "../worker/index.js";
-import { ASK_ANSWERS, AskSession, shiftHighlights, stripHeading, type AskMode, type RowWiring } from "./askSession.js";
+import {
+  ASK_ANSWERS,
+  AskSession,
+  shiftHighlights,
+  stripHeading,
+  type AskMode,
+  type RowWiring,
+} from "./askSession.js";
 import { GRAPH_SIZES } from "./GraphView.js";
 import { moveFocus, renderMeter } from "./rows.js";
 import { storedBoolean, storedNumber } from "../state/sanitize.js";
@@ -32,7 +70,10 @@ const DRAWER_LIMIT = 12;
 const DUPLICATES_TTL_MS = 60_000;
 
 /** The heading path of the section that contains a line, from the metadata cache's headings. */
-export function sectionAt(headings: { heading: string; level: number; line: number }[], line: number): { headingPath: string; headings: string[] } {
+export function sectionAt(
+  headings: { heading: string; level: number; line: number }[],
+  line: number,
+): { headingPath: string; headings: string[] } {
   const stack: { level: number; text: string }[] = [];
   const seen = new Map<string, number>();
   let current = { headingPath: "", headings: [] as string[] };
@@ -56,17 +97,26 @@ export function sectionAt(headings: { heading: string; level: number; line: numb
  * `headingPath` (the Note scope) only whole-note pairs count; with it (the Section scope) only
  * pairs that contain that section of the note. `ownId` is this note's side of the pair.
  */
-export function duplicateOf(pairs: DuplicatePair[], path: string, headingPath?: string): { pair: DuplicatePair; ownId: string; otherId: string; otherTitle: string } | null {
+export function duplicateOf(
+  pairs: DuplicatePair[],
+  path: string,
+  headingPath?: string,
+): { pair: DuplicatePair; ownId: string; otherId: string; otherTitle: string } | null {
   let best: DuplicatePair | null = null;
   for (const p of pairs) {
     if (p.aPath === p.bPath || (p.aPath !== path && p.bPath !== path)) continue;
     const ownId = p.aPath === path ? p.a : p.b;
-    const fits = headingPath === undefined ? p.kind === "source" : p.kind === "block" && parseId(ownId)?.headingPath === headingPath;
+    const fits =
+      headingPath === undefined
+        ? p.kind === "source"
+        : p.kind === "block" && parseId(ownId)?.headingPath === headingPath;
     if (!fits) continue;
     if (!best || p.similarity > best.similarity) best = p;
   }
   if (!best) return null;
-  return best.aPath === path ? { pair: best, ownId: best.a, otherId: best.b, otherTitle: best.bTitle } : { pair: best, ownId: best.b, otherId: best.a, otherTitle: best.aTitle };
+  return best.aPath === path
+    ? { pair: best, ownId: best.a, otherId: best.b, otherTitle: best.bTitle }
+    : { pair: best, ownId: best.b, otherId: best.a, otherTitle: best.aTitle };
 }
 
 /** How many shared keywords, links and tags the reason line names before "+N". */
@@ -79,19 +129,30 @@ const REASON_TAGS = 2;
  * the two notes share. Long lists end in "+N"; `full` holds every item for the tooltip. Null when
  * the engine sent nothing to show.
  */
-export function reasonParts(r: Pick<Result, "scores" | "why">): { score: string; rest: string[]; full: string } | null {
+export function reasonParts(
+  r: Pick<Result, "scores" | "why">,
+): { score: string; rest: string[]; full: string } | null {
   const name = (path: string) => path.split("/").pop()!.replace(/\.md$/, "");
-  const cut = (items: string[], n: number) => (items.length > n ? `${items.slice(0, n).join(", ")} +${items.length - n}` : items.join(", "));
+  const cut = (items: string[], n: number) =>
+    items.length > n ? `${items.slice(0, n).join(", ")} +${items.length - n}` : items.join(", ");
   const keywords = r.why?.keywords ?? [];
   const links = (r.why?.links ?? []).map(name);
   const tags = (r.why?.tags ?? []).map((tag) => `#${tag}`);
-  const score = r.scores.vec === undefined ? "" : t("similarity", { pct: Math.round(r.scores.vec * 100) });
+  const score =
+    r.scores.vec === undefined ? "" : t("similarity", { pct: Math.round(r.scores.vec * 100) });
   const rest: string[] = [];
   if (keywords.length) rest.push(t("reasonShares", { list: cut(keywords, REASON_KEYWORDS) }));
   if (links.length) rest.push(t("reasonLinks", { list: cut(links, REASON_LINKS) }));
   if (tags.length) rest.push(cut(tags, REASON_TAGS));
   if (!score && rest.length === 0) return null;
-  const full = [score, keywords.length ? t("reasonShares", { list: keywords.join(", ") }) : "", links.length ? t("reasonLinks", { list: links.join(", ") }) : "", tags.join(" ")].filter(Boolean).join(" · ");
+  const full = [
+    score,
+    keywords.length ? t("reasonShares", { list: keywords.join(", ") }) : "",
+    links.length ? t("reasonLinks", { list: links.join(", ") }) : "",
+    tags.join(" "),
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return { score, rest, full };
 }
 
@@ -175,10 +236,19 @@ export class ConnectionsView extends ItemView {
     this.statusEl = el.createDiv({ cls: "trova-notices", attr: { "aria-live": "polite" } });
     this.bodyEl = el.createDiv({ cls: "trova-pane-body trova-seek-body" });
     this.buildDrawer(el);
-    this.hintsEl = el.createDiv({ cls: "trova-hints trova-seek-hints", attr: { "aria-hidden": "true" } });
+    this.hintsEl = el.createDiv({
+      cls: "trova-hints trova-seek-hints",
+      attr: { "aria-hidden": "true" },
+    });
     const mod = Platform.isMacOS ? "⌘" : "Ctrl+";
     const alt = Platform.isMacOS ? "⌥" : "Alt+";
-    for (const [key, text] of [["↑↓", t("hintMove")], ["↵", t("hintOpen")], [`${mod}↵`, t("hintNewTab")], [`${alt}↵`, t("hintInsertLink")], ["esc", t("hintBack")]] as const) {
+    for (const [key, text] of [
+      ["↑↓", t("hintMove")],
+      ["↵", t("hintOpen")],
+      [`${mod}↵`, t("hintNewTab")],
+      [`${alt}↵`, t("hintInsertLink")],
+      ["esc", t("hintBack")],
+    ] as const) {
       const hint = this.hintsEl.createSpan({ cls: "trova-hint" });
       hint.createEl("kbd", { text: key });
       hint.appendText(` ${text}`);
@@ -187,22 +257,40 @@ export class ConnectionsView extends ItemView {
     // "/" anywhere in the pane, outside a text field, goes to the search box.
     this.registerDomEvent(el, "keydown", (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) {
+      if (
+        e.key === "/" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)
+      ) {
         e.preventDefault();
         this.focusInput();
       }
     });
 
-    const onSwitch = debounce(() => {
-      // A selection stays whatever the refresh setting; only its note link may come or go.
-      if (this.kind === "selection") this.syncSourceLink();
-      else if (this.plugin.settings.connectionsRefresh !== "manual") this.followActive();
-    }, 300, true);
-    const onCursor = debounce(() => {
-      if (this.kind === "block") this.followActive();
-      else if (this.kind === "selection") this.followSelection();
-    }, 500, true);
-    const onIdle = debounce(() => this.plugin.settings.connectionsRefresh === "idle" && void this.refresh(true), 2500, true);
+    const onSwitch = debounce(
+      () => {
+        // A selection stays whatever the refresh setting; only its note link may come or go.
+        if (this.kind === "selection") this.syncSourceLink();
+        else if (this.plugin.settings.connectionsRefresh !== "manual") this.followActive();
+      },
+      300,
+      true,
+    );
+    const onCursor = debounce(
+      () => {
+        if (this.kind === "block") this.followActive();
+        else if (this.kind === "selection") this.followSelection();
+      },
+      500,
+      true,
+    );
+    const onIdle = debounce(
+      () => this.plugin.settings.connectionsRefresh === "idle" && void this.refresh(true),
+      2500,
+      true,
+    );
     this.registerEvent(this.app.workspace.on("file-open", onSwitch));
     this.registerEvent(this.app.workspace.on("active-leaf-change", onSwitch));
     this.registerEvent(
@@ -214,14 +302,16 @@ export class ConnectionsView extends ItemView {
     this.registerEvent(this.app.workspace.on("css-change", () => this.graph?.refreshTheme()));
     // When the selection's note is saved or deleted, check that the selected text is still there.
     const recheck = (file: { path: string }) => {
-      if (this.anchor?.kind === "selection" && file.path === this.anchor.path) void this.checkSelectionText();
+      if (this.anchor?.kind === "selection" && file.path === this.anchor.path)
+        void this.checkSelectionText();
     };
     this.registerEvent(this.app.vault.on("modify", recheck));
     this.registerEvent(this.app.vault.on("delete", recheck));
     // A selection follows its note when the note is renamed.
     this.registerEvent(
       this.app.vault.on("rename", (file, oldPath) => {
-        if (this.lastSelection?.path === oldPath) this.lastSelection = { ...this.lastSelection, path: file.path };
+        if (this.lastSelection?.path === oldPath)
+          this.lastSelection = { ...this.lastSelection, path: file.path };
         if (this.anchor?.kind === "selection" && this.anchor.path === oldPath) {
           this.anchor = { ...this.anchor, path: file.path };
           this.renderBar();
@@ -242,7 +332,14 @@ export class ConnectionsView extends ItemView {
     this.register(
       this.plugin.engine.onEvent((e) => {
         if (e.event === "index.ready") this.graph?.clearCache();
-        if (e.event === "index.ready" || (e.event === "results.stale" && this.anchor && (e.data["sources"] as string[] | undefined)?.includes(this.plugin.sourceId(this.anchor.path)))) {
+        if (
+          e.event === "index.ready" ||
+          (e.event === "results.stale" &&
+            this.anchor &&
+            (e.data["sources"] as string[] | undefined)?.includes(
+              this.plugin.sourceId(this.anchor.path),
+            ))
+        ) {
           void this.refresh(true);
         }
       }),
@@ -288,7 +385,10 @@ export class ConnectionsView extends ItemView {
   private buildSearch(header: HTMLElement): void {
     const box = header.createDiv({ cls: "trova-seek-search" });
     setIcon(box.createSpan({ cls: "trova-seek-icon", attr: { "aria-hidden": "true" } }), "search");
-    const input = (this.inputEl = box.createEl("textarea", { cls: "trova-seek-input", attr: { rows: "1", placeholder: t("seekPlaceholder"), spellcheck: "false" } }));
+    const input = (this.inputEl = box.createEl("textarea", {
+      cls: "trova-seek-input",
+      attr: { rows: "1", placeholder: t("seekPlaceholder"), spellcheck: "false" },
+    }));
     quietLabel(input, t("askPlaceholder"));
     const grow = () => {
       // Measure the text at its natural height, then fix the box to it.
@@ -309,7 +409,13 @@ export class ConnectionsView extends ItemView {
       // Enter that confirms an IME composition is not a search, and neither is Enter with Mod or
       // Alt. An empty box runs nothing, and leaves alone a search the user did not type, such as
       // "About this note".
-      if (e.key === "Enter" && !e.shiftKey && !e.altKey && !Keymap.isModifier(e, "Mod") && !e.isComposing) {
+      if (
+        e.key === "Enter" &&
+        !e.shiftKey &&
+        !e.altKey &&
+        !Keymap.isModifier(e, "Mod") &&
+        !e.isComposing
+      ) {
         e.preventDefault();
         if (input.value.trim()) void this.ask.run(input.value);
       } else if (e.key === "Escape") {
@@ -318,7 +424,11 @@ export class ConnectionsView extends ItemView {
           e.stopPropagation();
           this.backToRelated(true);
         }
-      } else if (e.key === "ArrowDown" && !e.shiftKey && input.selectionStart === input.value.length) {
+      } else if (
+        e.key === "ArrowDown" &&
+        !e.shiftKey &&
+        input.selectionStart === input.value.length
+      ) {
         e.preventDefault();
         moveFocus(this.bodyEl, null, 1);
       }
@@ -326,20 +436,34 @@ export class ConnectionsView extends ItemView {
     input.addEventListener("focus", () => this.contentEl.addClass("is-searching"));
     input.addEventListener("blur", () => this.contentEl.removeClass("is-searching"));
 
-    this.modeEl = box.createEl("button", { cls: "trova-seek-mode", attr: { "aria-haspopup": "menu" } });
+    this.modeEl = box.createEl("button", {
+      cls: "trova-seek-mode",
+      attr: { "aria-haspopup": "menu" },
+    });
     this.modeEl.addEventListener("click", (e) => this.modeMenu(e));
     this.renderMode();
-    this.clearEl = box.createEl("button", { cls: "clickable-icon trova-seek-clear", attr: { "aria-label": t("clearQuestion") } });
+    this.clearEl = box.createEl("button", {
+      cls: "clickable-icon trova-seek-clear",
+      attr: { "aria-label": t("clearQuestion") },
+    });
     setIcon(this.clearEl, "x");
     this.clearEl.addEventListener("click", () => this.backToRelated(true));
-    const more = box.createEl("button", { cls: "clickable-icon", attr: { "aria-label": t("paneMenu"), "aria-haspopup": "menu" } });
+    const more = box.createEl("button", {
+      cls: "clickable-icon",
+      attr: { "aria-label": t("paneMenu"), "aria-haspopup": "menu" },
+    });
     setIcon(more, "more-horizontal");
     more.addEventListener("click", (e) => this.paneMenu(e));
     this.renderClear();
   }
 
   private renderMode(): void {
-    const name = this.ask.mode === "deep" ? t("modeDeep") : this.ask.mode === "fast" ? t("modeFast") : t("modeAuto");
+    const name =
+      this.ask.mode === "deep"
+        ? t("modeDeep")
+        : this.ask.mode === "fast"
+          ? t("modeFast")
+          : t("modeAuto");
     this.modeEl.setText(name);
     this.modeEl.setAttribute("aria-label", `${t("askModeLabel")}: ${name}`);
   }
@@ -350,13 +474,21 @@ export class ConnectionsView extends ItemView {
 
   private modeMenu(e: MouseEvent): void {
     showMenu(e, (menu) => {
-      for (const [mode, label] of [["auto", t("modeAuto")], ["fast", t("modeFast")], ["deep", t("modeDeep")]] as [AskMode, string][]) {
+      for (const [mode, label] of [
+        ["auto", t("modeAuto")],
+        ["fast", t("modeFast")],
+        ["deep", t("modeDeep")],
+      ] as [AskMode, string][]) {
         menu.addItem((i) =>
-          i.setTitle(label).setChecked(this.ask.mode === mode).onClick(() => {
-            this.ask.mode = mode;
-            this.renderMode();
-            if (this.ask.question) void this.ask.run(this.ask.question, { record: false, label: this.ask.label });
-          }),
+          i
+            .setTitle(label)
+            .setChecked(this.ask.mode === mode)
+            .onClick(() => {
+              this.ask.mode = mode;
+              this.renderMode();
+              if (this.ask.question)
+                void this.ask.run(this.ask.question, { record: false, label: this.ask.label });
+            }),
         );
       }
     });
@@ -404,7 +536,9 @@ export class ConnectionsView extends ItemView {
   /** True when a tab in the editor area shows the note at `path`. */
   private isOpen(path: string): boolean {
     const root = this.app.workspace.rootSplit;
-    return this.app.workspace.getLeavesOfType("markdown").some((l) => l.getRoot() === root && (l.view as MarkdownView).file?.path === path);
+    return this.app.workspace
+      .getLeavesOfType("markdown")
+      .some((l) => l.getRoot() === root && (l.view as MarkdownView).file?.path === path);
   }
 
   private computeAnchor(): Anchor | null {
@@ -414,7 +548,14 @@ export class ConnectionsView extends ItemView {
     if (this.kind === "block") {
       const cache = this.app.metadataCache.getFileCache(file);
       const line = md.editor?.getCursor().line ?? 0;
-      const section = sectionAt((cache?.headings ?? []).map((h) => ({ heading: h.heading, level: h.level, line: h.position.start.line })), line);
+      const section = sectionAt(
+        (cache?.headings ?? []).map((h) => ({
+          heading: h.heading,
+          level: h.level,
+          line: h.position.start.line,
+        })),
+        line,
+      );
       return { kind: "block", path: file.path, ...section };
     }
     return { kind: "note", path: file.path };
@@ -445,7 +586,11 @@ export class ConnectionsView extends ItemView {
       const md = this.activeMarkdown();
       const text = md?.editor.getSelection().trim();
       const last = this.lastSelection;
-      if ((!md?.file || !text) && last && this.app.vault.getAbstractFileByPath(last.path) instanceof TFile) {
+      if (
+        (!md?.file || !text) &&
+        last &&
+        this.app.vault.getAbstractFileByPath(last.path) instanceof TFile
+      ) {
         this.locked = false;
         this.showSelection(last.path, last.text);
         return;
@@ -483,13 +628,23 @@ export class ConnectionsView extends ItemView {
       if (force) void this.refresh(false);
       return;
     }
-    if (!force && this.anchor?.kind === "selection" && this.anchor.path === md.file.path && this.anchor.text === text) return;
+    if (
+      !force &&
+      this.anchor?.kind === "selection" &&
+      this.anchor.path === md.file.path &&
+      this.anchor.text === text
+    )
+      return;
     this.showSelection(md.file.path, text);
   }
 
   /** Whether the selection came from another note than the open one, which the context line then names. */
   private showsSource(): boolean {
-    return !this.ask.active && this.anchor?.kind === "selection" && this.anchor.path !== this.app.workspace.getActiveFile()?.path;
+    return (
+      !this.ask.active &&
+      this.anchor?.kind === "selection" &&
+      this.anchor.path !== this.app.workspace.getActiveFile()?.path
+    );
   }
 
   /**
@@ -523,7 +678,8 @@ export class ConnectionsView extends ItemView {
     const anchor = this.anchor;
     if (anchor?.kind !== "selection") return;
     const file = this.app.vault.getAbstractFileByPath(anchor.path);
-    const gone = !(file instanceof TFile) || !(await this.app.vault.cachedRead(file)).includes(anchor.text);
+    const gone =
+      !(file instanceof TFile) || !(await this.app.vault.cachedRead(file)).includes(anchor.text);
     if (this.anchor !== anchor || gone === this.selectionGone) return;
     this.selectionGone = gone;
     this.renderBar();
@@ -575,7 +731,13 @@ export class ConnectionsView extends ItemView {
       this.view = view;
     } catch {
       if (abort.signal.aborted) return;
-      this.view = { state: "offline", anchor, results: cached?.results ?? [], stale: false, pinned: cached?.pinned ?? new Set() };
+      this.view = {
+        state: "offline",
+        anchor,
+        results: cached?.results ?? [],
+        stale: false,
+        pinned: cached?.pinned ?? new Set(),
+      };
     }
     this.loading = false;
     this.render();
@@ -640,18 +802,25 @@ export class ConnectionsView extends ItemView {
       // Ask always asks for the same number of answers, so the count says something only when
       // fewer came back.
       const fewer = this.ask.final && this.ask.count < ASK_ANSWERS;
-      const what = this.ask.label || (fewer ? t("answersCount", { n: this.ask.count }) : t("answers"));
+      const what =
+        this.ask.label || (fewer ? t("answersCount", { n: this.ask.count }) : t("answers"));
       const mode = this.ask.modeText();
       const text = line.createSpan({ cls: "trova-seek-context-text", text: what });
       if (mode) text.createSpan({ cls: "trova-seek-mode-text", text: ` · ${mode}` });
       if (this.ask.offersDeep()) {
-        const hint = line.createEl("button", { cls: "trova-key-hint", attr: { "aria-keyshortcuts": "Enter" } });
+        const hint = line.createEl("button", {
+          cls: "trova-key-hint",
+          attr: { "aria-keyshortcuts": "Enter" },
+        });
         quietLabel(hint, t("runDeepLabel"));
         hint.createEl("kbd", { text: "↵", attr: { "aria-hidden": "true" } });
         hint.createSpan({ text: t("modeDeep"), attr: { "aria-hidden": "true" } });
         hint.addEventListener("click", () => this.ask.runAgain());
       }
-      const back = line.createEl("button", { cls: "trova-link-button", attr: { "aria-keyshortcuts": "Escape" } });
+      const back = line.createEl("button", {
+        cls: "trova-link-button",
+        attr: { "aria-keyshortcuts": "Escape" },
+      });
       setIcon(back.createSpan({ attr: { "aria-hidden": "true" } }), "arrow-left");
       back.appendText(t("backToRelated"));
       back.addEventListener("click", () => this.backToRelated(true));
@@ -661,10 +830,18 @@ export class ConnectionsView extends ItemView {
     const row = el.createDiv({ cls: "trova-seek-scope" });
     const seg = row.createDiv({ cls: "trova-segmented", attr: { role: "radiogroup" } });
     quietLabel(seg, t("scopeLabel"));
-    const kinds: [AnchorKind, string][] = [["note", t("anchorNote")], ["block", t("anchorBlock")], ["selection", t("anchorSelection")]];
+    const kinds: [AnchorKind, string][] = [
+      ["note", t("anchorNote")],
+      ["block", t("anchorBlock")],
+      ["selection", t("anchorSelection")],
+    ];
     for (const [kind, label] of kinds) {
       const on = kind === this.kind;
-      const b = seg.createEl("button", { text: label, cls: on ? "is-active" : "", attr: { role: "radio", "aria-checked": String(on), tabindex: on ? "0" : "-1" } });
+      const b = seg.createEl("button", {
+        text: label,
+        cls: on ? "is-active" : "",
+        attr: { role: "radio", "aria-checked": String(on), tabindex: on ? "0" : "-1" },
+      });
       b.addEventListener("click", () => this.setKind(kind));
     }
     // A radio group moves with the arrow keys, and Tab stops on the checked option only.
@@ -672,11 +849,19 @@ export class ConnectionsView extends ItemView {
       if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
       e.preventDefault();
       const at = kinds.findIndex(([k]) => k === this.kind);
-      const next = (at + (e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 1) + kinds.length) % kinds.length;
+      const next =
+        (at + (e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 1) + kinds.length) %
+        kinds.length;
       this.setKind(kinds[next]![0]);
       this.barEl.querySelectorAll<HTMLElement>(".trova-segmented [role=radio]")[next]?.focus();
     });
-    const lock = row.createEl("button", { cls: `clickable-icon${this.locked ? " is-active" : ""}`, attr: { "aria-label": this.locked ? t("unlockAnchor") : t("lockAnchor"), "aria-pressed": String(this.locked) } });
+    const lock = row.createEl("button", {
+      cls: `clickable-icon${this.locked ? " is-active" : ""}`,
+      attr: {
+        "aria-label": this.locked ? t("unlockAnchor") : t("lockAnchor"),
+        "aria-pressed": String(this.locked),
+      },
+    });
     setIcon(lock, this.locked ? "lock" : "unlock");
     lock.addEventListener("click", () => {
       this.locked = !this.locked;
@@ -688,8 +873,20 @@ export class ConnectionsView extends ItemView {
     this.sourceShown = false;
     if (this.anchor) {
       const name = this.anchor.path.split("/").pop()!.replace(/\.md$/, "");
-      const detail = this.anchor.kind === "block" ? (this.anchor.headings.join(" › ") || name) : this.anchor.kind === "selection" ? `“${this.anchor.text.slice(0, 60)}${this.anchor.text.length > 60 ? "…" : ""}”` : name;
-      setIcon(line.createSpan({ cls: "trova-seek-context-icon", attr: { "aria-hidden": "true" } }), this.anchor.kind === "note" ? "file-text" : this.anchor.kind === "block" ? "heading" : "text-cursor");
+      const detail =
+        this.anchor.kind === "block"
+          ? this.anchor.headings.join(" › ") || name
+          : this.anchor.kind === "selection"
+            ? `“${this.anchor.text.slice(0, 60)}${this.anchor.text.length > 60 ? "…" : ""}”`
+            : name;
+      setIcon(
+        line.createSpan({ cls: "trova-seek-context-icon", attr: { "aria-hidden": "true" } }),
+        this.anchor.kind === "note"
+          ? "file-text"
+          : this.anchor.kind === "block"
+            ? "heading"
+            : "text-cursor",
+      );
       const text = line.createSpan({ cls: "trova-seek-context-text" });
       text.appendText(`${t("relatedTo")} `);
       text.createSpan({ cls: "trova-anchor-name", text: detail });
@@ -703,27 +900,51 @@ export class ConnectionsView extends ItemView {
       }
     }
     if (this.locked) line.createSpan({ cls: "trova-badge", text: t("locked") });
-    if (this.view?.stale) line.createSpan({ cls: "trova-badge trova-badge-stale", text: "●", attr: { role: "img", "aria-label": t("stale") } });
+    if (this.view?.stale)
+      line.createSpan({
+        cls: "trova-badge trova-badge-stale",
+        text: "●",
+        attr: { role: "img", "aria-label": t("stale") },
+      });
     if (this.anchor?.kind === "selection" && !this.ask.active) {
-      if (this.selectionGone) line.createSpan({ cls: "trova-badge trova-badge-stale", text: "●", attr: { role: "img", "aria-label": t("selectionGone") } });
-      const clear = line.createEl("button", { cls: "clickable-icon trova-selection-clear", attr: { "aria-label": t("clearSelection") } });
+      if (this.selectionGone)
+        line.createSpan({
+          cls: "trova-badge trova-badge-stale",
+          text: "●",
+          attr: { role: "img", "aria-label": t("selectionGone") },
+        });
+      const clear = line.createEl("button", {
+        cls: "clickable-icon trova-selection-clear",
+        attr: { "aria-label": t("clearSelection") },
+      });
       setIcon(clear, "x");
       clear.addEventListener("click", () => this.clearSelection());
     }
     const re = this.plugin.engine.snapshot.status?.reembedding;
-    if (re && re.total > 0) line.createSpan({ cls: "trova-badge", text: t("reembedding", { pct: Math.round((re.done / re.total) * 100) }) });
+    if (re && re.total > 0)
+      line.createSpan({
+        cls: "trova-badge",
+        text: t("reembedding", { pct: Math.round((re.done / re.total) * 100) }),
+      });
 
     const filters = this.plugin.store.data.filters.connections;
     if (filters.length || this.plugin.settings.hideLinked) {
       const chips = el.createDiv({ cls: "trova-chips" });
       const chip = (text: string, remove: () => void) => {
-        const b = chips.createEl("button", { cls: "trova-chip trova-chip-remove", attr: { "aria-label": `${t("removeFilter")}: ${text}` } });
+        const b = chips.createEl("button", {
+          cls: "trova-chip trova-chip-remove",
+          attr: { "aria-label": `${t("removeFilter")}: ${text}` },
+        });
         b.appendText(text);
         setIcon(b.createSpan({ cls: "trova-chip-x", attr: { "aria-hidden": "true" } }), "x");
         b.addEventListener("click", remove);
       };
-      if (this.plugin.settings.hideLinked) chip(t("filterHideLinked"), () => this.toggleSetting("hideLinked"));
-      for (const f of filters) chip(`${f.negate ? "-" : ""}${f.field}:${String(f.value)}`, () => this.setFilters(filters.filter((x) => x !== f)));
+      if (this.plugin.settings.hideLinked)
+        chip(t("filterHideLinked"), () => this.toggleSetting("hideLinked"));
+      for (const f of filters)
+        chip(`${f.negate ? "-" : ""}${f.field}:${String(f.value)}`, () =>
+          this.setFilters(filters.filter((x) => x !== f)),
+        );
     }
   }
 
@@ -736,7 +957,8 @@ export class ConnectionsView extends ItemView {
     const el = this.bodyEl;
     // Keep keyboard focus on the same row across a re-render.
     const active = el.ownerDocument.activeElement;
-    const focused = active?.instanceOf(HTMLElement) && el.contains(active) ? active.dataset["key"] : undefined;
+    const focused =
+      active?.instanceOf(HTMLElement) && el.contains(active) ? active.dataset["key"] : undefined;
     el.empty();
     if (this.ask.active) this.ask.renderList(el);
     else this.renderRelated(el);
@@ -746,7 +968,8 @@ export class ConnectionsView extends ItemView {
   private renderRelated(el: HTMLElement): void {
     const view = this.view;
     const message = (text: string) => el.createDiv({ cls: "trova-empty", text });
-    if (!this.anchor) return void message(this.kind === "selection" ? t("selectionWaiting") : t("noActiveNote"));
+    if (!this.anchor)
+      return void message(this.kind === "selection" ? t("selectionWaiting") : t("noActiveNote"));
     this.renderDuplicate(el);
     if (!view) {
       if (this.loading) skeletonAfter(el, () => this.loading && !this.view);
@@ -754,7 +977,11 @@ export class ConnectionsView extends ItemView {
     }
     if (view.state === "offline") {
       if (this.plugin.engine.snapshot.state === "disabled") message(t("needsEngine"));
-      else banner(el, t("engineOffBanner"), { label: t("startEngine"), run: () => void this.plugin.engine.connect(true) });
+      else
+        banner(el, t("engineOffBanner"), {
+          label: t("startEngine"),
+          run: () => void this.plugin.engine.connect(true),
+        });
       if (view.results.length === 0) return this.renderMentions(el);
     }
     if (view.state === "tooShort") message(t("tooShort"));
@@ -771,7 +998,10 @@ export class ConnectionsView extends ItemView {
       if (view.stale) el.createDiv({ cls: "trova-stale-note", text: t("stale") });
       if (view.results.length === 0) message(t("noConnections"));
       else {
-        el.createDiv({ cls: "trova-group-head", text: t("similarNotes") }).createSpan({ cls: "trova-group-count", text: String(view.results.length) });
+        el.createDiv({ cls: "trova-group-head", text: t("similarNotes") }).createSpan({
+          cls: "trova-group-count",
+          text: String(view.results.length),
+        });
         const list = el.createDiv({ cls: "trova-results", attr: { role: "list" } });
         quietLabel(list, t("similarNotes"));
         for (const r of view.results) this.renderResult(list, r, view.pinned.has(r.id));
@@ -789,20 +1019,46 @@ export class ConnectionsView extends ItemView {
     const pairs = this.duplicates?.data.pairs;
     if (!anchor || anchor.kind === "selection" || !pairs) return;
     const store = this.plugin.store;
-    const dup = duplicateOf(pairs.filter((p) => !store.isNotDuplicate(p.a, p.b)), anchor.path, anchor.kind === "block" ? anchor.headingPath : undefined);
+    const dup = duplicateOf(
+      pairs.filter((p) => !store.isNotDuplicate(p.a, p.b)),
+      anchor.path,
+      anchor.kind === "block" ? anchor.headingPath : undefined,
+    );
     if (!dup) return;
     const pct = Math.round(dup.pair.similarity * 100);
-    const text = anchor.kind === "block" ? t("dupThisSection", { pct, title: dup.otherTitle }) : t("dupWarning", { pct, title: dup.otherTitle });
+    const text =
+      anchor.kind === "block"
+        ? t("dupThisSection", { pct, title: dup.otherTitle })
+        : t("dupWarning", { pct, title: dup.otherTitle });
     const path = anchor.path;
     const box = el.createDiv({ cls: "trova-alert", attr: { role: "note" } });
     setIcon(box.createSpan({ cls: "trova-alert-icon", attr: { "aria-hidden": "true" } }), "copy");
     box.createSpan({ cls: "trova-alert-text", text });
-    box.createEl("button", { text: t("compare") }).addEventListener("click", () => void this.plugin.openBeside(dup.otherId, { besidePath: path, reuse: true, own: dup.ownId }));
+    box
+      .createEl("button", { text: t("compare") })
+      .addEventListener(
+        "click",
+        () =>
+          void this.plugin.openBeside(dup.otherId, {
+            besidePath: path,
+            reuse: true,
+            own: dup.ownId,
+          }),
+      );
   }
 
   private renderResult(list: HTMLElement, r: Result, pinned: boolean): void {
     const group = list.createDiv({ cls: "trova-conn", attr: { role: "listitem" } });
-    const head = group.createDiv({ cls: "trova-conn-head", attr: { draggable: "true", tabindex: "0", "data-row": "", "data-key": r.id, "data-path": r.path } });
+    const head = group.createDiv({
+      cls: "trova-conn-head",
+      attr: {
+        draggable: "true",
+        tabindex: "0",
+        "data-row": "",
+        "data-key": r.id,
+        "data-path": r.path,
+      },
+    });
     if (r.path === this.selectedPath) head.addClass("is-selected");
     const blocks = r.blocks ?? [];
     const reason = reasonParts(r);
@@ -816,7 +1072,14 @@ export class ConnectionsView extends ItemView {
       this.allExpanded = false;
       this.render();
     };
-    const toggle = head.createEl("button", { cls: "trova-conn-toggle", attr: { "aria-label": open ? t("hideDetails") : t("showDetails"), "aria-expanded": String(open), tabindex: "-1" } });
+    const toggle = head.createEl("button", {
+      cls: "trova-conn-toggle",
+      attr: {
+        "aria-label": open ? t("hideDetails") : t("showDetails"),
+        "aria-expanded": String(open),
+        tabindex: "-1",
+      },
+    });
     setIcon(toggle, open ? "chevron-down" : "chevron-right");
     if (!expandable) toggle.addClass("is-hidden");
     else head.setAttribute("aria-expanded", String(open));
@@ -824,14 +1087,20 @@ export class ConnectionsView extends ItemView {
       e.stopPropagation();
       setOpen(!open);
     });
-    if (pinned) setIcon(head.createSpan({ cls: "trova-pin", attr: { "aria-label": t("pinned") } }), "pin");
+    if (pinned)
+      setIcon(head.createSpan({ cls: "trova-pin", attr: { "aria-label": t("pinned") } }), "pin");
     head.createSpan({ cls: "trova-conn-title", text: r.title });
     const folder = folderOf(r.path);
     if (folder) head.createSpan({ cls: "trova-row-path", text: folder });
     if (r.type) head.createSpan({ cls: "trova-badge trova-badge-type", text: r.type });
     const actions = head.createSpan({ cls: "trova-row-actions" });
     this.rowAction(actions, "link", t("insertLink"), () => this.plugin.insertLink(r));
-    this.rowAction(actions, "file-plus", t("openNewTab"), () => void this.plugin.openResult(r, "tab"));
+    this.rowAction(
+      actions,
+      "file-plus",
+      t("openNewTab"),
+      () => void this.plugin.openResult(r, "tab"),
+    );
     if (r.matchedBy.length) renderMeter(head, r.label, r.scores.vec);
     this.wireResult(head, r, r, { expand: setOpen, toggle: () => setOpen(!open) });
     if (!open) return;
@@ -840,16 +1109,33 @@ export class ConnectionsView extends ItemView {
       const line = group.createDiv({ cls: "trova-whyline" });
       if (reason.score) line.createSpan({ cls: "trova-whyline-score", text: reason.score });
       for (const part of reason.rest) {
-        if (line.childElementCount) line.createSpan({ cls: "trova-whyline-sep", text: " · ", attr: { "aria-hidden": "true" } });
+        if (line.childElementCount)
+          line.createSpan({
+            cls: "trova-whyline-sep",
+            text: " · ",
+            attr: { "aria-hidden": "true" },
+          });
         line.createSpan({ text: part });
       }
       line.setAttribute("title", reason.full);
     }
     for (const b of blocks) {
-      const row = group.createDiv({ cls: "trova-conn-block", attr: { draggable: "true", tabindex: "0", "data-row": "", "data-key": b.id, "data-path": r.path } });
+      const row = group.createDiv({
+        cls: "trova-conn-block",
+        attr: {
+          draggable: "true",
+          tabindex: "0",
+          "data-row": "",
+          "data-key": b.id,
+          "data-path": r.path,
+        },
+      });
       const top = row.createDiv({ cls: "trova-row-head" });
       top.createSpan({ cls: "trova-row-heading", text: b.block?.headings.join(" › ") || r.title });
-      const add = top.createEl("button", { cls: "clickable-icon trova-basket-btn", attr: { "aria-label": t("addToBasket") } });
+      const add = top.createEl("button", {
+        cls: "clickable-icon trova-basket-btn",
+        attr: { "aria-label": t("addToBasket") },
+      });
       setIcon(add, "shopping-basket");
       add.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -857,13 +1143,23 @@ export class ConnectionsView extends ItemView {
       });
       renderMeter(top, b.label, b.scores.vec);
       const heading = b.block?.headings.at(-1);
-      renderHighlighted(row.createDiv({ cls: "trova-row-snippet" }), stripHeading(b.snippet, heading), shiftHighlights(b.snippet, b.highlights, heading));
-      this.wireResult(row, b, r, { expand: (next) => !next && (head.focus(), setOpen(false)), toggle: () => (head.focus(), setOpen(false)) });
+      renderHighlighted(
+        row.createDiv({ cls: "trova-row-snippet" }),
+        stripHeading(b.snippet, heading),
+        shiftHighlights(b.snippet, b.highlights, heading),
+      );
+      this.wireResult(row, b, r, {
+        expand: (next) => !next && (head.focus(), setOpen(false)),
+        toggle: () => (head.focus(), setOpen(false)),
+      });
     }
   }
 
   private rowAction(parent: HTMLElement, icon: string, label: string, run: () => void): void {
-    const b = parent.createEl("button", { cls: "clickable-icon", attr: { "aria-label": label, tabindex: "-1" } });
+    const b = parent.createEl("button", {
+      cls: "clickable-icon",
+      attr: { "aria-label": label, tabindex: "-1" },
+    });
     setIcon(b, icon);
     b.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -872,15 +1168,30 @@ export class ConnectionsView extends ItemView {
   }
 
   /** Click, modifier clicks, hover preview, drag to link, keyboard and the result menu. */
-  private wireResult(el: HTMLElement, r: Result, parent: Result, extra: Pick<RowWiring, "expand" | "toggle">): void {
+  private wireResult(
+    el: HTMLElement,
+    r: Result,
+    parent: Result,
+    extra: Pick<RowWiring, "expand" | "toggle">,
+  ): void {
     const heading = r.block?.headings[r.block.headings.length - 1];
     // Page preview decides whether the hover needs Mod, from the user's setting for this pane.
     el.addEventListener("mouseover", (e) => {
       if (r.collection !== this.plugin.collection) return;
-      this.app.workspace.trigger("hover-link", { event: e, source: CONNECTIONS_VIEW, hoverParent: this, targetEl: el, linktext: heading ? `${r.path}#${heading}` : r.path, sourcePath: this.anchor?.path ?? "" });
+      this.app.workspace.trigger("hover-link", {
+        event: e,
+        source: CONNECTIONS_VIEW,
+        hoverParent: this,
+        targetEl: el,
+        linktext: heading ? `${r.path}#${heading}` : r.path,
+        sourcePath: this.anchor?.path ?? "",
+      });
     });
     el.addEventListener("dragstart", (e) => {
-      e.dataTransfer?.setData("text/plain", linkFor(this.app, r.path, heading, this.anchor?.path ?? ""));
+      e.dataTransfer?.setData(
+        "text/plain",
+        linkFor(this.app, r.path, heading, this.anchor?.path ?? ""),
+      );
     });
     this.wireRow(el, {
       path: r.path,
@@ -953,8 +1264,12 @@ export class ConnectionsView extends ItemView {
   /** Marks the row of a note as selected, in the list and in the graph. */
   private setSelected(path: string | null, fromGraph: boolean): void {
     this.selectedPath = path;
-    for (const row of this.bodyEl.querySelectorAll<HTMLElement>("[data-path]")) row.toggleClass("is-selected", !!path && row.dataset["path"] === path);
-    if (fromGraph && path) this.bodyEl.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)?.scrollIntoView({ block: "nearest" });
+    for (const row of this.bodyEl.querySelectorAll<HTMLElement>("[data-path]"))
+      row.toggleClass("is-selected", !!path && row.dataset["path"] === path);
+    if (fromGraph && path)
+      this.bodyEl
+        .querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)
+        ?.scrollIntoView({ block: "nearest" });
     if (!fromGraph) this.graph?.selectPath(path);
   }
 
@@ -968,8 +1283,14 @@ export class ConnectionsView extends ItemView {
     const collapsed = storedBoolean(this.plugin.local.get("mentions-collapsed")) === true;
     const total = mentionCount(m.hits);
     const head = el.createDiv({ cls: "trova-group-head" });
-    const toggle = head.createEl("button", { cls: "trova-group-toggle", attr: { "aria-expanded": String(!collapsed) } });
-    setIcon(toggle.createSpan({ attr: { "aria-hidden": "true" } }), collapsed ? "chevron-right" : "chevron-down");
+    const toggle = head.createEl("button", {
+      cls: "trova-group-toggle",
+      attr: { "aria-expanded": String(!collapsed) },
+    });
+    setIcon(
+      toggle.createSpan({ attr: { "aria-hidden": "true" } }),
+      collapsed ? "chevron-right" : "chevron-down",
+    );
     toggle.appendText(t("mentionsGroup"));
     toggle.createSpan({ cls: "trova-group-count", text: String(total) });
     toggle.addEventListener("click", () => {
@@ -977,29 +1298,77 @@ export class ConnectionsView extends ItemView {
       this.render();
     });
     if (total > 1 && !collapsed) {
-      head.createEl("button", { cls: "trova-link-button", text: t("linkAll") }).addEventListener("click", () => confirmLinkAll(this.plugin, file, m.hits, () => this.reloadMentions()));
+      head
+        .createEl("button", { cls: "trova-link-button", text: t("linkAll") })
+        .addEventListener("click", () =>
+          confirmLinkAll(this.plugin, file, m.hits, () => this.reloadMentions()),
+        );
     }
     if (collapsed) return;
     const list = el.createDiv({ cls: "trova-results", attr: { role: "list" } });
     quietLabel(list, t("mentionsGroup"));
     for (const hit of m.hits) {
       const group = list.createDiv({ cls: "trova-conn", attr: { role: "listitem" } });
-      const title = group.createDiv({ cls: "trova-conn-head", attr: { tabindex: "0", "data-row": "", "data-key": `mention:${hit.path}`, "data-path": hit.path } });
+      const title = group.createDiv({
+        cls: "trova-conn-head",
+        attr: {
+          tabindex: "0",
+          "data-row": "",
+          "data-key": `mention:${hit.path}`,
+          "data-path": hit.path,
+        },
+      });
       title.createSpan({ cls: "trova-conn-title", text: hit.title });
       title.createSpan({ cls: "trova-row-path", text: folderOf(hit.path) });
       const first = hit.mentions[0]!;
       this.wireRow(title, {
         path: hit.path,
-        open: (where) => void this.plugin.open({ path: hit.path, offset: first.start, length: first.name.length }, where),
+        open: (where) =>
+          void this.plugin.open(
+            { path: hit.path, offset: first.start, length: first.name.length },
+            where,
+          ),
         insertLink: () => {
           const md = this.activeMarkdown();
           md?.editor.replaceSelection(linkFor(this.app, hit.path, undefined, md.file?.path ?? ""));
         },
         menu: (e) =>
           showMenu(e, (menu) => {
-            menu.addItem((i) => i.setTitle(t("open")).setIcon("file").onClick(() => void this.plugin.open({ path: hit.path, offset: first.start, length: first.name.length }, false)));
-            menu.addItem((i) => i.setTitle(t("openNewTab")).setIcon("file-plus").onClick(() => void this.plugin.open({ path: hit.path, offset: first.start, length: first.name.length }, "tab")));
-            menu.addItem((i) => i.setTitle(t("linkIt")).setIcon("link").onClick(() => void linkMentions(this.plugin, file, [hit], () => this.reloadMentions()).then(() => this.reloadMentions())));
+            menu.addItem((i) =>
+              i
+                .setTitle(t("open"))
+                .setIcon("file")
+                .onClick(
+                  () =>
+                    void this.plugin.open(
+                      { path: hit.path, offset: first.start, length: first.name.length },
+                      false,
+                    ),
+                ),
+            );
+            menu.addItem((i) =>
+              i
+                .setTitle(t("openNewTab"))
+                .setIcon("file-plus")
+                .onClick(
+                  () =>
+                    void this.plugin.open(
+                      { path: hit.path, offset: first.start, length: first.name.length },
+                      "tab",
+                    ),
+                ),
+            );
+            menu.addItem((i) =>
+              i
+                .setTitle(t("linkIt"))
+                .setIcon("link")
+                .onClick(
+                  () =>
+                    void linkMentions(this.plugin, file, [hit], () => this.reloadMentions()).then(
+                      () => this.reloadMentions(),
+                    ),
+                ),
+            );
           }),
       });
       for (const mention of hit.mentions) {
@@ -1009,9 +1378,15 @@ export class ConnectionsView extends ItemView {
         text.appendText(mention.context.slice(0, at));
         text.createEl("mark", { text: mention.name, cls: "trova-hl" });
         text.appendText(mention.context.slice(at + mention.name.length));
-        row.createEl("button", { text: t("linkIt"), cls: "trova-small-button" }).addEventListener("click", () =>
-          void linkMentions(this.plugin, file, [{ ...hit, mentions: [mention] }], () => this.reloadMentions()).then(() => this.reloadMentions()),
-        );
+        row
+          .createEl("button", { text: t("linkIt"), cls: "trova-small-button" })
+          .addEventListener(
+            "click",
+            () =>
+              void linkMentions(this.plugin, file, [{ ...hit, mentions: [mention] }], () =>
+                this.reloadMentions(),
+              ).then(() => this.reloadMentions()),
+          );
       }
     }
   }
@@ -1025,29 +1400,76 @@ export class ConnectionsView extends ItemView {
     const store = this.plugin.store;
     const pinned = store.pins(anchorId).includes(parent.id);
     showMenu(e, (menu) => {
-      menu.addItem((i) => i.setTitle(t("open")).setIcon("file").onClick(() => void this.plugin.openResult(r, false)));
-      menu.addItem((i) => i.setTitle(t("openNewTab")).setIcon("file-plus").onClick(() => void this.plugin.openResult(r, "tab")));
-      menu.addItem((i) => i.setTitle(t("insertLink")).setIcon("link").onClick(() => this.plugin.insertLink(r)));
+      menu.addItem((i) =>
+        i
+          .setTitle(t("open"))
+          .setIcon("file")
+          .onClick(() => void this.plugin.openResult(r, false)),
+      );
+      menu.addItem((i) =>
+        i
+          .setTitle(t("openNewTab"))
+          .setIcon("file-plus")
+          .onClick(() => void this.plugin.openResult(r, "tab")),
+      );
+      menu.addItem((i) =>
+        i
+          .setTitle(t("insertLink"))
+          .setIcon("link")
+          .onClick(() => this.plugin.insertLink(r)),
+      );
       menu.addSeparator();
-      menu.addItem((i) => i.setTitle(t("addToBasket")).setIcon("shopping-basket").onClick(() => this.plugin.addResultToBasket(r)));
-      if (r.block) menu.addItem((i) => i.setTitle(t("addBlockNeighbours")).setIcon("list-plus").onClick(() => this.plugin.addResultToBasket(r, true)));
-      menu.addItem((i) => i.setTitle(t("moreLikeThis")).setIcon("sparkles").onClick(() => this.moreLike(r)));
+      menu.addItem((i) =>
+        i
+          .setTitle(t("addToBasket"))
+          .setIcon("shopping-basket")
+          .onClick(() => this.plugin.addResultToBasket(r)),
+      );
+      if (r.block)
+        menu.addItem((i) =>
+          i
+            .setTitle(t("addBlockNeighbours"))
+            .setIcon("list-plus")
+            .onClick(() => this.plugin.addResultToBasket(r, true)),
+        );
+      menu.addItem((i) =>
+        i
+          .setTitle(t("moreLikeThis"))
+          .setIcon("sparkles")
+          .onClick(() => this.moreLike(r)),
+      );
       if (r.collection === this.plugin.collection) {
-        menu.addItem((i) => i.setTitle(t("graphCenter")).setIcon("locate-fixed").onClick(() => this.centreGraph(r.path)));
-        menu.addItem((i) => i.setTitle(t("graphOpenHere")).setIcon("git-fork").onClick(() => void this.plugin.openGraph(r.path)));
+        menu.addItem((i) =>
+          i
+            .setTitle(t("graphCenter"))
+            .setIcon("locate-fixed")
+            .onClick(() => this.centreGraph(r.path)),
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle(t("graphOpenHere"))
+            .setIcon("git-fork")
+            .onClick(() => void this.plugin.openGraph(r.path)),
+        );
       }
       menu.addSeparator();
       menu.addItem((i) =>
-        i.setTitle(pinned ? t("unpin") : t("pin")).setIcon("pin").onClick(() => {
-          store.setPinned(anchorId, parent.id, !pinned);
-          if (pinned) undoNotice(t("unpinned"), () => store.setPinned(anchorId, parent.id, true));
-        }),
+        i
+          .setTitle(pinned ? t("unpin") : t("pin"))
+          .setIcon("pin")
+          .onClick(() => {
+            store.setPinned(anchorId, parent.id, !pinned);
+            if (pinned) undoNotice(t("unpinned"), () => store.setPinned(anchorId, parent.id, true));
+          }),
       );
       menu.addItem((i) =>
-        i.setTitle(t("hide")).setIcon("eye-off").onClick(() => {
-          store.setHidden(anchorId, parent.id, true);
-          undoNotice(t("hidden"), () => store.setHidden(anchorId, parent.id, false));
-        }),
+        i
+          .setTitle(t("hide"))
+          .setIcon("eye-off")
+          .onClick(() => {
+            store.setHidden(anchorId, parent.id, true);
+            undoNotice(t("hidden"), () => store.setHidden(anchorId, parent.id, false));
+          }),
       );
     });
   }
@@ -1068,66 +1490,161 @@ export class ConnectionsView extends ItemView {
     const { store, settings } = this.plugin;
     const filters = store.data.filters.connections;
     const daily = this.plugin.dailyFolder();
-    const hasDaily = daily !== null && filters.some((f) => f.field === "path" && f.negate && f.value === daily);
+    const hasDaily =
+      daily !== null && filters.some((f) => f.field === "path" && f.negate && f.value === daily);
     showMenu(e, (menu) => {
       if (this.ask.active) {
-        menu.addItem((i) => i.setTitle(t("explainToggle")).setIcon("bug").setChecked(this.ask.explain).onClick(() => {
-          this.ask.explain = !this.ask.explain;
-          this.render();
-        }));
-        menu.addItem((i) => i.setTitle(t("saveAsSearch")).setIcon("save").setDisabled(!this.ask.question).onClick(() => this.ask.saveAsSearch()));
+        menu.addItem((i) =>
+          i
+            .setTitle(t("explainToggle"))
+            .setIcon("bug")
+            .setChecked(this.ask.explain)
+            .onClick(() => {
+              this.ask.explain = !this.ask.explain;
+              this.render();
+            }),
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle(t("saveAsSearch"))
+            .setIcon("save")
+            .setDisabled(!this.ask.question)
+            .onClick(() => this.ask.saveAsSearch()),
+        );
       }
-      menu.addItem((i) => i.setTitle(t("history")).setIcon("history").onClick(() =>
-        this.ask.historyMenu(e, (query, mode) => this.runQuestion(query, { mode, label: query.startsWith("vec:") ? t("askHistoryPassage") : undefined })),
-      ));
+      menu.addItem((i) =>
+        i
+          .setTitle(t("history"))
+          .setIcon("history")
+          .onClick(() =>
+            this.ask.historyMenu(e, (query, mode) =>
+              this.runQuestion(query, {
+                mode,
+                label: query.startsWith("vec:") ? t("askHistoryPassage") : undefined,
+              }),
+            ),
+          ),
+      );
       menu.addSeparator();
-      menu.addItem((i) => i.setTitle(t("refresh")).setIcon("refresh-cw").onClick(() => {
-        if (this.ask.active && this.ask.question) return void this.ask.run(this.ask.question, { record: false, label: this.ask.label });
-        if (!this.locked && this.kind === "selection") this.followSelection(true);
-        else {
-          if (!this.locked) this.anchor = this.computeAnchor();
-          this.graph?.clearCache();
-          void this.refresh(false);
-        }
-      }));
+      menu.addItem((i) =>
+        i
+          .setTitle(t("refresh"))
+          .setIcon("refresh-cw")
+          .onClick(() => {
+            if (this.ask.active && this.ask.question)
+              return void this.ask.run(this.ask.question, { record: false, label: this.ask.label });
+            if (!this.locked && this.kind === "selection") this.followSelection(true);
+            else {
+              if (!this.locked) this.anchor = this.computeAnchor();
+              this.graph?.clearCache();
+              void this.refresh(false);
+            }
+          }),
+      );
       if (!this.ask.active) {
-        menu.addItem((i) => i.setTitle(this.allExpanded ? t("collapseAll") : t("expandAll")).setIcon("chevrons-up-down").onClick(() => {
-          this.allExpanded = !this.allExpanded;
-          this.expanded.clear();
-          this.render();
-        }));
-        menu.addItem((i) => i.setTitle(t("copyAsLinks")).setIcon("copy").onClick(() => {
-          const links = (this.view?.results ?? []).map((r) => `- ${linkFor(this.app, r.path, undefined, this.anchor?.path ?? "")}`);
-          void navigator.clipboard.writeText(links.join("\n"));
-          new Notice(t("copied"));
-        }));
-        menu.addItem((i) => i.setTitle(this.anchor?.kind === "block" ? t("askAboutSection") : t("askAboutNote")).setIcon("message-circle-question").onClick(() => void this.plugin.askAboutAnchor(this.anchor)));
-        menu.addItem((i) => i.setTitle(t("graphOpenHere")).setIcon("git-fork").onClick(() => void this.plugin.openGraph(this.anchor?.path)));
+        menu.addItem((i) =>
+          i
+            .setTitle(this.allExpanded ? t("collapseAll") : t("expandAll"))
+            .setIcon("chevrons-up-down")
+            .onClick(() => {
+              this.allExpanded = !this.allExpanded;
+              this.expanded.clear();
+              this.render();
+            }),
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle(t("copyAsLinks"))
+            .setIcon("copy")
+            .onClick(() => {
+              const links = (this.view?.results ?? []).map(
+                (r) => `- ${linkFor(this.app, r.path, undefined, this.anchor?.path ?? "")}`,
+              );
+              void navigator.clipboard.writeText(links.join("\n"));
+              new Notice(t("copied"));
+            }),
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle(this.anchor?.kind === "block" ? t("askAboutSection") : t("askAboutNote"))
+            .setIcon("message-circle-question")
+            .onClick(() => void this.plugin.askAboutAnchor(this.anchor)),
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle(t("graphOpenHere"))
+            .setIcon("git-fork")
+            .onClick(() => void this.plugin.openGraph(this.anchor?.path)),
+        );
         menu.addSeparator();
-        menu.addItem((i) => i.setTitle(t("filterHideLinked")).setChecked(settings.hideLinked).onClick(() => this.toggleSetting("hideLinked")));
-        menu.addItem((i) => i.setTitle(t("showLoose")).setChecked(settings.showLoose).onClick(() => this.toggleSetting("showLoose")));
+        menu.addItem((i) =>
+          i
+            .setTitle(t("filterHideLinked"))
+            .setChecked(settings.hideLinked)
+            .onClick(() => this.toggleSetting("hideLinked")),
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle(t("showLoose"))
+            .setChecked(settings.showLoose)
+            .onClick(() => this.toggleSetting("showLoose")),
+        );
         if (daily !== null) {
-          menu.addItem((i) => i.setTitle(t("filterExcludeDaily")).setChecked(hasDaily).onClick(() =>
-            this.setFilters(hasDaily ? filters.filter((f) => !(f.field === "path" && f.negate && f.value === daily)) : [...filters, { field: "path", op: "contains", value: daily, negate: true }]),
-          ));
+          menu.addItem((i) =>
+            i
+              .setTitle(t("filterExcludeDaily"))
+              .setChecked(hasDaily)
+              .onClick(() =>
+                this.setFilters(
+                  hasDaily
+                    ? filters.filter((f) => !(f.field === "path" && f.negate && f.value === daily))
+                    : [...filters, { field: "path", op: "contains", value: daily, negate: true }],
+                ),
+              ),
+          );
         }
-        menu.addItem((i) => i.setTitle(t("filterFolder")).setIcon("folder").onClick(() =>
-          this.plugin.prompt(t("filterFolder"), folderOf(this.anchor?.path ?? ""), (value) => {
-            const rest = filters.filter((f) => !(f.field === "path" && !f.negate));
-            this.setFilters(value.trim() ? [...rest, { field: "path", op: "contains", value: value.trim() }] : rest);
-          }),
-        ));
-        menu.addItem((i) => i.setTitle(t("filterTag")).setIcon("tag").onClick(() =>
-          this.plugin.prompt(t("filterTag"), "", (value) => {
-            const rest = filters.filter((f) => f.field !== "tag");
-            const tag = value.trim().replace(/^#/, "").toLowerCase();
-            this.setFilters(tag ? [...rest, { field: "tag", op: "eq", value: tag }] : rest);
-          }),
-        ));
-        if (filters.length) menu.addItem((i) => i.setTitle(t("filterClear")).setIcon("x").onClick(() => this.setFilters([])));
+        menu.addItem((i) =>
+          i
+            .setTitle(t("filterFolder"))
+            .setIcon("folder")
+            .onClick(() =>
+              this.plugin.prompt(t("filterFolder"), folderOf(this.anchor?.path ?? ""), (value) => {
+                const rest = filters.filter((f) => !(f.field === "path" && !f.negate));
+                this.setFilters(
+                  value.trim()
+                    ? [...rest, { field: "path", op: "contains", value: value.trim() }]
+                    : rest,
+                );
+              }),
+            ),
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle(t("filterTag"))
+            .setIcon("tag")
+            .onClick(() =>
+              this.plugin.prompt(t("filterTag"), "", (value) => {
+                const rest = filters.filter((f) => f.field !== "tag");
+                const tag = value.trim().replace(/^#/, "").toLowerCase();
+                this.setFilters(tag ? [...rest, { field: "tag", op: "eq", value: tag }] : rest);
+              }),
+            ),
+        );
+        if (filters.length)
+          menu.addItem((i) =>
+            i
+              .setTitle(t("filterClear"))
+              .setIcon("x")
+              .onClick(() => this.setFilters([])),
+          );
       }
       menu.addSeparator();
-      menu.addItem((i) => i.setTitle(t("openVaultCare")).setIcon("heart-pulse").onClick(() => void this.plugin.openVaultCare()));
+      menu.addItem((i) =>
+        i
+          .setTitle(t("openVaultCare"))
+          .setIcon("heart-pulse")
+          .onClick(() => void this.plugin.openVaultCare()),
+      );
     });
   }
 
@@ -1137,7 +1654,12 @@ export class ConnectionsView extends ItemView {
     const drawer = (this.drawerEl = parent.createDiv({ cls: "trova-drawer" }));
     const handle = (this.handleEl = drawer.createDiv({
       cls: "trova-drawer-handle",
-      attr: { role: "separator", tabindex: "0", "aria-orientation": "horizontal", "aria-valuemin": String(DRAWER_MIN) },
+      attr: {
+        role: "separator",
+        tabindex: "0",
+        "aria-orientation": "horizontal",
+        "aria-valuemin": String(DRAWER_MIN),
+      },
     }));
     quietLabel(handle, t("graphResize"));
     handle.addEventListener("pointerdown", (e) => this.startResize(e));
@@ -1160,7 +1682,12 @@ export class ConnectionsView extends ItemView {
   private restoreDrawer(): void {
     const saved = storedBoolean(this.plugin.local.get("drawer-open"));
     const pane = this.contentEl.clientHeight;
-    this.drawerHeight = storedNumber(this.plugin.local.get("drawer-height"), 0, 10_000, Math.round(pane * 0.4));
+    this.drawerHeight = storedNumber(
+      this.plugin.local.get("drawer-height"),
+      0,
+      10_000,
+      Math.round(pane * 0.4),
+    );
     this.setDrawerOpen(saved ?? pane >= DRAWER_AUTO_OPEN, false);
   }
 
@@ -1172,7 +1699,8 @@ export class ConnectionsView extends ItemView {
       if (!this.graph) {
         this.graph = new SimilarityGraph(this.drawerBodyEl, this.plugin, {
           compact: true,
-          limit: GRAPH_SIZES.find((n) => n === this.plugin.local.get("drawer-limit")) ?? DRAWER_LIMIT,
+          limit:
+            GRAPH_SIZES.find((n) => n === this.plugin.local.get("drawer-limit")) ?? DRAWER_LIMIT,
           loose: this.plugin.settings.showLoose,
           onSelect: (path) => this.setSelected(path, true),
           onChange: () => this.renderDrawerStatus(),
@@ -1203,7 +1731,8 @@ export class ConnectionsView extends ItemView {
     const startY = e.clientY;
     const startHeight = this.drawerHeight;
     this.contentEl.addClass("is-resizing");
-    const move = (m: PointerEvent) => this.setDrawerHeight(startHeight - (m.clientY - startY), false);
+    const move = (m: PointerEvent) =>
+      this.setDrawerHeight(startHeight - (m.clientY - startY), false);
     const end = () => {
       handle.removeEventListener("pointermove", move);
       handle.removeEventListener("pointerup", end);
@@ -1220,8 +1749,14 @@ export class ConnectionsView extends ItemView {
     const el = this.drawerHeadEl;
     el.empty();
     const row = el.createDiv({ cls: "trova-drawer-bar" });
-    const toggle = row.createEl("button", { cls: "trova-group-toggle", attr: { "aria-expanded": String(this.drawerOpen) } });
-    setIcon(toggle.createSpan({ attr: { "aria-hidden": "true" } }), this.drawerOpen ? "chevron-down" : "chevron-up");
+    const toggle = row.createEl("button", {
+      cls: "trova-group-toggle",
+      attr: { "aria-expanded": String(this.drawerOpen) },
+    });
+    setIcon(
+      toggle.createSpan({ attr: { "aria-hidden": "true" } }),
+      this.drawerOpen ? "chevron-down" : "chevron-up",
+    );
     toggle.appendText(t("graph"));
     toggle.addEventListener("click", () => this.setDrawerOpen(!this.drawerOpen));
     row.createSpan({ cls: "trova-spinner" });
@@ -1230,7 +1765,8 @@ export class ConnectionsView extends ItemView {
       const graph = this.graph;
       const select = row.createEl("select", { cls: "dropdown trova-drawer-size" });
       quietLabel(select, t("graphSize"));
-      for (const n of GRAPH_SIZES) select.createEl("option", { text: t("graphNotes", { n }), value: String(n) });
+      for (const n of GRAPH_SIZES)
+        select.createEl("option", { text: t("graphNotes", { n }), value: String(n) });
       select.value = String(graph.limit);
       select.addEventListener("change", () => {
         graph.limit = Number(select.value);
@@ -1238,25 +1774,39 @@ export class ConnectionsView extends ItemView {
         void graph.load(graph.rootPath, true);
       });
       const button = (icon: string, label: string, run: () => void, pressed?: boolean) => {
-        const b = row.createEl("button", { cls: `clickable-icon${pressed ? " is-active" : ""}`, attr: { "aria-label": label } });
+        const b = row.createEl("button", {
+          cls: `clickable-icon${pressed ? " is-active" : ""}`,
+          attr: { "aria-label": label },
+        });
         if (pressed !== undefined) b.setAttribute("aria-pressed", String(pressed));
         setIcon(b, icon);
         b.addEventListener("click", run);
       };
-      button("circle-dashed", t("showLoose"), () => {
-        graph.loose = !graph.loose;
-        this.renderDrawerHead();
-        void graph.load(graph.rootPath, true);
-      }, graph.loose);
+      button(
+        "circle-dashed",
+        t("showLoose"),
+        () => {
+          graph.loose = !graph.loose;
+          this.renderDrawerHead();
+          void graph.load(graph.rootPath, true);
+        },
+        graph.loose,
+      );
       button("maximize", t("graphFit"), () => graph.fit());
-      button("maximize-2", t("graphOpenEditor"), () => void this.plugin.openGraph(graph.rootPath ?? this.anchor?.path));
+      button(
+        "maximize-2",
+        t("graphOpenEditor"),
+        () => void this.plugin.openGraph(graph.rootPath ?? this.anchor?.path),
+      );
     }
     this.renderDrawerStatus();
   }
 
   private renderDrawerStatus(): void {
     this.drawerHeadEl.querySelector(".trova-spinner")?.toggleClass("is-busy", !!this.graph?.busy);
-    this.drawerHeadEl.querySelector(".trova-graph-count")?.setText(this.drawerOpen ? (this.graph?.countText() ?? "") : "");
+    this.drawerHeadEl
+      .querySelector(".trova-graph-count")
+      ?.setText(this.drawerOpen ? (this.graph?.countText() ?? "") : "");
   }
 
   /** Centres the drawer's graph on a note and opens the drawer if it is closed. */
@@ -1278,12 +1828,13 @@ export class ConnectionsView extends ItemView {
       const pane = el.getBoundingClientRect();
       const status = bar.getBoundingClientRect();
       const sideBySide = status.right <= pane.left || status.left >= pane.right;
-      if (!sideBySide && status.top < pane.bottom && status.bottom > pane.top) overlap = Math.ceil(pane.bottom - status.top);
+      if (!sideBySide && status.top < pane.bottom && status.bottom > pane.top)
+        overlap = Math.ceil(pane.bottom - status.top);
     }
     const value = overlap > 0 ? `${overlap}px` : "";
-    if (el.style.paddingBottom !== value) el.style.setProperty("padding-bottom", value, value ? "important" : "");
+    if (el.style.paddingBottom !== value)
+      el.style.setProperty("padding-bottom", value, value ? "important" : "");
   }
-
 }
 
 export function resultHeading(r: Result): string | undefined {

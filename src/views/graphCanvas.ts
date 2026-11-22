@@ -87,7 +87,13 @@ export class GraphCanvas<T = unknown> {
   /** A node lit from outside the canvas, such as the one under a hovered list row. */
   private highlighted: CanvasNode<T> | null = null;
   private selectedId: string | null = null;
-  private drag: { node: CanvasNode<T> | null; x: number; y: number; moved: boolean; id: number } | null = null;
+  private drag: {
+    node: CanvasNode<T> | null;
+    x: number;
+    y: number;
+    moved: boolean;
+    id: number;
+  } | null = null;
   private colors = new Map<string, string>();
   private observer: ResizeObserver;
   private fitted = false;
@@ -100,7 +106,10 @@ export class GraphCanvas<T = unknown> {
     private parent: HTMLElement,
     private opts: CanvasOptions<T>,
   ) {
-    this.el = parent.createEl("canvas", { cls: "trova-graph-canvas", attr: { tabindex: "0", role: "application" } });
+    this.el = parent.createEl("canvas", {
+      cls: "trova-graph-canvas",
+      attr: { tabindex: "0", role: "application" },
+    });
     quietLabel(this.el, opts.ariaLabel);
     this.ctx = this.el.getContext("2d")!;
     this.observer = new ResizeObserver(() => this.resize());
@@ -144,7 +153,12 @@ export class GraphCanvas<T = unknown> {
    * Replaces the data. A node object that was already shown keeps its position, so merging new
    * nodes into the graph does not move the old ones far.
    */
-  setData(nodes: CanvasNode<T>[], edges: CanvasEdge<T>[], annotations: CanvasAnnotation[] = [], opts: { refit?: boolean; centreId?: string | null } = {}): void {
+  setData(
+    nodes: CanvasNode<T>[],
+    edges: CanvasEdge<T>[],
+    annotations: CanvasAnnotation[] = [],
+    opts: { refit?: boolean; centreId?: string | null } = {},
+  ): void {
     // A new graph starts from a fresh view, centred on its anchor, and follows the layout until
     // it settles or the user pans or zooms. Merging nodes into the same graph keeps the view.
     if (opts.refit) {
@@ -217,9 +231,16 @@ export class GraphCanvas<T = unknown> {
         const shown = n.label.length > 34 ? `${n.label.slice(0, 33)}…` : n.label;
         // A long label in a narrow pane may not fit beside its node; it then gets at most 60% of
         // the half-width, so one label never shrinks the whole graph to a dot.
-        const side = labelled && dx > dy ? Math.min(this.ctx.measureText(shown).width + 6, (this.width / 2 - pad) * 0.6) : 0;
+        const side =
+          labelled && dx > dy
+            ? Math.min(this.ctx.measureText(shown).width + 6, (this.width / 2 - pad) * 0.6)
+            : 0;
         const above = labelled && dx <= dy ? 20 : 0;
-        k = Math.min(k, (this.width / 2 - pad - side) / Math.max(1, dx + n.r), (this.height / 2 - pad - above) / Math.max(1, dy + n.r));
+        k = Math.min(
+          k,
+          (this.width / 2 - pad - side) / Math.max(1, dx + n.r),
+          (this.height / 2 - pad - above) / Math.max(1, dy + n.r),
+        );
       }
       this.k = Math.max(0.05, Math.min(2.5, k));
       this.tx = this.width / 2 - centre.x * this.k;
@@ -240,7 +261,10 @@ export class GraphCanvas<T = unknown> {
     const pad = 48;
     const w = Math.max(1, maxX - minX);
     const h = Math.max(1, maxY - minY);
-    this.k = Math.max(0.05, Math.min(2.5, Math.min((this.width - 2 * pad) / w, (this.height - 2 * pad) / h)));
+    this.k = Math.max(
+      0.05,
+      Math.min(2.5, Math.min((this.width - 2 * pad) / w, (this.height - 2 * pad) / h)),
+    );
     this.tx = this.width / 2 - ((minX + maxX) / 2) * this.k;
     this.ty = this.height / 2 - ((minY + maxY) / 2) * this.k;
     this.schedule();
@@ -378,10 +402,12 @@ export class GraphCanvas<T = unknown> {
     const selected = this.selectedId ? this.nodes.find((n) => n.id === this.selectedId) : undefined;
     for (const e of this.edges) {
       const on = !focus || e.a === focus || e.b === focus;
-      if (e.quiet && !(focus && on) && !(selected && (e.a === selected || e.b === selected))) continue;
+      if (e.quiet && !(focus && on) && !(selected && (e.a === selected || e.b === selected)))
+        continue;
       ctx.globalAlpha = on ? 0.18 + 0.55 * e.weight : 0.05;
       ctx.strokeStyle = e.strong ? accent : line;
-      ctx.lineWidth = (this.opts.uniformEdges ? 1.1 : 0.6 + 2.4 * e.weight * e.weight) / Math.sqrt(k);
+      ctx.lineWidth =
+        (this.opts.uniformEdges ? 1.1 : 0.6 + 2.4 * e.weight * e.weight) / Math.sqrt(k);
       ctx.beginPath();
       ctx.moveTo(e.a.x, e.a.y);
       ctx.lineTo(e.b.x, e.b.y);
@@ -434,7 +460,12 @@ export class GraphCanvas<T = unknown> {
     // drawn and not the centre node; a label with no free side is left out (it shows on hover).
     const centre = this.centreId ? this.nodes.find((n) => n.id === this.centreId) : undefined;
     type Side = "above" | "below" | "left" | "right";
-    interface Box { x0: number; y0: number; x1: number; y1: number }
+    interface Box {
+      x0: number;
+      y0: number;
+      x1: number;
+      y1: number;
+    }
     const placed: Box[] = [];
     if (centre) {
       const cx = centre.x * k + this.tx;
@@ -443,7 +474,14 @@ export class GraphCanvas<T = unknown> {
       const cr = Math.max(1.6, centre.r * k) + 6;
       placed.push({ x0: cx - cr, y0: cy - cr, x1: cx + cr, y1: cy + cr });
     }
-    const overlaps = (b: Box) => placed.some((p) => b.x0 < p.x1 + LABEL_MARGIN && b.x1 > p.x0 - LABEL_MARGIN && b.y0 < p.y1 + LABEL_MARGIN && b.y1 > p.y0 - LABEL_MARGIN);
+    const overlaps = (b: Box) =>
+      placed.some(
+        (p) =>
+          b.x0 < p.x1 + LABEL_MARGIN &&
+          b.x1 > p.x0 - LABEL_MARGIN &&
+          b.y0 < p.y1 + LABEL_MARGIN &&
+          b.y1 > p.y0 - LABEL_MARGIN,
+      );
     const inside = (b: Box) => b.x0 >= 0 && b.y0 >= 0 && b.x1 <= this.width && b.y1 <= this.height;
     const outward = (n: CanvasNode<T>): Side => {
       if (!centre || n === centre) return "below";
@@ -452,15 +490,46 @@ export class GraphCanvas<T = unknown> {
       if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? "right" : "left";
       return dy < 0 ? "above" : "below";
     };
-    const box = (n: CanvasNode<T>, side: Side, w: number): { b: Box; x: number; y: number; align: CanvasTextAlign; base: CanvasTextBaseline } => {
+    const box = (
+      n: CanvasNode<T>,
+      side: Side,
+      w: number,
+    ): { b: Box; x: number; y: number; align: CanvasTextAlign; base: CanvasTextBaseline } => {
       const sx = n.x * k + this.tx;
       const sy = n.y * k + this.ty;
       const gap = Math.max(1.6, n.r * k) + 5;
       const h = 15;
-      if (side === "below") return { b: { x0: sx - w / 2, y0: sy + gap, x1: sx + w / 2, y1: sy + gap + h }, x: sx, y: sy + gap, align: "center", base: "top" };
-      if (side === "above") return { b: { x0: sx - w / 2, y0: sy - gap - h, x1: sx + w / 2, y1: sy - gap }, x: sx, y: sy - gap, align: "center", base: "bottom" };
-      if (side === "right") return { b: { x0: sx + gap, y0: sy - h / 2, x1: sx + gap + w, y1: sy + h / 2 }, x: sx + gap, y: sy, align: "left", base: "middle" };
-      return { b: { x0: sx - gap - w, y0: sy - h / 2, x1: sx - gap, y1: sy + h / 2 }, x: sx - gap, y: sy, align: "right", base: "middle" };
+      if (side === "below")
+        return {
+          b: { x0: sx - w / 2, y0: sy + gap, x1: sx + w / 2, y1: sy + gap + h },
+          x: sx,
+          y: sy + gap,
+          align: "center",
+          base: "top",
+        };
+      if (side === "above")
+        return {
+          b: { x0: sx - w / 2, y0: sy - gap - h, x1: sx + w / 2, y1: sy - gap },
+          x: sx,
+          y: sy - gap,
+          align: "center",
+          base: "bottom",
+        };
+      if (side === "right")
+        return {
+          b: { x0: sx + gap, y0: sy - h / 2, x1: sx + gap + w, y1: sy + h / 2 },
+          x: sx + gap,
+          y: sy,
+          align: "left",
+          base: "middle",
+        };
+      return {
+        b: { x0: sx - gap - w, y0: sy - h / 2, x1: sx - gap, y1: sy + h / 2 },
+        x: sx - gap,
+        y: sy,
+        align: "right",
+        base: "middle",
+      };
     };
     /** Draws a label. `force` draws it even when every side overlaps, on its preferred side. */
     const label = (n: CanvasNode<T>, strong: boolean, force: boolean): boolean => {
@@ -468,8 +537,13 @@ export class GraphCanvas<T = unknown> {
       const shown = n.label.length > 34 ? `${n.label.slice(0, 33)}…` : n.label;
       const w = ctx.measureText(shown).width;
       const first = outward(n);
-      const sides: Side[] = [first, ...(["above", "below", "right", "left"] as Side[]).filter((x) => x !== first)];
-      let pick = centre ? sides.map((side) => box(n, side, w)).find((c) => !overlaps(c.b) && inside(c.b)) : box(n, first, w);
+      const sides: Side[] = [
+        first,
+        ...(["above", "below", "right", "left"] as Side[]).filter((x) => x !== first),
+      ];
+      let pick = centre
+        ? sides.map((side) => box(n, side, w)).find((c) => !overlaps(c.b) && inside(c.b))
+        : box(n, first, w);
       if (!pick) {
         if (!force) return false;
         pick = box(n, first, w);
@@ -494,7 +568,8 @@ export class GraphCanvas<T = unknown> {
       if (n.x < left || n.x > right || n.y < top || n.y > bottom) return false;
       return n.showLabel || n.id === this.selectedId || (focus ? !!near?.has(n.id) : all);
     });
-    const rank = (n: CanvasNode<T>) => (n === centre ? 0 : n.id === this.selectedId ? 1 : n.showLabel ? 2 : 3);
+    const rank = (n: CanvasNode<T>) =>
+      n === centre ? 0 : n.id === this.selectedId ? 1 : n.showLabel ? 2 : 3;
     wanted.sort((a, b) => rank(a) - rank(b) || b.r - a.r);
     let drawn = 0;
     for (const n of wanted) {
@@ -565,7 +640,13 @@ export class GraphCanvas<T = unknown> {
   private onPointerDown(e: PointerEvent): void {
     if (e.button !== 0) return;
     this.el.setPointerCapture(e.pointerId);
-    this.drag = { node: this.nodeAt(e.offsetX, e.offsetY), x: e.offsetX, y: e.offsetY, moved: false, id: e.pointerId };
+    this.drag = {
+      node: this.nodeAt(e.offsetX, e.offsetY),
+      x: e.offsetX,
+      y: e.offsetY,
+      moved: false,
+      id: e.pointerId,
+    };
   }
 
   private onPointerMove(e: PointerEvent): void {
@@ -606,10 +687,18 @@ export class GraphCanvas<T = unknown> {
   private onKey(e: KeyboardEvent): void {
     if (this.nodes.length === 0) return;
     const at = this.nodes.findIndex((n) => n.id === this.selectedId);
-    if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowUp") {
+    if (
+      e.key === "ArrowRight" ||
+      e.key === "ArrowDown" ||
+      e.key === "ArrowLeft" ||
+      e.key === "ArrowUp"
+    ) {
       e.preventDefault();
       const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
-      const next = this.nodes[(Math.max(0, at) + (at === -1 ? 0 : step) + this.nodes.length) % this.nodes.length]!;
+      const next =
+        this.nodes[
+          (Math.max(0, at) + (at === -1 ? 0 : step) + this.nodes.length) % this.nodes.length
+        ]!;
       this.opts.onClick?.(next, new MouseEvent("click"));
     } else if (e.key === "Enter" && at !== -1) {
       e.preventDefault();

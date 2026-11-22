@@ -31,7 +31,14 @@ function text(v: unknown): string {
   return typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
 }
 
-export type EngineState = "disabled" | "idle" | "connecting" | "ready" | "offline" | "not-found" | "wrong-version";
+export type EngineState =
+  | "disabled"
+  | "idle"
+  | "connecting"
+  | "ready"
+  | "offline"
+  | "not-found"
+  | "wrong-version";
 
 export interface EngineSnapshot {
   state: EngineState;
@@ -92,7 +99,15 @@ export class EngineManager {
   private retryCount = 0;
   private stopped = false;
   private connecting: Promise<void> | null = null;
-  private pending = new Map<string, { changed: Set<string>; deleted: Set<string>; renamed: { from: string; to: string }[]; full: boolean }>();
+  private pending = new Map<
+    string,
+    {
+      changed: Set<string>;
+      deleted: Set<string>;
+      renamed: { from: string; to: string }[];
+      full: boolean;
+    }
+  >();
   private syncTimer: number | null = null;
   private unsupported = new Set<string>();
   private keepAlive: number | null = null;
@@ -122,7 +137,11 @@ export class EngineManager {
   }
 
   has(capability: Capability): boolean {
-    return this.ready && !this.unsupported.has(capability) && (this.snapshot.status?.capabilities.includes(capability) ?? false);
+    return (
+      this.ready &&
+      !this.unsupported.has(capability) &&
+      (this.snapshot.status?.capabilities.includes(capability) ?? false)
+    );
   }
 
   collections(): string[] {
@@ -167,7 +186,12 @@ export class EngineManager {
     const served = health.apis ?? [health.api];
     const fit = apiCompatibility(served, API_MAJOR);
     if (fit !== "ok") {
-      this.set({ state: "wrong-version", gotApi: served.join(", "), outdated: fit === "engineTooOld" ? "engine" : "plugin", reason: `API ${served.join(", ")}` });
+      this.set({
+        state: "wrong-version",
+        gotApi: served.join(", "),
+        outdated: fit === "engineTooOld" ? "engine" : "plugin",
+        reason: `API ${served.join(", ")}`,
+      });
       return "wrong-version";
     }
     this.client = new EngineClient(ep.base, ep.token);
@@ -202,7 +226,10 @@ export class EngineManager {
         }
         if (found === "wrong-version") return;
         if (found === "none") {
-          this.set({ state: "offline", reason: spawned.errorOutput() || "The engine did not start within 15 seconds" });
+          this.set({
+            state: "offline",
+            reason: spawned.errorOutput() || "The engine did not start within 15 seconds",
+          });
           this.scheduleRetry();
           return;
         }
@@ -232,15 +259,25 @@ export class EngineManager {
     const wanted = await this.host.collections();
     this.vaultCollection = wanted[0]?.name ?? "";
     this.allCollections = wanted.map((c) => c.name);
-    const existing = (await client.json<{ collections: { name: string; path: string }[] }>("GET", "/v1/collections")).collections;
+    const existing = (
+      await client.json<{ collections: { name: string; path: string }[] }>("GET", "/v1/collections")
+    ).collections;
     for (const c of wanted) {
       const known = existing.find((e) => e.name === c.name);
       await client.json("POST", "/v1/collections", c);
-      if (this.host.mayIndex() && !known) await client.json("POST", "/v1/index/sync", { collection: c.name, full: true } satisfies SyncRequest);
+      if (this.host.mayIndex() && !known)
+        await client.json("POST", "/v1/index/sync", {
+          collection: c.name,
+          full: true,
+        } satisfies SyncRequest);
     }
     if (this.host.mayIndex()) {
       for (const c of wanted) {
-        if (existing.some((e) => e.name === c.name)) await client.json("POST", "/v1/index/sync", { collection: c.name, full: true } satisfies SyncRequest);
+        if (existing.some((e) => e.name === c.name))
+          await client.json("POST", "/v1/index/sync", {
+            collection: c.name,
+            full: true,
+          } satisfies SyncRequest);
       }
     }
     await this.refreshStatus();
@@ -253,7 +290,11 @@ export class EngineManager {
       const before = new Set(this.allCollections);
       await this.register();
       for (const name of before) {
-        if (!this.allCollections.includes(name)) await this.client!.json("DELETE", `/v1/collections?name=${encodeURIComponent(name)}`).catch(() => undefined);
+        if (!this.allCollections.includes(name))
+          await this.client!.json(
+            "DELETE",
+            `/v1/collections?name=${encodeURIComponent(name)}`,
+          ).catch(() => undefined);
       }
       this.set({});
     } catch (err) {
@@ -264,7 +305,10 @@ export class EngineManager {
   /** Starts the first full index after the user clicks Start on the welcome screen. */
   async startIndexing(): Promise<void> {
     if (!this.ready) return;
-    for (const name of this.allCollections) await this.call(() => this.client!.json("POST", "/v1/index/sync", { collection: name, full: true }));
+    for (const name of this.allCollections)
+      await this.call(() =>
+        this.client!.json("POST", "/v1/index/sync", { collection: name, full: true }),
+      );
     await this.refreshStatus();
   }
 
@@ -287,7 +331,8 @@ export class EngineManager {
     if (this.keepAlive) window.clearInterval(this.keepAlive);
     // qmd unloads idle models after 5 minutes; keep them warm while Obsidian is focused.
     this.keepAlive = window.setInterval(() => {
-      if (this.ready && typeof activeDocument !== "undefined" && activeDocument.hasFocus()) void this.client?.json("POST", "/v1/keepalive", {}).catch(() => undefined);
+      if (this.ready && typeof activeDocument !== "undefined" && activeDocument.hasFocus())
+        void this.client?.json("POST", "/v1/keepalive", {}).catch(() => undefined);
     }, 4 * 60_000);
   }
 
@@ -307,7 +352,13 @@ export class EngineManager {
 
   private onEngineEvent(e: EngineEvent): void {
     if (e.event === "index.progress") {
-      this.set({ progress: { kind: text(e.data["stage"]) || text(e.data["kind"]), done: Number(e.data["done"] ?? 0), total: Number(e.data["total"] ?? 0) } });
+      this.set({
+        progress: {
+          kind: text(e.data["stage"]) || text(e.data["kind"]),
+          done: Number(e.data["done"] ?? 0),
+          total: Number(e.data["total"] ?? 0),
+        },
+      });
     } else if (e.event === "index.ready") {
       this.set({ progress: undefined });
       void this.refreshStatus();
@@ -363,7 +414,8 @@ export class EngineManager {
   /** Runs one engine call with the documented responses to each error code. */
   private async call<T>(fn: () => Promise<T>, capability?: Capability): Promise<T> {
     if (!this.client) throw new EngineOffline();
-    if (capability && this.unsupported.has(capability)) throw new EngineError("unsupported", `The engine lacks ${capability}`);
+    if (capability && this.unsupported.has(capability))
+      throw new EngineError("unsupported", `The engine lacks ${capability}`);
     try {
       return await fn();
     } catch (caught) {
@@ -401,7 +453,11 @@ export class EngineManager {
     }
   }
 
-  private async *streamCall(path: string, body: unknown, signal?: AbortSignal): AsyncGenerator<ResultBatch> {
+  private async *streamCall(
+    path: string,
+    body: unknown,
+    signal?: AbortSignal,
+  ): AsyncGenerator<ResultBatch> {
     if (!this.client) throw new EngineOffline();
     let attempt = 0;
     for (;;) {
@@ -410,7 +466,11 @@ export class EngineManager {
         return;
       } catch (err) {
         if (signal?.aborted) return;
-        if (err instanceof EngineError && attempt === 0 && (err.code === "busy" || err.code === "model_loading")) {
+        if (
+          err instanceof EngineError &&
+          attempt === 0 &&
+          (err.code === "busy" || err.code === "model_loading")
+        ) {
           attempt++;
           await sleep(err.code === "busy" ? 200 : (err.retryAfterMs ?? 1000));
           continue;
@@ -428,7 +488,10 @@ export class EngineManager {
     return this.streamCall("/v1/ask", req, signal);
   }
   related(req: RelatedRequest, signal?: AbortSignal): Promise<RelatedResponse> {
-    return this.call(() => this.client!.json("POST", "/v1/related", req, signal), "relatedByVector");
+    return this.call(
+      () => this.client!.json("POST", "/v1/related", req, signal),
+      "relatedByVector",
+    );
   }
   graph(req: GraphRequest, signal?: AbortSignal): Promise<GraphResponse> {
     return this.call(() => this.client!.json("POST", "/v1/graph", req, signal), "graph");
@@ -443,25 +506,41 @@ export class EngineManager {
     return this.call(() => this.client!.json("GET", "/v1/metadata/keys"));
   }
   duplicates(start: boolean): Promise<DuplicatesResponse> {
-    return this.call(() => this.client!.json(start ? "POST" : "GET", "/v1/duplicates", start ? {} : undefined), "duplicates");
+    return this.call(
+      () => this.client!.json(start ? "POST" : "GET", "/v1/duplicates", start ? {} : undefined),
+      "duplicates",
+    );
   }
   topics(start: boolean): Promise<TopicsResponse> {
-    return this.call(() => this.client!.json(start ? "POST" : "GET", "/v1/topics", start ? {} : undefined), "topics");
+    return this.call(
+      () => this.client!.json(start ? "POST" : "GET", "/v1/topics", start ? {} : undefined),
+      "topics",
+    );
   }
   downloadModels(): Promise<{ jobId: string }> {
     return this.call(() => this.client!.json("POST", "/v1/models/download", {}));
   }
   cancelJob(jobId: string): Promise<void> {
-    return this.call(() => this.client!.json("POST", `/v1/jobs/${encodeURIComponent(jobId)}/cancel`, {}));
+    return this.call(() =>
+      this.client!.json("POST", `/v1/jobs/${encodeURIComponent(jobId)}/cancel`, {}),
+    );
   }
   pushAttachmentText(path: string, text: string): Promise<void> {
-    return this.call(() => this.client!.json("POST", "/v1/attachments/text", { collection: this.vaultCollection, path, text }));
+    return this.call(() =>
+      this.client!.json("POST", "/v1/attachments/text", {
+        collection: this.vaultCollection,
+        path,
+        text,
+      }),
+    );
   }
   setDebug(on: boolean): void {
     void this.client?.json("POST", "/v1/debug", { on }).catch(() => undefined);
   }
   async setPaused(paused: boolean): Promise<void> {
-    await this.call(() => this.client!.json("POST", paused ? "/v1/index/pause" : "/v1/index/resume", {}));
+    await this.call(() =>
+      this.client!.json("POST", paused ? "/v1/index/pause" : "/v1/index/resume", {}),
+    );
     await this.refreshStatus();
   }
 
@@ -469,12 +548,24 @@ export class EngineManager {
 
   private batch(collection: string) {
     let b = this.pending.get(collection);
-    if (!b) this.pending.set(collection, (b = { changed: new Set(), deleted: new Set(), renamed: [], full: false }));
+    if (!b)
+      this.pending.set(
+        collection,
+        (b = { changed: new Set(), deleted: new Set(), renamed: [], full: false }),
+      );
     return b;
   }
 
   /** Vault events go to index/sync in batches, debounced by 2 seconds. */
-  queueSync(change: { changed?: string; deleted?: string; renamed?: { from: string; to: string }; full?: boolean }, collection = this.vaultCollection): void {
+  queueSync(
+    change: {
+      changed?: string;
+      deleted?: string;
+      renamed?: { from: string; to: string };
+      full?: boolean;
+    },
+    collection = this.vaultCollection,
+  ): void {
     if (!collection || !this.host.mayIndex()) return;
     const b = this.batch(collection);
     if (change.changed) b.changed.add(change.changed);
@@ -490,7 +581,13 @@ export class EngineManager {
     this.syncTimer = null;
     if (!this.ready) return;
     for (const [collection, b] of this.pending) {
-      const req: SyncRequest = { collection, changed: [...b.changed], deleted: [...b.deleted], renamed: b.renamed, full: b.full };
+      const req: SyncRequest = {
+        collection,
+        changed: [...b.changed],
+        deleted: [...b.deleted],
+        renamed: b.renamed,
+        full: b.full,
+      };
       this.pending.delete(collection);
       void this.call(() => this.client!.json("POST", "/v1/index/sync", req)).catch(() => undefined);
     }

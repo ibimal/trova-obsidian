@@ -21,7 +21,10 @@ export interface ContextPiece {
  * overlapping or touching ranges of one note join into one piece. `fullText` returns a note's
  * text, which is needed to join two ranges.
  */
-export function mergePieces(pieces: ContextPiece[], fullText: (path: string) => string | undefined): ContextPiece[] {
+export function mergePieces(
+  pieces: ContextPiece[],
+  fullText: (path: string) => string | undefined,
+): ContextPiece[] {
   const whole = new Set(pieces.filter((p) => p.start === undefined).map((p) => p.path));
   const out: ContextPiece[] = [];
   for (const p of pieces) {
@@ -30,7 +33,9 @@ export function mergePieces(pieces: ContextPiece[], fullText: (path: string) => 
       continue;
     }
     if (whole.has(p.path)) continue;
-    const overlap = out.find((o) => o.path === p.path && o.start !== undefined && p.start! <= o.end! && p.end! >= o.start);
+    const overlap = out.find(
+      (o) => o.path === p.path && o.start !== undefined && p.start! <= o.end! && p.end! >= o.start,
+    );
     if (!overlap) {
       out.push({ ...p });
       continue;
@@ -39,7 +44,11 @@ export function mergePieces(pieces: ContextPiece[], fullText: (path: string) => 
     const end = Math.max(overlap.end!, p.end!);
     if (start === overlap.start && end === overlap.end) continue;
     const text = fullText(p.path);
-    overlap.content = text ? text.slice(start, end) : overlap.start! <= p.start ? overlap.content + p.content : p.content + overlap.content;
+    overlap.content = text
+      ? text.slice(start, end)
+      : overlap.start! <= p.start
+        ? overlap.content + p.content
+        : p.content + overlap.content;
     if (p.start < overlap.start!) overlap.headings = p.headings;
     overlap.start = start;
     overlap.end = end;
@@ -54,7 +63,11 @@ function linkFor(piece: ContextPiece): string {
 }
 
 function xmlAttr(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 export function formatContext(pieces: ContextPiece[], format: ContextFormat): string {
@@ -62,13 +75,18 @@ export function formatContext(pieces: ContextPiece[], format: ContextFormat): st
   switch (format) {
     case "markdown":
     case "note":
-      return pieces.map((p) => `## ${linkFor(p)}\n\n${body(p)}`).join("\n\n") + (pieces.length ? "\n" : "");
+      return (
+        pieces.map((p) => `## ${linkFor(p)}\n\n${body(p)}`).join("\n\n") +
+        (pieces.length ? "\n" : "")
+      );
     case "xml":
       return (
         "<documents>\n" +
         pieces
           .map((p) => {
-            const heading = p.headings?.length ? ` heading="${xmlAttr(p.headings.join(" > "))}"` : "";
+            const heading = p.headings?.length
+              ? ` heading="${xmlAttr(p.headings.join(" > "))}"`
+              : "";
             return `<document path="${xmlAttr(p.path)}"${heading}>\n${body(p)}\n</document>`;
           })
           .join("\n") +

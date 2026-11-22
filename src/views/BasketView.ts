@@ -54,20 +54,35 @@ export class BasketView extends ItemView {
       return;
     }
     basket.items.forEach((item, index) => {
-      const row = list.createDiv({ cls: "trova-basket-item", attr: { draggable: "true", role: "listitem", tabindex: "0" } });
+      const row = list.createDiv({
+        cls: "trova-basket-item",
+        attr: { draggable: "true", role: "listitem", tabindex: "0" },
+      });
       setIcon(row.createSpan({ cls: "trova-grip" }), "grip-vertical");
       const text = row.createDiv({ cls: "trova-basket-text" });
       text.createDiv({ cls: "trova-row-title", text: item.title });
-      const detail = item.kind === "note" ? t("wholeNote") : `${item.headings?.join(" › ") || item.title}${item.kind === "neighbours" ? " ±1" : ""}`;
-      text.createDiv({ cls: "trova-row-path", text: [folderOf(item.path), detail].filter(Boolean).join(" · ") });
-      const remove = row.createEl("button", { cls: "clickable-icon", attr: { "aria-label": t("remove") } });
+      const detail =
+        item.kind === "note"
+          ? t("wholeNote")
+          : `${item.headings?.join(" › ") || item.title}${item.kind === "neighbours" ? " ±1" : ""}`;
+      text.createDiv({
+        cls: "trova-row-path",
+        text: [folderOf(item.path), detail].filter(Boolean).join(" · "),
+      });
+      const remove = row.createEl("button", {
+        cls: "clickable-icon",
+        attr: { "aria-label": t("remove") },
+      });
       setIcon(remove, "x");
       remove.addEventListener("click", (e) => {
         e.stopPropagation();
         const removed = basket.remove(item.key);
         if (removed) undoNotice(t("removed"), () => basket.restore(removed, index));
       });
-      onOpen(text, (where) => void this.plugin.open({ path: item.path, headings: item.headings }, where));
+      onOpen(
+        text,
+        (where) => void this.plugin.open({ path: item.path, headings: item.headings }, where),
+      );
       // Drag to reorder; the copy follows the basket order. Alt+Up and Alt+Down do the same from the keyboard.
       row.addEventListener("dragstart", (e) => {
         this.dragFrom = index;
@@ -101,9 +116,15 @@ export class BasketView extends ItemView {
     this.meterEl.empty();
     this.meterEl.createSpan({ text: t("basketTokens", { n: tokens.toLocaleString() }) });
     const bar = this.meterEl.createDiv({ cls: "trova-meter-bar" });
-    bar.createDiv({ cls: "trova-meter-fill" }).style.width = `${Math.min(100, (tokens / Math.max(1, limit)) * 100)}%`;
+    bar.createDiv({
+      cls: "trova-meter-fill",
+    }).style.width = `${Math.min(100, (tokens / Math.max(1, limit)) * 100)}%`;
     this.meterEl.toggleClass("is-over", tokens > limit);
-    if (tokens > limit) this.meterEl.createSpan({ cls: "trova-meter-warn", text: t("basketOver", { limit: limit.toLocaleString() }) });
+    if (tokens > limit)
+      this.meterEl.createSpan({
+        cls: "trova-meter-warn",
+        text: t("basketOver", { limit: limit.toLocaleString() }),
+      });
   }
 
   private renderActions(): void {

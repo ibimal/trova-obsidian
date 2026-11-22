@@ -11,18 +11,8 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "types": [
-      "node"
-    ],
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable",
-      "WebWorker"
-    ]
+    "types": ["node"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable", "WebWorker"]
   },
-  "include": [
-    "src",
-    "test"
-  ]
+  "include": ["src", "test"]
 }

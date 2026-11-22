@@ -13,17 +13,87 @@ interface Topic {
 }
 
 const TOPICS: Topic[] = [
-  { key: "keyboard", folder: "Tools", title: "Keyboard", terms: ["keyboard", "remap", "layer", "homerow", "modifier", "keymap", "firmware", "chord"], question: "how do I remap modifier keys on a keyboard layer" },
-  { key: "search", folder: "Search", title: "Retrieval", terms: ["retrieval", "ranking", "fusion", "bm25", "embedding", "rerank", "recall", "index"], question: "what improves ranking when combining bm25 with embedding retrieval" },
-  { key: "garden", folder: "Garden", title: "Garden", terms: ["tomato", "compost", "seedling", "mulch", "prune", "harvest", "trellis", "soil"], question: "when should tomato seedlings move into compost rich soil" },
-  { key: "cooking", folder: "Kitchen", title: "Cooking", terms: ["sourdough", "ferment", "starter", "hydration", "crumb", "proof", "oven", "flour"], question: "why does sourdough hydration change the crumb after the proof" },
-  { key: "running", folder: "Health", title: "Running", terms: ["marathon", "tempo", "interval", "cadence", "recovery", "mileage", "taper", "stride"], question: "how should weekly mileage change during a marathon taper" },
-  { key: "finance", folder: "Money", title: "Finance", terms: ["budget", "invoice", "ledger", "dividend", "expense", "forecast", "savings", "audit"], question: "which expenses belong in the quarterly budget forecast ledger" },
-  { key: "astronomy", folder: "Sky", title: "Astronomy", terms: ["telescope", "nebula", "aperture", "eyepiece", "galaxy", "exposure", "tracking", "seeing"], question: "what aperture telescope shows a nebula with long exposure tracking" },
-  { key: "travel", folder: "Trips", title: "Travel", terms: ["itinerary", "ferry", "hostel", "passport", "layover", "trailhead", "luggage", "visa"], question: "how to plan a ferry itinerary with a short layover and visa checks" },
+  {
+    key: "keyboard",
+    folder: "Tools",
+    title: "Keyboard",
+    terms: ["keyboard", "remap", "layer", "homerow", "modifier", "keymap", "firmware", "chord"],
+    question: "how do I remap modifier keys on a keyboard layer",
+  },
+  {
+    key: "search",
+    folder: "Search",
+    title: "Retrieval",
+    terms: ["retrieval", "ranking", "fusion", "bm25", "embedding", "rerank", "recall", "index"],
+    question: "what improves ranking when combining bm25 with embedding retrieval",
+  },
+  {
+    key: "garden",
+    folder: "Garden",
+    title: "Garden",
+    terms: ["tomato", "compost", "seedling", "mulch", "prune", "harvest", "trellis", "soil"],
+    question: "when should tomato seedlings move into compost rich soil",
+  },
+  {
+    key: "cooking",
+    folder: "Kitchen",
+    title: "Cooking",
+    terms: ["sourdough", "ferment", "starter", "hydration", "crumb", "proof", "oven", "flour"],
+    question: "why does sourdough hydration change the crumb after the proof",
+  },
+  {
+    key: "running",
+    folder: "Health",
+    title: "Running",
+    terms: ["marathon", "tempo", "interval", "cadence", "recovery", "mileage", "taper", "stride"],
+    question: "how should weekly mileage change during a marathon taper",
+  },
+  {
+    key: "finance",
+    folder: "Money",
+    title: "Finance",
+    terms: ["budget", "invoice", "ledger", "dividend", "expense", "forecast", "savings", "audit"],
+    question: "which expenses belong in the quarterly budget forecast ledger",
+  },
+  {
+    key: "astronomy",
+    folder: "Sky",
+    title: "Astronomy",
+    terms: [
+      "telescope",
+      "nebula",
+      "aperture",
+      "eyepiece",
+      "galaxy",
+      "exposure",
+      "tracking",
+      "seeing",
+    ],
+    question: "what aperture telescope shows a nebula with long exposure tracking",
+  },
+  {
+    key: "travel",
+    folder: "Trips",
+    title: "Travel",
+    terms: ["itinerary", "ferry", "hostel", "passport", "layover", "trailhead", "luggage", "visa"],
+    question: "how to plan a ferry itinerary with a short layover and visa checks",
+  },
 ];
 
-const FILLER = ["notes", "ideas", "plan", "review", "log", "guide", "checklist", "summary", "draft", "reference", "questions", "decisions"];
+const FILLER = [
+  "notes",
+  "ideas",
+  "plan",
+  "review",
+  "log",
+  "guide",
+  "checklist",
+  "summary",
+  "draft",
+  "reference",
+  "questions",
+  "decisions",
+];
 
 function rng(seed: number): () => number {
   let s = seed >>> 0;
@@ -38,7 +108,11 @@ function rng(seed: number): () => number {
 function sentence(topic: Topic, random: () => number, words = 14): string {
   const out: string[] = [];
   for (let i = 0; i < words; i++) {
-    out.push(random() < 0.55 ? topic.terms[Math.floor(random() * topic.terms.length)]! : FILLER[Math.floor(random() * FILLER.length)]!);
+    out.push(
+      random() < 0.55
+        ? topic.terms[Math.floor(random() * topic.terms.length)]!
+        : FILLER[Math.floor(random() * FILLER.length)]!,
+    );
   }
   const text = out.join(" ");
   return `${text[0]!.toUpperCase()}${text.slice(1)}.`;
@@ -58,7 +132,8 @@ function makePdf(pages: string[]): Buffer {
   pages.forEach((text, i) => {
     const escaped = text.replace(/([\\()])/g, "\\$1");
     const stream = `BT /F1 12 Tf 72 720 Td (${escaped}) Tj ET`;
-    objects[2 + i * 2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${4 + i * 2} 0 R /Resources << /Font << /F1 ${fontId} 0 R >> >> >>`;
+    objects[2 + i * 2] =
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${4 + i * 2} 0 R /Resources << /Font << /F1 ${fontId} 0 R >> >> >>`;
     objects[3 + i * 2] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
   });
   objects[fontId - 1] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
@@ -149,9 +224,15 @@ export function fixtureNotes(): Record<string, string | Buffer> {
       const path = `${topic.folder}/${name}.md`;
       const next = `${topic.title} ${FILLER[(i + 1) % FILLER.length]} ${((i + 1) % 23) + 1}`;
       const tags = `tags: [${topic.key}, area/${topic.key}]`;
-      const fm = i % 3 === 0 ? `---\n${tags}\nstatus: ${i % 2 ? "active" : "done"}\nrating: ${(i % 5) + 1}\n---\n` : "";
+      const fm =
+        i % 3 === 0
+          ? `---\n${tags}\nstatus: ${i % 2 ? "active" : "done"}\nrating: ${(i % 5) + 1}\n---\n`
+          : "";
       const headings = i % 7 === 6 ? "" : `# ${topic.terms[i % topic.terms.length]} overview\n`;
-      const second = i % 7 === 6 ? "" : `\n## Details\n${paragraph(topic, random)}\n\n## Details\n${paragraph(topic, random, 2)}\n`;
+      const second =
+        i % 7 === 6
+          ? ""
+          : `\n## Details\n${paragraph(topic, random)}\n\n## Details\n${paragraph(topic, random, 2)}\n`;
       const link = i % 4 === 0 ? "" : `\nSee also [[${next}]].\n`;
       const inlineTag = i % 5 === 0 ? ` #${topic.key}` : "";
       files[path] = `${fm}${headings}${paragraph(topic, random)}${inlineTag}\n${second}${link}`;
@@ -162,25 +243,44 @@ export function fixtureNotes(): Record<string, string | Buffer> {
   files["Tools/Kanata.md"] = KANATA;
   files["Trova.md"] = TROVA;
   files["Projects/Trova/Plan.md"] = PLAN;
-  files["NoHeadings.md"] = "This note has no headings at all. It only has a short paragraph about a lighthouse keeper and the fog signal.\n";
-  files["Long.md"] = `# Long note\n${Array.from({ length: 60 }, (_, i) => `## Section ${i + 1}\n${paragraph(TOPICS[i % TOPICS.length]!, random, 5)}\n`).join("\n")}`;
-  files["Secret.md"] = "---\ntrova: false\n---\n# Secret\nThe zebrafish password is hidden here and must never appear in any result.\n";
-  files["Orphan.md"] = "# Orphan\nNothing links here and this note links nowhere. It describes a quiet harbour at dawn.\n";
-  files["Mentions.md"] = "# Mentions\nI tried Kanata yesterday and the KB remap worked. The Trova engine found it. Not linked on purpose.\n";
+  files["NoHeadings.md"] =
+    "This note has no headings at all. It only has a short paragraph about a lighthouse keeper and the fog signal.\n";
+  files["Long.md"] =
+    `# Long note\n${Array.from({ length: 60 }, (_, i) => `## Section ${i + 1}\n${paragraph(TOPICS[i % TOPICS.length]!, random, 5)}\n`).join("\n")}`;
+  files["Secret.md"] =
+    "---\ntrova: false\n---\n# Secret\nThe zebrafish password is hidden here and must never appear in any result.\n";
+  files["Orphan.md"] =
+    "# Orphan\nNothing links here and this note links nowhere. It describes a quiet harbour at dawn.\n";
+  files["Mentions.md"] =
+    "# Mentions\nI tried Kanata yesterday and the KB remap worked. The Trova engine found it. Not linked on purpose.\n";
   files["Dup A.md"] = `# Retrospective\n${DUP_TEXT}\n`;
   files["Dup B.md"] = `# Retro copy\n${DUP_TEXT} Small addition.\n`;
-  files["Sprachen/Suchmaschinen.md"] = "# Über Suchmaschinen\nEine Suchmaschine verbindet Schlüsselwörter und Bedeutung. Die Größe der Abschnitte beeinflusst die Trefferqualität.\n";
-  files["Sprachen/日本語.md"] = "# 日本語のノート\n検索エンジンはキーワードと意味を組み合わせます。東京の天気は晴れです。\n";
-  files["Daily/2026-11-10.md"] = "# 2026-11-10\nWorked on the keyboard remap config and read about fusion ranking.\n";
+  files["Sprachen/Suchmaschinen.md"] =
+    "# Über Suchmaschinen\nEine Suchmaschine verbindet Schlüsselwörter und Bedeutung. Die Größe der Abschnitte beeinflusst die Trefferqualität.\n";
+  files["Sprachen/日本語.md"] =
+    "# 日本語のノート\n検索エンジンはキーワードと意味を組み合わせます。東京の天気は晴れです。\n";
+  files["Daily/2026-11-10.md"] =
+    "# 2026-11-10\nWorked on the keyboard remap config and read about fusion ranking.\n";
   files["Daily/2026-11-11.md"] = "# 2026-11-11\nGarden day: compost and tomato seedlings.\n";
   files["Templates/Note.md"] = "# {{title}}\nTemplate body.\n";
   files["Board.canvas"] = JSON.stringify({
     nodes: [
-      { id: "1", type: "text", text: "Canvas card about periscope design", x: 0, y: 0, width: 200, height: 100 },
+      {
+        id: "1",
+        type: "text",
+        text: "Canvas card about periscope design",
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 100,
+      },
       { id: "2", type: "file", file: "Tools/Kanata.md", x: 300, y: 0, width: 200, height: 100 },
     ],
     edges: [],
   });
-  files["Papers/Fusion.pdf"] = makePdf(["Reciprocal rank fusion outperforms single rankers", "Second page discusses the xylophone benchmark"]);
+  files["Papers/Fusion.pdf"] = makePdf([
+    "Reciprocal rank fusion outperforms single rankers",
+    "Second page discusses the xylophone benchmark",
+  ]);
   return files;
 }

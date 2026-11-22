@@ -25,8 +25,12 @@ describe("worker: title lane", () => {
   });
   it("matches prefixes, ANDs words and finds files of any type by name", () => {
     expect(index.search(q("kana")).title[0]!.path).toBe("Tools/Kanata.md");
-    expect(index.search(q("trova plan")).title.map((h) => h.path)).toEqual(["Projects/Trova/Plan.md"]);
-    expect(index.search(q("fusion ext:pdf")).title.map((h) => h.path)).toEqual(["Papers/Fusion.pdf"]);
+    expect(index.search(q("trova plan")).title.map((h) => h.path)).toEqual([
+      "Projects/Trova/Plan.md",
+    ]);
+    expect(index.search(q("fusion ext:pdf")).title.map((h) => h.path)).toEqual([
+      "Papers/Fusion.pdf",
+    ]);
     expect(index.search(q("kanata")).title[0]!.titleHighlights).toEqual([[0, 6]]);
   });
 });
@@ -57,8 +61,12 @@ describe("worker: body lane, filters and typo rescue", () => {
     expect(bodyPaths("kanata tag:#keyboard")).toEqual(["Tools/Kanata.md"]);
     expect(bodyPaths("kanata links:[[Trova]]")).toEqual(["Tools/Kanata.md"]);
     expect(bodyPaths("harbour is:orphan")).toEqual(["Orphan.md"]);
-    expect(bodyPaths("plan status:active rating:>3 path:Projects")).toEqual(["Projects/Trova/Plan.md"]);
-    expect(index.search(q("in:title kanata")).title.map((h) => h.path)).toEqual(["Tools/Kanata.md"]);
+    expect(bodyPaths("plan status:active rating:>3 path:Projects")).toEqual([
+      "Projects/Trova/Plan.md",
+    ]);
+    expect(index.search(q("in:title kanata")).title.map((h) => h.path)).toEqual([
+      "Tools/Kanata.md",
+    ]);
     expect(index.search(q("tag:#tools")).title.map((h) => h.path)).toEqual(["Tools/Kanata.md"]);
   });
   it("never returns excluded notes", () => {
@@ -82,11 +90,15 @@ describe("worker: overlay lane and updates", () => {
     const index = makeIndex();
     expect(index.search(q("wombat"), { bodies: "overlay" }).body).toEqual([]);
     index.upsertBodies([{ path: "Trova.md", body: "# Trova\nA just-typed word: wombat." }], true);
-    expect(index.search(q("wombat"), { bodies: "overlay" }).body.map((h) => h.path)).toEqual(["Trova.md"]);
+    expect(index.search(q("wombat"), { bodies: "overlay" }).body.map((h) => h.path)).toEqual([
+      "Trova.md",
+    ]);
     expect(index.search(q("kanata"), { bodies: "overlay" }).body).toEqual([]);
     index.clearDirty(["Trova.md"]);
     expect(index.search(q("wombat"), { bodies: "overlay" }).body).toEqual([]);
-    expect(index.search(q("wombat"), { bodies: "all" }).body.map((h) => h.path)).toEqual(["Trova.md"]);
+    expect(index.search(q("wombat"), { bodies: "all" }).body.map((h) => h.path)).toEqual([
+      "Trova.md",
+    ]);
   });
   it("handles rename and remove", () => {
     const index = makeIndex();

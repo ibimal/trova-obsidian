@@ -36,9 +36,18 @@ export class HttpApi {
 
   start(port: number, token: string): Promise<void> {
     this.stop();
-    if (!Platform.isDesktopApp) return Promise.reject(new Error("The local HTTP API needs the desktop app"));
-    const http = (window as unknown as { require: (id: string) => { createServer(h: (req: Req, res: Res) => void): HttpServer } }).require("http");
-    const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Authorization", "Access-Control-Allow-Methods": "GET, OPTIONS" };
+    if (!Platform.isDesktopApp)
+      return Promise.reject(new Error("The local HTTP API needs the desktop app"));
+    const http = (
+      window as unknown as {
+        require: (id: string) => { createServer(h: (req: Req, res: Res) => void): HttpServer };
+      }
+    ).require("http");
+    const cors = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Authorization",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+    };
     const send = (res: Res, status: number, body: unknown) => {
       res.writeHead(status, { "Content-Type": "application/json", ...cors });
       res.end(JSON.stringify(body));
@@ -51,23 +60,39 @@ export class HttpApi {
         }
         // Read-only: only GET is served.
         if (req.method !== "GET") return send(res, 405, { error: "Only GET is allowed" });
-        if (!token || req.headers["authorization"] !== `Bearer ${token}`) return send(res, 401, { error: "Missing or wrong token" });
+        if (!token || req.headers["authorization"] !== `Bearer ${token}`)
+          return send(res, 401, { error: "Missing or wrong token" });
         const url = new URL(req.url ?? "/", "http://127.0.0.1");
         const q = url.searchParams.get("q") ?? "";
         const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? 20)));
         const { api } = this.plugin;
         try {
-          if (url.pathname === "/search") return send(res, 200, await last(api.search(q, { limit }), false));
+          if (url.pathname === "/search")
+            return send(res, 200, await last(api.search(q, { limit }), false));
           if (url.pathname === "/ask") {
             const mode = url.searchParams.get("mode");
-            return send(res, 200, await last(api.ask(q, { limit, mode: mode === "fast" || mode === "deep" ? mode : "auto" }), true));
+            return send(
+              res,
+              200,
+              await last(
+                api.ask(q, { limit, mode: mode === "fast" || mode === "deep" ? mode : "auto" }),
+                true,
+              ),
+            );
           }
           if (url.pathname === "/related") {
             const path = url.searchParams.get("path");
             const text = url.searchParams.get("text");
             const block = url.searchParams.get("block");
             if (!path && !text) return send(res, 400, { error: "related needs path or text" });
-            return send(res, 200, await api.related(text ? { text } : block ? { path: path!, block } : { path: path! }, { limit }));
+            return send(
+              res,
+              200,
+              await api.related(
+                text ? { text } : block ? { path: path!, block } : { path: path! },
+                { limit },
+              ),
+            );
           }
           return send(res, 404, { error: "Unknown endpoint. Use /search, /ask or /related" });
         } catch (err) {

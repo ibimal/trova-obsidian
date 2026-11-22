@@ -33,13 +33,13 @@ The plugin implements a written features and API specification that is not publi
 
 `test/extras.test.ts` builds 10,000 notes of about 300 words each and times the worker's index on Node 24 (M-series Mac). The vocabulary has only 40 words, so every query word matches thousands of notes; a real vault is easier.
 
-| Measurement | Result |
-| --- | --- |
-| Metadata pass, 10,000 files | 78 ms |
-| Body pass, per 50-file batch | 6.9 ms |
-| Search, title lane and overlay (engine running), p50 / p95 | 1.7 ms / 6.2 ms |
-| Search, title lane and all bodies (no engine), p50 / p95 | 13.6 ms / 23.9 ms |
-| Typo rescue, slowest of three queries | 31.8 ms |
-| Fresh edit indexed | 0.2 ms |
+| Measurement                                                | Result            |
+| ---------------------------------------------------------- | ----------------- |
+| Metadata pass, 10,000 files                                | 78 ms             |
+| Body pass, per 50-file batch                               | 6.9 ms            |
+| Search, title lane and overlay (engine running), p50 / p95 | 1.7 ms / 6.2 ms   |
+| Search, title lane and all bodies (no engine), p50 / p95   | 13.6 ms / 23.9 ms |
+| Typo rescue, slowest of three queries                      | 31.8 ms           |
+| Fresh edit indexed                                         | 0.2 ms            |
 
 These times exclude the message hop to the worker and the DOM render. They were not measured inside Obsidian.

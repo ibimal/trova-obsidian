@@ -28,14 +28,23 @@ export function footerExtension(plugin: TrovaPlugin) {
       if (!file || file.extension !== "md") return void dom.hide();
       const line = view.state.doc.lineAt(view.state.selection.main.head).number - 1;
       const cache = plugin.app.metadataCache.getFileCache(file);
-      const section = sectionAt((cache?.headings ?? []).map((h) => ({ heading: h.heading, level: h.level, line: h.position.start.line })), line);
+      const section = sectionAt(
+        (cache?.headings ?? []).map((h) => ({
+          heading: h.heading,
+          level: h.level,
+          line: h.position.start.line,
+        })),
+        line,
+      );
       const key = `${file.path}#${section.headingPath}`;
       if (key === lastKey) return;
       lastKey = key;
       abort?.abort();
       abort = new AbortController();
       const signal = abort.signal;
-      const result = await plugin.connections.related({ kind: "block", path: file.path, ...section }, signal, 8).catch(() => null);
+      const result = await plugin.connections
+        .related({ kind: "block", path: file.path, ...section }, signal, 8)
+        .catch(() => null);
       if (signal.aborted) return;
       dom.replaceChildren();
       const top = (result?.state === "ok" ? result.results : []).slice(0, 5);

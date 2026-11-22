@@ -1,7 +1,15 @@
 // The similarity graph in an editor tab: the full-size version of the Connections pane's graph
 // drawer, with a toolbar and a card for the selected note.
 
-import { ItemView, MarkdownView, TFile, debounce, setIcon, type ViewStateResult, type WorkspaceLeaf } from "obsidian";
+import {
+  ItemView,
+  MarkdownView,
+  TFile,
+  debounce,
+  setIcon,
+  type ViewStateResult,
+  type WorkspaceLeaf,
+} from "obsidian";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 import { navigableInMainArea, passEnterKeys, quietLabel } from "../ui.js";
@@ -79,7 +87,12 @@ export class GraphView extends ItemView {
   // bring the graph back as it was. Obsidian calls setState each time it opens the view, so the
   // first graph is drawn here.
   override getState(): Record<string, unknown> {
-    return { ...super.getState(), path: this.graph?.rootPath ?? null, locked: this.locked, limit: this.graph?.limit };
+    return {
+      ...super.getState(),
+      path: this.graph?.rootPath ?? null,
+      locked: this.locked,
+      limit: this.graph?.limit,
+    };
   }
 
   override async setState(state: unknown, result: ViewStateResult): Promise<void> {
@@ -91,7 +104,8 @@ export class GraphView extends ItemView {
     if (typeof s["locked"] === "boolean") this.locked = s["locked"];
     this.renderToolbar();
     const path = s["path"];
-    if (typeof path === "string" && this.app.vault.getAbstractFileByPath(path) instanceof TFile) void graph.load(path, true);
+    if (typeof path === "string" && this.app.vault.getAbstractFileByPath(path) instanceof TFile)
+      void graph.load(path, true);
     else this.followActive(true);
   }
 
@@ -135,30 +149,44 @@ export class GraphView extends ItemView {
     el.empty();
     const row = el.createDiv({ cls: "trova-pane-toolbar" });
     const button = (icon: string, label: string, run: () => void, active = false) => {
-      const b = row.createEl("button", { cls: "clickable-icon", attr: { "aria-label": label, "aria-pressed": String(active) } });
+      const b = row.createEl("button", {
+        cls: "clickable-icon",
+        attr: { "aria-label": label, "aria-pressed": String(active) },
+      });
       setIcon(b, icon);
       if (active) b.addClass("is-active");
       b.addEventListener("click", run);
       return b;
     };
-    button(this.locked ? "lock" : "unlock", this.locked ? t("graphUnlock") : t("graphLock"), () => {
-      this.locked = !this.locked;
-      this.renderToolbar();
-      if (!this.locked) this.followActive();
-    }, this.locked);
+    button(
+      this.locked ? "lock" : "unlock",
+      this.locked ? t("graphUnlock") : t("graphLock"),
+      () => {
+        this.locked = !this.locked;
+        this.renderToolbar();
+        if (!this.locked) this.followActive();
+      },
+      this.locked,
+    );
     const select = row.createEl("select", { cls: "dropdown" });
     quietLabel(select, t("graphSize"));
-    for (const n of GRAPH_SIZES) select.createEl("option", { text: t("graphNotes", { n }), value: String(n) });
+    for (const n of GRAPH_SIZES)
+      select.createEl("option", { text: t("graphNotes", { n }), value: String(n) });
     select.value = String(graph.limit);
     select.addEventListener("change", () => {
       graph.limit = Number(select.value);
       void graph.load(graph.rootPath, true);
     });
-    button("circle-dashed", t("showLoose"), () => {
-      graph.loose = !graph.loose;
-      this.renderToolbar();
-      void graph.load(graph.rootPath, true);
-    }, graph.loose);
+    button(
+      "circle-dashed",
+      t("showLoose"),
+      () => {
+        graph.loose = !graph.loose;
+        this.renderToolbar();
+        void graph.load(graph.rootPath, true);
+      },
+      graph.loose,
+    );
     button("maximize", t("graphFit"), () => graph.fit());
     button("refresh-cw", t("refresh"), () => {
       graph.clearCache();

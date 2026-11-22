@@ -4,11 +4,26 @@
 // The editor's Similarity graph view and the Connections pane's graph drawer both use it.
 
 import { Notice, setIcon } from "obsidian";
-import { DEFAULT_THRESHOLDS, EngineError, type GraphNode, type GraphResponse, type Label } from "../contract/index.js";
+import {
+  DEFAULT_THRESHOLDS,
+  EngineError,
+  type GraphNode,
+  type GraphResponse,
+  type Label,
+} from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import type TrovaPlugin from "../main.js";
 import { Lru } from "../state/store.js";
-import { banner, folderOf, labelText, linkFor, onOpen, openIn, showMenu, type OpenIn } from "../ui.js";
+import {
+  banner,
+  folderOf,
+  labelText,
+  linkFor,
+  onOpen,
+  openIn,
+  showMenu,
+  type OpenIn,
+} from "../ui.js";
 import { GraphCanvas, type CanvasEdge, type CanvasNode } from "./graphCanvas.js";
 
 const MAX_NODES = 400;
@@ -88,7 +103,12 @@ export class GraphModel {
         return;
       }
       if (this.nodes.size >= MAX_NODES) return;
-      this.nodes.set(node.id, { node, score: anchor ? 1 : node.score, anchor: anchor && isRoot, expanded: anchor });
+      this.nodes.set(node.id, {
+        node,
+        score: anchor ? 1 : node.score,
+        anchor: anchor && isRoot,
+        expanded: anchor,
+      });
       added.push(node.id);
     };
     if (res.anchor) put(res.anchor, true);
@@ -216,7 +236,15 @@ export class SimilarityGraph {
     const key = `${source}|${this.limit}|${this.loose ? 1 : 0}`;
     const hit = this.cache.get(key);
     if (hit) return hit;
-    const res = await this.plugin.engine.graph({ anchor: { source }, limit: this.limit, loose: this.loose, collections: this.plugin.engine.collections() }, signal);
+    const res = await this.plugin.engine.graph(
+      {
+        anchor: { source },
+        limit: this.limit,
+        loose: this.loose,
+        collections: this.plugin.engine.collections(),
+      },
+      signal,
+    );
     if (res.anchorIndexed) this.cache.set(key, res);
     return res;
   }
@@ -245,7 +273,11 @@ export class SimilarityGraph {
       this.sync([]);
       this.renderInfo();
       if (this.plugin.engine.snapshot.state === "disabled") banner(this.noticeEl, t("needsEngine"));
-      else banner(this.noticeEl, t("engineOffBanner"), { label: t("startEngine"), run: () => void this.plugin.engine.connect(true) });
+      else
+        banner(this.noticeEl, t("engineOffBanner"), {
+          label: t("startEngine"),
+          run: () => void this.plugin.engine.connect(true),
+        });
       return;
     }
     this.setBusy(true);
@@ -256,10 +288,15 @@ export class SimilarityGraph {
       const added = this.model.merge(res, true);
       this.rootScores = new Map(res.nodes.map((n) => [n.id, n.score]));
       this.sync(added, res.anchor?.id, true);
-      if (res.nodes.length === 0) this.noticeEl.createDiv({ cls: "trova-empty", text: t("noConnections") });
+      if (res.nodes.length === 0)
+        this.noticeEl.createDiv({ cls: "trova-empty", text: t("noConnections") });
     } catch (err) {
       if (abort.signal.aborted) return;
-      message(err instanceof EngineError && err.code === "not_found" ? t("notIndexedYet") : t("engineOffBanner"));
+      message(
+        err instanceof EngineError && err.code === "not_found"
+          ? t("notIndexedYet")
+          : t("engineOffBanner"),
+      );
     } finally {
       if (!abort.signal.aborted) this.setBusy(false);
     }
@@ -270,7 +307,8 @@ export class SimilarityGraph {
   async expand(id: string): Promise<void> {
     const data = this.model.nodes.get(id);
     if (!data || !this.plugin.engine.ready) return;
-    if (this.model.nodes.size >= MAX_NODES) return void new Notice(t("graphFull", { n: MAX_NODES }));
+    if (this.model.nodes.size >= MAX_NODES)
+      return void new Notice(t("graphFull", { n: MAX_NODES }));
     const abort = (this.abort ??= new AbortController());
     this.setBusy(true);
     try {
@@ -291,14 +329,17 @@ export class SimilarityGraph {
   /** Pushes the model to the canvas. New nodes start next to the node they were found from. */
   private sync(added: string[], near?: string, refit = false): void {
     const origin = near ? this.canvasNodes.get(near) : undefined;
-    for (const id of [...this.canvasNodes.keys()]) if (!this.model.nodes.has(id)) this.canvasNodes.delete(id);
+    for (const id of [...this.canvasNodes.keys()])
+      if (!this.model.nodes.has(id)) this.canvasNodes.delete(id);
     // New nodes start on a golden-angle spiral, in order of similarity: any run of consecutive
     // notes, such as the few strongest that carry labels, starts spread around the anchor
     // instead of bunched in one sector.
     const order = new Map(
       added
         .filter((id) => !this.model.nodes.get(id)?.anchor)
-        .sort((a, b) => (this.model.nodes.get(b)?.score ?? 0) - (this.model.nodes.get(a)?.score ?? 0))
+        .sort(
+          (a, b) => (this.model.nodes.get(b)?.score ?? 0) - (this.model.nodes.get(a)?.score ?? 0),
+        )
         .map((id, rank) => [id, rank]),
     );
     // The drawer labels the strongest of the anchor's own related notes, ranked by similarity to
@@ -320,7 +361,15 @@ export class SimilarityGraph {
       if (!node) {
         const angle = slot.get(id) ?? -Math.PI / 2 + (order.get(id) ?? 0) * GOLDEN_ANGLE;
         const distance = data.anchor ? 0 : 120 + (1 - data.score) * 160;
-        node = { id, label: data.node.title, x: (origin?.x ?? 0) + Math.cos(angle) * distance, y: (origin?.y ?? 0) + Math.sin(angle) * distance, r: 6, color: "", data };
+        node = {
+          id,
+          label: data.node.title,
+          x: (origin?.x ?? 0) + Math.cos(angle) * distance,
+          y: (origin?.y ?? 0) + Math.sin(angle) * distance,
+          r: 6,
+          color: "",
+          data,
+        };
         this.canvasNodes.set(id, node);
       }
       node.data = data;
@@ -342,11 +391,19 @@ export class SimilarityGraph {
       // In the drawer, links between two related notes appear only when one of them is pointed at;
       // the spokes from this note are always drawn.
       const spoke = a?.data.anchor || b?.data.anchor;
-      if (a && b) edges.push({ a, b, weight: drawWeight(e.similarity), strong: e.linked, quiet: this.opts.compact && !spoke && !e.linked });
+      if (a && b)
+        edges.push({
+          a,
+          b,
+          weight: drawWeight(e.similarity),
+          strong: e.linked,
+          quiet: this.opts.compact && !spoke && !e.linked,
+        });
     }
     this.canvas.setData([...this.canvasNodes.values()], edges, [], { refit, centreId: anchorId });
     this.canvas.select(this.selectedId);
-    if (added.length > 0 && near && this.model.nodes.size > added.length + 1) this.canvas.reheat(0.6);
+    if (added.length > 0 && near && this.model.nodes.size > added.length + 1)
+      this.canvas.reheat(0.6);
     this.opts.onChange?.();
   }
 
@@ -376,7 +433,9 @@ export class SimilarityGraph {
   /** Selects the node of a note, when the graph shows it. Does not call `onSelect`. */
   selectPath(path: string | null): void {
     let id: string | null = null;
-    if (path) for (const [key, data] of this.model.nodes) if (data.node.path === path && !data.anchor) id = key;
+    if (path)
+      for (const [key, data] of this.model.nodes)
+        if (data.node.path === path && !data.anchor) id = key;
     if (id === this.selectedId) return;
     this.selectedId = id;
     this.canvas.select(id);
@@ -400,7 +459,8 @@ export class SimilarityGraph {
     if (this.opts.compact) return;
     const data = this.selectedId ? this.model.nodes.get(this.selectedId) : undefined;
     if (!data) {
-      if (this.model.nodes.size > 1) el.createDiv({ cls: "trova-graph-hint", text: t("graphHint") });
+      if (this.model.nodes.size > 1)
+        el.createDiv({ cls: "trova-graph-hint", text: t("graphHint") });
       return;
     }
     const { node } = data;
@@ -410,20 +470,34 @@ export class SimilarityGraph {
     head.createSpan({ cls: "trova-row-title", text: node.title });
     const folder = folderOf(node.path);
     if (folder) head.createSpan({ cls: "trova-row-path", text: folder });
-    if (!data.anchor) head.createSpan({ cls: `trova-label trova-label-${node.label}`, text: `${labelText(node.label)} · ${Math.round(data.score * 100)}%` });
+    if (!data.anchor)
+      head.createSpan({
+        cls: `trova-label trova-label-${node.label}`,
+        text: `${labelText(node.label)} · ${Math.round(data.score * 100)}%`,
+      });
     if (node.snippet) main.createDiv({ cls: "trova-row-snippet", text: node.snippet });
     const actions = card.createDiv({ cls: "trova-card-actions" });
-    onOpen(actions.createEl("button", { text: t("open"), cls: "mod-cta" }), (where) => void this.openNode(node, where));
+    onOpen(
+      actions.createEl("button", { text: t("open"), cls: "mod-cta" }),
+      (where) => void this.openNode(node, where),
+    );
     // In a narrow bar these two show only their icon; `syncNarrow` then gives them their label as
     // name and tooltip.
     const action = (icon: string, label: string, run: () => void) => {
-      const button = actions.createEl("button", { cls: "trova-graph-action", attr: { "data-label": label } });
-      setIcon(button.createSpan({ cls: "trova-graph-action-icon", attr: { "aria-hidden": "true" } }), icon);
+      const button = actions.createEl("button", {
+        cls: "trova-graph-action",
+        attr: { "data-label": label },
+      });
+      setIcon(
+        button.createSpan({ cls: "trova-graph-action-icon", attr: { "aria-hidden": "true" } }),
+        icon,
+      );
       button.createSpan({ cls: "trova-graph-action-text", text: label });
       button.addEventListener("click", run);
     };
     if (!data.expanded) action("git-fork", t("graphExpand"), () => void this.expand(node.id));
-    if (!data.anchor && node.collection === this.plugin.collection) action("locate-fixed", t("graphCentreButton"), () => this.centre(node.path));
+    if (!data.anchor && node.collection === this.plugin.collection)
+      action("locate-fixed", t("graphCentreButton"), () => this.centre(node.path));
     this.syncNarrow();
   }
 
@@ -452,17 +526,56 @@ export class SimilarityGraph {
     const { node } = data;
     const inVault = node.collection === this.plugin.collection;
     showMenu(e, (menu) => {
-      menu.addItem((i) => i.setTitle(t("open")).setIcon("file").onClick(() => void this.openNode(node, false)));
-      menu.addItem((i) => i.setTitle(t("openNewTab")).setIcon("file-plus").onClick(() => void this.openNode(node, "tab")));
+      menu.addItem((i) =>
+        i
+          .setTitle(t("open"))
+          .setIcon("file")
+          .onClick(() => void this.openNode(node, false)),
+      );
+      menu.addItem((i) =>
+        i
+          .setTitle(t("openNewTab"))
+          .setIcon("file-plus")
+          .onClick(() => void this.openNode(node, "tab")),
+      );
       menu.addSeparator();
-      if (!data.expanded) menu.addItem((i) => i.setTitle(t("graphExpand")).setIcon("git-fork").onClick(() => void this.expand(node.id)));
-      if (inVault && !data.anchor) menu.addItem((i) => i.setTitle(t("graphCenter")).setIcon("locate-fixed").onClick(() => this.centre(node.path)));
+      if (!data.expanded)
+        menu.addItem((i) =>
+          i
+            .setTitle(t("graphExpand"))
+            .setIcon("git-fork")
+            .onClick(() => void this.expand(node.id)),
+        );
+      if (inVault && !data.anchor)
+        menu.addItem((i) =>
+          i
+            .setTitle(t("graphCenter"))
+            .setIcon("locate-fixed")
+            .onClick(() => this.centre(node.path)),
+        );
       if (inVault) {
-        menu.addItem((i) => i.setTitle(t("addToBasket")).setIcon("shopping-basket").onClick(() => new Notice(this.plugin.basket.add(node.path) ? t("addedToBasket") : t("alreadyInBasket"))));
-        menu.addItem((i) => i.setTitle(t("copyLink")).setIcon("link").onClick(() => {
-          void navigator.clipboard.writeText(linkFor(this.plugin.app, node.path, undefined, this.rootPath ?? ""));
-          new Notice(t("copied"));
-        }));
+        menu.addItem((i) =>
+          i
+            .setTitle(t("addToBasket"))
+            .setIcon("shopping-basket")
+            .onClick(
+              () =>
+                new Notice(
+                  this.plugin.basket.add(node.path) ? t("addedToBasket") : t("alreadyInBasket"),
+                ),
+            ),
+        );
+        menu.addItem((i) =>
+          i
+            .setTitle(t("copyLink"))
+            .setIcon("link")
+            .onClick(() => {
+              void navigator.clipboard.writeText(
+                linkFor(this.plugin.app, node.path, undefined, this.rootPath ?? ""),
+              );
+              new Notice(t("copied"));
+            }),
+        );
       }
     });
   }

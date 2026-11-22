@@ -62,11 +62,26 @@ export interface InstantState {
 }
 
 export interface ControllerDeps {
-  worker: { call(method: "search", args: [ParsedQuery, SearchOptions], signal?: AbortSignal): Promise<SearchReply> };
-  engine: { ready: boolean; has(c: Capability): boolean; search(req: SearchRequest, signal?: AbortSignal): AsyncIterable<ResultBatch> };
+  worker: {
+    call(
+      method: "search",
+      args: [ParsedQuery, SearchOptions],
+      signal?: AbortSignal,
+    ): Promise<SearchReply>;
+  };
+  engine: {
+    ready: boolean;
+    has(c: Capability): boolean;
+    search(req: SearchRequest, signal?: AbortSignal): AsyncIterable<ResultBatch>;
+  };
   vaultCollection(): string;
   collections(): string[];
-  settings(): { typoTolerance: 0 | 1 | 2; recencyBoost: boolean; semanticRows: boolean; fieldWeights: SearchOptions["weights"] };
+  settings(): {
+    typoTolerance: 0 | 1 | 2;
+    recencyBoost: boolean;
+    semanticRows: boolean;
+    fieldWeights: SearchOptions["weights"];
+  };
   daysSinceOpened(path: string): number | null;
   knownKeys(): ReadonlySet<string> | undefined;
   semanticDelayMs?: number;
@@ -92,7 +107,9 @@ const SETTLE_MS = 300;
  */
 export function mergeBelow(shown: Row[], fused: Row[]): Row[] {
   const next = new Map(fused.map((r) => [r.id, r]));
-  const kept = shown.filter((r) => next.has(r.id)).map((r) => ({ ...r, matchedBy: next.get(r.id)!.matchedBy }));
+  const kept = shown
+    .filter((r) => next.has(r.id))
+    .map((r) => ({ ...r, matchedBy: next.get(r.id)!.matchedBy }));
   const seen = new Set(kept.map((r) => r.id));
   return [...kept, ...fused.filter((r) => !seen.has(r.id))];
 }
@@ -156,7 +173,11 @@ interface Lanes {
 }
 
 /** Fuses the lanes: weight 2 for the title lane, 1 for the others, then recency, then ties. */
-export function fuseLanes(lanes: Lanes, daysSinceOpened: (path: string) => number | null, recency: boolean): Row[] {
+export function fuseLanes(
+  lanes: Lanes,
+  daysSinceOpened: (path: string) => number | null,
+  recency: boolean,
+): Row[] {
   const rows = new Map<string, Row>();
   const merge = (row: Row) => {
     const prev = rows.get(row.id);
@@ -193,7 +214,12 @@ export function fuseLanes(lanes: Lanes, daysSinceOpened: (path: string) => numbe
     row.score = f.score * (recency ? recencyMultiplier(daysSinceOpened(row.path)) : 1);
     return row;
   });
-  return out.sort((a, b) => b.score - a.score || b.modified - a.modified || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return out.sort(
+    (a, b) =>
+      b.score - a.score ||
+      b.modified - a.modified ||
+      (a.path < b.path ? -1 : a.path > b.path ? 1 : 0),
+  );
 }
 
 export class QueryController {
@@ -222,7 +248,11 @@ export class QueryController {
    * Runs a query. `onUpdate` is called once per lane that arrives; the caller batches the calls
    * into one render per animation frame.
    */
-  run(raw: string, onUpdate: (state: InstantState) => void, opts: { noFuzzy?: boolean } = {}): void {
+  run(
+    raw: string,
+    onUpdate: (state: InstantState) => void,
+    opts: { noFuzzy?: boolean } = {},
+  ): void {
     this.cancel();
     const abort = new AbortController();
     this.abort = abort;
@@ -231,7 +261,15 @@ export class QueryController {
     const settings = { ...this.deps.settings() };
     if (opts.noFuzzy) settings.typoTolerance = 0;
     const vault = this.deps.vaultCollection();
-    const state: InstantState = { raw, query, diagnostics, rows: [], semantic: [], pending: false, refining: false };
+    const state: InstantState = {
+      raw,
+      query,
+      diagnostics,
+      rows: [],
+      semantic: [],
+      pending: false,
+      refining: false,
+    };
     if (isEmptyQuery(query) || query.mode === "ask") {
       onUpdate(state);
       return;
@@ -269,7 +307,11 @@ export class QueryController {
       if (signal.aborted) return;
       if (firstTimer) window.clearTimeout(firstTimer);
       firstTimer = null;
-      const rows = fuseLanes(lanes, (path) => this.deps.daysSinceOpened(path), settings.recencyBoost);
+      const rows = fuseLanes(
+        lanes,
+        (path) => this.deps.daysSinceOpened(path),
+        settings.recencyBoost,
+      );
       painted = rows;
       emit(rows);
     };
@@ -280,7 +322,11 @@ export class QueryController {
         if (painted && firstTimer === null) {
           // Rows are on screen from before this lane: add its new rows below them, then show the
           // full ranking after a pause in typing.
-          const fused = fuseLanes(lanes, (path) => this.deps.daysSinceOpened(path), settings.recencyBoost);
+          const fused = fuseLanes(
+            lanes,
+            (path) => this.deps.daysSinceOpened(path),
+            settings.recencyBoost,
+          );
           painted = mergeBelow(painted, fused);
           emit(painted);
           timer(settleMs, publish);
@@ -300,7 +346,19 @@ export class QueryController {
     // Lanes 1 and 2: the worker answers from memory.
     if (!lexOnly) {
       this.deps.worker
-        .call("search", [query, { limit: 50, fuzzy: settings.typoTolerance, weights: settings.fieldWeights, bodies: engineUp ? "overlay" : "all" }], signal)
+        .call(
+          "search",
+          [
+            query,
+            {
+              limit: 50,
+              fuzzy: settings.typoTolerance,
+              weights: settings.fieldWeights,
+              bodies: engineUp ? "overlay" : "all",
+            },
+          ],
+          signal,
+        )
         .then((reply) => {
           lanes.title = reply.title.map((h) => fromWorker(h, vault));
           lanes.body = reply.body.map((h) => fromWorker(h, vault));
@@ -317,12 +375,20 @@ export class QueryController {
     if (engineUp && !lexOnly) {
       void (async () => {
         try {
-          const req: SearchRequest = { query, lanes: ["lex"], collections: this.deps.collections(), limit: 30, fuzzy: settings.typoTolerance > 0, deadlineMs: 250 };
+          const req: SearchRequest = {
+            query,
+            lanes: ["lex"],
+            collections: this.deps.collections(),
+            limit: 30,
+            fuzzy: settings.typoTolerance > 0,
+            deadlineMs: 250,
+          };
           for await (const batch of this.deps.engine.search(req, signal)) {
             if (signal.aborted) return;
             lanes.engine = batch.results.map((r) => fromEngine(r, vault));
             // The worker saw the title lane too; when it found a correction, keep it.
-            if (batch.correction && lanes.title.length + lanes.body.length === 0) state.correction = batch.correction;
+            if (batch.correction && lanes.title.length + lanes.body.length === 0)
+              state.correction = batch.correction;
           }
         } catch {
           /* the engine lane failing leaves the worker's results in place */
@@ -334,14 +400,21 @@ export class QueryController {
     } else if (engineUp) open--;
 
     // Semantic rows: after a pause in typing, for queries of three or more words.
-    const wantsVec = lexOnly || (settings.semanticRows && queryWordCount(query) >= SEMANTIC_ROWS_MIN_WORDS);
+    const wantsVec =
+      lexOnly || (settings.semanticRows && queryWordCount(query) >= SEMANTIC_ROWS_MIN_WORDS);
     if (engineUp && wantsVec && this.deps.engine.has("vec")) {
       state.refining = true;
       this.semanticTimer = window.setTimeout(
         () => {
           void (async () => {
             try {
-              const req: SearchRequest = { query, lanes: ["vec"], collections: this.deps.collections(), limit: lexOnly ? 20 : SEMANTIC_ROWS_MAX * 3, deadlineMs: 1500 };
+              const req: SearchRequest = {
+                query,
+                lanes: ["vec"],
+                collections: this.deps.collections(),
+                limit: lexOnly ? 20 : SEMANTIC_ROWS_MAX * 3,
+                deadlineMs: 1500,
+              };
               for await (const batch of this.deps.engine.search(req, signal)) {
                 if (signal.aborted) return;
                 const shown = new Set(state.rows.map((r) => r.id));

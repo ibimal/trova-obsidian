@@ -3,19 +3,39 @@ import { spawnCommand, withPath } from "../src/engine/launcher.js";
 
 describe("starting the engine", () => {
   it("starts the binary directly on macOS and Linux, with no shell", () => {
-    expect(spawnCommand("/opt/homebrew/bin/trova", ["watch"], "darwin")).toEqual({ command: "/opt/homebrew/bin/trova", args: ["watch"], windowsVerbatimArguments: false });
-    expect(spawnCommand("/home/me/my tools/trova", ["watch"], "linux").command).toBe("/home/me/my tools/trova");
+    expect(spawnCommand("/opt/homebrew/bin/trova", ["watch"], "darwin")).toEqual({
+      command: "/opt/homebrew/bin/trova",
+      args: ["watch"],
+      windowsVerbatimArguments: false,
+    });
+    expect(spawnCommand("/home/me/my tools/trova", ["watch"], "linux").command).toBe(
+      "/home/me/my tools/trova",
+    );
   });
 
   it("starts a Windows .exe directly", () => {
-    expect(spawnCommand("C:\\Program Files\\trova\\trova.exe", ["watch"], "win32")).toEqual({ command: "C:\\Program Files\\trova\\trova.exe", args: ["watch"], windowsVerbatimArguments: false });
+    expect(spawnCommand("C:\\Program Files\\trova\\trova.exe", ["watch"], "win32")).toEqual({
+      command: "C:\\Program Files\\trova\\trova.exe",
+      args: ["watch"],
+      windowsVerbatimArguments: false,
+    });
   });
 
   it("starts npm's .cmd wrapper through cmd.exe with the path escaped", () => {
-    const run = spawnCommand("C:\\Users\\Jane Doe\\AppData\\Roaming\\npm\\trova.cmd", ["watch"], "win32", "C:\\Windows\\system32\\cmd.exe");
+    const run = spawnCommand(
+      "C:\\Users\\Jane Doe\\AppData\\Roaming\\npm\\trova.cmd",
+      ["watch"],
+      "win32",
+      "C:\\Windows\\system32\\cmd.exe",
+    );
     expect(run.command).toBe("C:\\Windows\\system32\\cmd.exe");
     expect(run.windowsVerbatimArguments).toBe(true);
-    expect(run.args).toEqual(["/d", "/s", "/c", '"C:\\Users\\Jane^ Doe\\AppData\\Roaming\\npm\\trova.cmd watch"']);
+    expect(run.args).toEqual([
+      "/d",
+      "/s",
+      "/c",
+      '"C:\\Users\\Jane^ Doe\\AppData\\Roaming\\npm\\trova.cmd watch"',
+    ]);
   });
 
   it("escapes every cmd.exe metacharacter, so a path cannot add a command", () => {

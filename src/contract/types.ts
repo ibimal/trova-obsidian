@@ -25,7 +25,10 @@ export interface HealthResponse {
  * Whether an engine that serves the API versions `served` can talk to a client built for API major
  * `major`, and if not, which side is out of date.
  */
-export function apiCompatibility(served: readonly string[], major = API_MAJOR): "ok" | "engineTooOld" | "engineTooNew" {
+export function apiCompatibility(
+  served: readonly string[],
+  major = API_MAJOR,
+): "ok" | "engineTooOld" | "engineTooNew" {
   const majors = served.map((v) => Number(v.split(".")[0])).filter(Number.isFinite);
   if (majors.includes(major)) return "ok";
   return majors.some((m) => m > major) ? "engineTooNew" : "engineTooOld";

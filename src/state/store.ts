@@ -56,7 +56,9 @@ export class DataStore {
     this.problems = problems;
     if (problems.length) console.warn("Trova: repaired data.json", problems);
     if (!this.loadFailed && problems.length === 0) return;
-    this.backupName = await (this.persistence.backup?.() ?? Promise.resolve(null)).catch(() => null);
+    this.backupName = await (this.persistence.backup?.() ?? Promise.resolve(null)).catch(
+      () => null,
+    );
     // Without a copy, a file that could not be read is left as it is, so nothing is lost; the
     // next change the user makes saves the repaired data.
     if (this.backupName) await this.flush();
@@ -268,7 +270,8 @@ export class LocalState {
     const opened = this.read("trova-opened");
     this.opened = {};
     if (typeof opened === "object" && opened !== null && !Array.isArray(opened)) {
-      for (const [path, at] of Object.entries(opened)) if (typeof at === "number" && Number.isFinite(at)) this.opened[path] = at;
+      for (const [path, at] of Object.entries(opened))
+        if (typeof at === "number" && Number.isFinite(at)) this.opened[path] = at;
     }
   }
 
@@ -278,7 +281,11 @@ export class LocalState {
     return (raw as unknown[]).filter((h): h is HistoryEntry => {
       if (typeof h !== "object" || h === null) return false;
       const e = h as Record<string, unknown>;
-      return typeof e["query"] === "string" && (e["mode"] === "auto" || e["mode"] === "fast" || e["mode"] === "deep") && typeof e["at"] === "number";
+      return (
+        typeof e["query"] === "string" &&
+        (e["mode"] === "auto" || e["mode"] === "fast" || e["mode"] === "deep") &&
+        typeof e["at"] === "number"
+      );
     });
   }
 

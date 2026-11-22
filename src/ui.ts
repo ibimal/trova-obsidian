@@ -1,6 +1,19 @@
 // Small DOM helpers shared by the views. Plain DOM with Obsidian's own components only.
 
-import { Keymap, Menu, Modal, Notice, Platform, Scope, TFile, type App, type ItemView, type Modifier, type PaneType, type WorkspaceLeaf } from "obsidian";
+import {
+  Keymap,
+  Menu,
+  Modal,
+  Notice,
+  Platform,
+  Scope,
+  TFile,
+  type App,
+  type ItemView,
+  type Modifier,
+  type PaneType,
+  type WorkspaceLeaf,
+} from "obsidian";
 import type { Label, MatchedBy } from "./contract/index.js";
 import { t, type StringKey } from "./i18n/en.js";
 
@@ -38,12 +51,19 @@ export function labelText(label: Label): string {
 }
 
 export function badgeFor(by: MatchedBy): StringKey {
-  return by === "lex" ? "badgeKeyword" : by === "fuzzy" ? "badgeFuzzy" : by === "vec" ? "badgeSemantic" : "badgeRerank";
+  return by === "lex"
+    ? "badgeKeyword"
+    : by === "fuzzy"
+      ? "badgeFuzzy"
+      : by === "vec"
+        ? "badgeSemantic"
+        : "badgeRerank";
 }
 
 export function renderBadges(el: HTMLElement, matchedBy: MatchedBy[], type?: string): void {
   if (type) el.createSpan({ cls: "trova-badge trova-badge-type", text: type });
-  for (const by of matchedBy) el.createSpan({ cls: `trova-badge trova-badge-${by}`, text: t(badgeFor(by)) });
+  for (const by of matchedBy)
+    el.createSpan({ cls: `trova-badge trova-badge-${by}`, text: t(badgeFor(by)) });
 }
 
 export function reducedMotion(): boolean {
@@ -181,10 +201,19 @@ export function navigableInMainArea(view: ItemView): void {
  * Opens a result: in the current tab, or where `where` says, or in `given`. Scrolls to the matched
  * block and highlights the match. Files outside the vault open in the default app.
  */
-export async function openTarget(app: App, target: OpenTarget, where: OpenIn = false, given?: WorkspaceLeaf): Promise<void> {
+export async function openTarget(
+  app: App,
+  target: OpenTarget,
+  where: OpenIn = false,
+  given?: WorkspaceLeaf,
+): Promise<void> {
   if (target.root) {
     if (Platform.isDesktopApp) {
-      const electron = (window as unknown as { require: (id: string) => { shell: { openPath(p: string): Promise<string> } } }).require("electron");
+      const electron = (
+        window as unknown as {
+          require: (id: string) => { shell: { openPath(p: string): Promise<string> } };
+        }
+      ).require("electron");
       await electron.shell.openPath(`${target.root.replace(/[\\/]+$/, "")}/${target.path}`);
       new Notice(t("attachmentOpened"));
     }
@@ -206,7 +235,9 @@ export async function openTarget(app: App, target: OpenTarget, where: OpenIn = f
     const content = await app.vault.cachedRead(file);
     if (target.offset + target.length <= content.length) {
       // Obsidian's own search uses this ephemeral state: it scrolls to the match and flashes it.
-      await leaf.openFile(file, { eState: { match: { content, matches: [[target.offset, target.offset + target.length]] } } });
+      await leaf.openFile(file, {
+        eState: { match: { content, matches: [[target.offset, target.offset + target.length]] } },
+      });
       return;
     }
   }
@@ -226,7 +257,12 @@ export async function openTarget(app: App, target: OpenTarget, where: OpenIn = f
 /** The `[[link]]` text for a path, following the user's link settings. */
 export function linkFor(app: App, path: string, heading?: string, sourcePath = ""): string {
   const file = app.vault.getAbstractFileByPath(path);
-  if (file instanceof TFile) return app.fileManager.generateMarkdownLink(file, sourcePath, heading ? `#${heading}` : undefined);
+  if (file instanceof TFile)
+    return app.fileManager.generateMarkdownLink(
+      file,
+      sourcePath,
+      heading ? `#${heading}` : undefined,
+    );
   return `[[${path.replace(/\.md$/, "")}${heading ? `#${heading}` : ""}]]`;
 }
 
@@ -242,7 +278,11 @@ export function showMenu(e: MouseEvent, build: (menu: Menu) => void): void {
 }
 
 /** A banner with one action, used for engine-offline and partial-index states. */
-export function banner(parent: HTMLElement, text: string, action?: { label: string; run: () => void }): HTMLElement {
+export function banner(
+  parent: HTMLElement,
+  text: string,
+  action?: { label: string; run: () => void },
+): HTMLElement {
   const el = parent.createDiv({ cls: "trova-banner" });
   el.createSpan({ text });
   if (action) el.createEl("button", { text: action.label }).addEventListener("click", action.run);
@@ -250,7 +290,11 @@ export function banner(parent: HTMLElement, text: string, action?: { label: stri
 }
 
 /** Skeleton rows appear only if nothing has arrived after 150 ms. */
-export function skeletonAfter(parent: HTMLElement, isStillPending: () => boolean, rows = 4): () => void {
+export function skeletonAfter(
+  parent: HTMLElement,
+  isStillPending: () => boolean,
+  rows = 4,
+): () => void {
   const timer = window.setTimeout(() => {
     if (!isStillPending()) return;
     const wrap = parent.createDiv({ cls: "trova-skeletons" });

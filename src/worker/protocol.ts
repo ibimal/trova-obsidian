@@ -10,7 +10,10 @@ export interface WorkerApi {
   clearDirty(paths?: string[]): void;
   markDirty(paths: string[]): void;
   search(q: ParsedQuery, opts: SearchOptions): SearchReply;
-  suggest(text: string, limit: number): { path: string; title: string; alias?: string; score: number }[];
+  suggest(
+    text: string,
+    limit: number,
+  ): { path: string; title: string; alias?: string; score: number }[];
   mentions(names: string[], selfPath: string): MentionHit[];
   inFile(path: string, q: ParsedQuery): LineMatch[];
   orphans(): string[];
@@ -31,7 +34,14 @@ export interface WorkerCancel {
 export type WorkerMessage = WorkerRequest | WorkerCancel;
 
 /** Methods that do not change the index. The worker runs them before queued updates. */
-export const READ_METHODS: ReadonlySet<keyof WorkerApi> = new Set<keyof WorkerApi>(["search", "suggest", "mentions", "inFile", "orphans", "stats"]);
+export const READ_METHODS: ReadonlySet<keyof WorkerApi> = new Set<keyof WorkerApi>([
+  "search",
+  "suggest",
+  "mentions",
+  "inFile",
+  "orphans",
+  "stats",
+]);
 
 export interface WorkerResponse {
   id: number;

@@ -50,7 +50,12 @@ export class OnboardingModal extends Modal {
       this.close();
     };
     if (s.state === "ready") {
-      box.createEl("p", { text: t("engineFound", { name: s.status?.engine.name ?? "trova", version: s.status?.engine.version ?? "" }) });
+      box.createEl("p", {
+        text: t("engineFound", {
+          name: s.status?.engine.name ?? "trova",
+          version: s.status?.engine.version ?? "",
+        }),
+      });
       // Confirm scope: what will be indexed, what is excluded, and the one download.
       const files = this.app.vault.getMarkdownFiles();
       const included = files.filter((f) => !this.plugin.indexer.isExcluded(f.path)).length;
@@ -59,8 +64,13 @@ export class OnboardingModal extends Modal {
       const list = scope.createEl("ul");
       list.createEl("li", { text: t("scopeNotes", { n: included.toLocaleString() }) });
       const excluded = this.plugin.indexer.excludeGlobs();
-      list.createEl("li", { text: excluded.length ? t("scopeExcluded", { folders: excluded.join(", ") }) : t("scopeNoneExcluded") });
-      if (s.status?.models.embed.state !== "ready") list.createEl("li", { text: t("scopeDownload") });
+      list.createEl("li", {
+        text: excluded.length
+          ? t("scopeExcluded", { folders: excluded.join(", ") })
+          : t("scopeNoneExcluded"),
+      });
+      if (s.status?.models.embed.state !== "ready")
+        list.createEl("li", { text: t("scopeDownload") });
       el.appendChild(buttons);
       const start = buttons.createEl("button", { text: t("start"), cls: "mod-cta" });
       start.addEventListener("click", () => {
@@ -70,7 +80,9 @@ export class OnboardingModal extends Modal {
         void engine.startIndexing();
         this.close();
       });
-      buttons.createEl("button", { text: t("continueWithout") }).addEventListener("click", withoutEngine);
+      buttons
+        .createEl("button", { text: t("continueWithout") })
+        .addEventListener("click", withoutEngine);
       start.focus();
       return;
     }
@@ -79,14 +91,21 @@ export class OnboardingModal extends Modal {
     } else if (s.state === "wrong-version" && s.outdated === "plugin") {
       box.createEl("p", { text: t("pluginTooOld", { got: s.gotApi ?? "?", want: API_VERSION }) });
     } else if (s.state === "wrong-version") {
-      box.createEl("p", { text: t("engineWrongVersion", { got: s.gotApi ?? "?", want: API_VERSION }) });
+      box.createEl("p", {
+        text: t("engineWrongVersion", { got: s.gotApi ?? "?", want: API_VERSION }),
+      });
       this.command(box, t("upgradeCommand"));
     } else {
       box.createEl("p", { text: t("engineNotFound") });
       this.command(box, t("installCommand"));
-      if (s.reason && s.state === "offline") box.createEl("pre", { cls: "trova-reason", text: s.reason });
+      if (s.reason && s.state === "offline")
+        box.createEl("pre", { cls: "trova-reason", text: s.reason });
     }
-    buttons.createEl("button", { text: t("checkAgain") }).addEventListener("click", () => void engine.connect(true));
-    buttons.createEl("button", { text: t("continueWithout"), cls: "mod-cta" }).addEventListener("click", withoutEngine);
+    buttons
+      .createEl("button", { text: t("checkAgain") })
+      .addEventListener("click", () => void engine.connect(true));
+    buttons
+      .createEl("button", { text: t("continueWithout"), cls: "mod-cta" })
+      .addEventListener("click", withoutEngine);
   }
 }

@@ -6,7 +6,12 @@ const production = process.argv[2] === "production";
 
 // main.js bundles MiniSearch (MIT), whose licence asks that its notice travel with every copy.
 const minisearch = JSON.parse(readFileSync("node_modules/minisearch/package.json", "utf8"));
-const comment = (text) => text.trim().split("\n").map((line) => ` * ${line}`.trimEnd()).join("\n");
+const comment = (text) =>
+  text
+    .trim()
+    .split("\n")
+    .map((line) => ` * ${line}`.trimEnd())
+    .join("\n");
 const banner = `/*!
  * Trova for Obsidian. MIT licence: https://github.com/ibimal/trova-obsidian
  *
@@ -32,7 +37,10 @@ async function workerCode() {
 const inlineWorker = {
   name: "inline-worker",
   setup(b) {
-    b.onResolve({ filter: /^virtual:worker-code$/ }, (args) => ({ path: args.path, namespace: "worker-code" }));
+    b.onResolve({ filter: /^virtual:worker-code$/ }, (args) => ({
+      path: args.path,
+      namespace: "worker-code",
+    }));
     b.onLoad({ filter: /.*/, namespace: "worker-code" }, async () => ({
       contents: `export default ${JSON.stringify(await workerCode())};`,
       loader: "js",
@@ -49,7 +57,14 @@ const options = {
   format: "cjs",
   target: "es2022",
   platform: "browser",
-  external: ["obsidian", "electron", "@codemirror/*", "@lezer/*", ...builtinModules, ...builtinModules.map((m) => `node:${m}`)],
+  external: [
+    "obsidian",
+    "electron",
+    "@codemirror/*",
+    "@lezer/*",
+    ...builtinModules,
+    ...builtinModules.map((m) => `node:${m}`),
+  ],
   plugins: [inlineWorker],
   sourcemap: production ? false : "inline",
   minify: production,

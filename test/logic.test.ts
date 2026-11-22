@@ -1,10 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
-import { parseQuery, type Result, type ResultBatch, type SearchRequest } from "../src/contract/index.js";
+import {
+  parseQuery,
+  type Result,
+  type ResultBatch,
+  type SearchRequest,
+} from "../src/contract/index.js";
 import { rankLinkSuggestions } from "../src/editor/linkSuggest.js";
 import { EngineManager, RETRY_SCHEDULE_MS, type EngineSnapshot } from "../src/engine/manager.js";
 import { rowToResult } from "../src/features/api.js";
 import { parseSavedSearch } from "../src/features/savedSearch.js";
-import { QueryController, fuseLanes, mergeBelow, stableOrder, type InstantState, type Row } from "../src/query/controller.js";
+import {
+  QueryController,
+  fuseLanes,
+  mergeBelow,
+  stableOrder,
+  type InstantState,
+  type Row,
+} from "../src/query/controller.js";
 import { defaultData } from "../src/settings.js";
 import { DataStore, LocalState, Lru, SAVE_DEBOUNCE_MS, renameId } from "../src/state/store.js";
 import { sectionAt } from "../src/views/ConnectionsView.js";
@@ -14,32 +26,74 @@ import { fixtureDocs } from "./fixture-docs.js";
 
 const C = "vault-test0001";
 const row = (path: string, extra: Partial<Row> = {}): Row => ({
-  id: `${C}:${path}`, collection: C, path, title: path.replace(/\.md$/, ""), titleHighlights: [], snippet: "", highlights: [], headings: [], matchedBy: ["lex"], score: 0, modified: 0, ...extra,
+  id: `${C}:${path}`,
+  collection: C,
+  path,
+  title: path.replace(/\.md$/, ""),
+  titleHighlights: [],
+  snippet: "",
+  highlights: [],
+  headings: [],
+  matchedBy: ["lex"],
+  score: 0,
+  modified: 0,
+  ...extra,
 });
 
 describe("lane fusion", () => {
   it("weights the title lane 2 and the others 1", () => {
-    const fused = fuseLanes({ title: [row("b.md")], body: [row("a.md"), row("b.md")], engine: [row("a.md")] }, () => null, false);
+    const fused = fuseLanes(
+      { title: [row("b.md")], body: [row("a.md"), row("b.md")], engine: [row("a.md")] },
+      () => null,
+      false,
+    );
     expect(fused.map((r) => r.path)).toEqual(["b.md", "a.md"]);
     expect(fused[0]!.score).toBeCloseTo(2 / 61 + 1 / 62);
     expect(fused[1]!.score).toBeCloseTo(1 / 61 + 1 / 61);
   });
   it("applies the recency multiplier, then breaks ties by modified time and path", () => {
     const lanes = { title: [], body: [row("old.md")], engine: [row("new.md")] };
-    expect(fuseLanes(lanes, (p) => (p === "new.md" ? 0 : null), true).map((r) => r.path)).toEqual(["new.md", "old.md"]);
-    const tie = fuseLanes({ title: [], body: [row("b.md", { modified: 5 })], engine: [row("a.md", { modified: 9 })] }, () => null, false);
+    expect(fuseLanes(lanes, (p) => (p === "new.md" ? 0 : null), true).map((r) => r.path)).toEqual([
+      "new.md",
+      "old.md",
+    ]);
+    const tie = fuseLanes(
+      { title: [], body: [row("b.md", { modified: 5 })], engine: [row("a.md", { modified: 9 })] },
+      () => null,
+      false,
+    );
     expect(tie.map((r) => r.path)).toEqual(["a.md", "b.md"]);
-    const tie2 = fuseLanes({ title: [], body: [row("b.md")], engine: [row("a.md")] }, () => null, false);
+    const tie2 = fuseLanes(
+      { title: [], body: [row("b.md")], engine: [row("a.md")] },
+      () => null,
+      false,
+    );
     expect(tie2.map((r) => r.path)).toEqual(["a.md", "b.md"]);
   });
   it("merges row data across lanes: title highlights, block and badges", () => {
     const fused = fuseLanes(
-      { title: [row("a.md", { titleHighlights: [[0, 1]] })], body: [], engine: [row("a.md", { snippet: "body text", blockId: `${C}:a.md#x`, headings: ["X"], matchedBy: ["fuzzy"] })] },
+      {
+        title: [row("a.md", { titleHighlights: [[0, 1]] })],
+        body: [],
+        engine: [
+          row("a.md", {
+            snippet: "body text",
+            blockId: `${C}:a.md#x`,
+            headings: ["X"],
+            matchedBy: ["fuzzy"],
+          }),
+        ],
+      },
       () => null,
       false,
     );
     expect(fused).toHaveLength(1);
-    expect(fused[0]).toMatchObject({ snippet: "body text", blockId: `${C}:a.md#x`, titleHighlights: [[0, 1]], matchedBy: ["fuzzy", "lex"] });
+    expect(fused[0]).toMatchObject({
+      snippet: "body text",
+      blockId: `${C}:a.md#x`,
+      titleHighlights: [[0, 1]],
+      matchedBy: ["fuzzy", "lex"],
+    });
   });
   it("keeps the selected or hovered row at its index when an update arrives", () => {
     expect(stableOrder(["a", "b", "c"], ["c", "b", "a", "d"], "b")).toEqual(["c", "b", "a", "d"]);
@@ -49,7 +103,12 @@ describe("lane fusion", () => {
   });
 });
 
-function makeController(engineReady: boolean, engineResults: Record<string, Result[]> = {}, delay = 0, timing: { coalesceMs?: number; settleMs?: number } = {}) {
+function makeController(
+  engineReady: boolean,
+  engineResults: Record<string, Result[]> = {},
+  delay = 0,
+  timing: { coalesceMs?: number; settleMs?: number } = {},
+) {
   const worker = startInline();
   const { docs, bodies } = fixtureDocs();
   const calls: SearchRequest[] = [];
@@ -62,12 +121,21 @@ function makeController(engineReady: boolean, engineResults: Record<string, Resu
         calls.push(req);
         if (delay) await new Promise((r) => setTimeout(r, delay));
         if (signal?.aborted) return;
-        yield { stage: req.lanes[0] === "vec" ? "vec" : "lex", results: engineResults[req.lanes[0]!] ?? [], final: true };
+        yield {
+          stage: req.lanes[0] === "vec" ? "vec" : "lex",
+          results: engineResults[req.lanes[0]!] ?? [],
+          final: true,
+        };
       },
     },
     vaultCollection: () => C,
     collections: () => [C],
-    settings: () => ({ typoTolerance: 1, recencyBoost: true, semanticRows: true, fieldWeights: { filename: 4, aliases: 3, headings: 2, body: 1 } }),
+    settings: () => ({
+      typoTolerance: 1,
+      recencyBoost: true,
+      semanticRows: true,
+      fieldWeights: { filename: 4, aliases: 3, headings: 2, body: 1 },
+    }),
     daysSinceOpened: () => null,
     knownKeys: () => undefined,
     semanticDelayMs: 5,
@@ -92,12 +160,26 @@ function makeController(engineReady: boolean, engineResults: Record<string, Resu
 }
 
 const engineResult = (path: string, by: Result["matchedBy"] = ["lex"]): Result => ({
-  id: `${C}:${path}#`, source: `${C}:${path}`, path, title: path, collection: C, snippet: "from engine", highlights: [], scores: {}, matchedBy: by, label: "related",
+  id: `${C}:${path}#`,
+  source: `${C}:${path}`,
+  path,
+  title: path,
+  collection: C,
+  snippet: "from engine",
+  highlights: [],
+  scores: {},
+  matchedBy: by,
+  label: "related",
 });
 
 describe("QueryController", () => {
   it("paints once when both keyword lanes answer within the wait", async () => {
-    const { run } = makeController(true, { lex: [engineResult("Tools/Kanata.md"), engineResult("Papers/Fusion.pdf")] }, 10, { coalesceMs: 60 });
+    const { run } = makeController(
+      true,
+      { lex: [engineResult("Tools/Kanata.md"), engineResult("Papers/Fusion.pdf")] },
+      10,
+      { coalesceMs: 60 },
+    );
     const states = await run("kanata");
     // One list, and it already has the engine's notes: no second, reordered paint.
     const withRows = states.filter((s) => s.rows.length > 0);
@@ -105,7 +187,12 @@ describe("QueryController", () => {
     expect(withRows[0]!.rows.map((r) => r.path)).toContain("Papers/Fusion.pdf");
   });
   it("adds a late engine lane below the shown rows, then shows the full ranking after a pause", async () => {
-    const { controller, ready } = makeController(true, { lex: [engineResult("Papers/Fusion.pdf"), engineResult("Tools/Kanata.md")] }, 60, { coalesceMs: 10, settleMs: 30 });
+    const { controller, ready } = makeController(
+      true,
+      { lex: [engineResult("Papers/Fusion.pdf"), engineResult("Tools/Kanata.md")] },
+      60,
+      { coalesceMs: 10, settleMs: 30 },
+    );
     await ready;
     const states: InstantState[] = [];
     controller.run("kanata", (s) => states.push(s));
@@ -123,11 +210,32 @@ describe("QueryController", () => {
     expect(settled!.pending).toBe(false);
   });
   it("merges below without reordering or changing the rows on screen", () => {
-    const row = (id: string, snippet: string): Row => ({ id, collection: C, path: id, title: id, titleHighlights: [], snippet, highlights: [], headings: [], matchedBy: ["lex"], score: 0, modified: 0 });
-    const out = mergeBelow([row("a", "first a"), row("b", "first b")], [row("c", "c"), row("b", "new b"), row("a", "new a")]);
-    expect(out.map((r) => [r.id, r.snippet])).toEqual([["a", "first a"], ["b", "first b"], ["c", "c"]]);
+    const row = (id: string, snippet: string): Row => ({
+      id,
+      collection: C,
+      path: id,
+      title: id,
+      titleHighlights: [],
+      snippet,
+      highlights: [],
+      headings: [],
+      matchedBy: ["lex"],
+      score: 0,
+      modified: 0,
+    });
+    const out = mergeBelow(
+      [row("a", "first a"), row("b", "first b")],
+      [row("c", "c"), row("b", "new b"), row("a", "new a")],
+    );
+    expect(out.map((r) => [r.id, r.snippet])).toEqual([
+      ["a", "first a"],
+      ["b", "first b"],
+      ["c", "c"],
+    ]);
     // A shown row that the new list dropped goes.
-    expect(mergeBelow([row("a", "x"), row("z", "y")], [row("a", "x")]).map((r) => r.id)).toEqual(["a"]);
+    expect(mergeBelow([row("a", "x"), row("z", "y")], [row("a", "x")]).map((r) => r.id)).toEqual([
+      "a",
+    ]);
   });
   it("answers from the worker alone when the engine is off, searching all bodies", async () => {
     const { run, calls } = makeController(false);
@@ -138,7 +246,9 @@ describe("QueryController", () => {
     expect(calls).toEqual([]);
   });
   it("fans out to the engine lex lane and merges on the source id", async () => {
-    const { run, calls } = makeController(true, { lex: [engineResult("Tools/Kanata.md"), engineResult("Papers/Fusion.pdf")] });
+    const { run, calls } = makeController(true, {
+      lex: [engineResult("Tools/Kanata.md"), engineResult("Papers/Fusion.pdf")],
+    });
     const last = (await run("kanata")).pop()!;
     expect(calls[0]!.lanes).toEqual(["lex"]);
     expect(last.rows[0]!.path).toBe("Tools/Kanata.md");
@@ -146,7 +256,10 @@ describe("QueryController", () => {
     expect(last.rows.map((r) => r.path)).toContain("Papers/Fusion.pdf");
   });
   it("adds semantic rows for queries of three or more words, without rows that are already shown", async () => {
-    const { run, calls } = makeController(true, { lex: [engineResult("Trova.md")], vec: [engineResult("Trova.md", ["vec"]), engineResult("Orphan.md", ["vec"])] });
+    const { run, calls } = makeController(true, {
+      lex: [engineResult("Trova.md")],
+      vec: [engineResult("Trova.md", ["vec"]), engineResult("Orphan.md", ["vec"])],
+    });
     const last = (await run("trova search engine")).pop()!;
     expect(calls.map((c) => c.lanes[0])).toEqual(["lex", "vec"]);
     expect(last.semantic.map((r) => r.path)).toEqual(["Orphan.md"]);
@@ -160,7 +273,9 @@ describe("QueryController", () => {
     await ready;
     const first: InstantState[] = [];
     controller.run("trova", (s) => first.push(s));
-    const done = new Promise<InstantState>((resolve) => controller.run("kanata", (s) => !s.pending && resolve(s)));
+    const done = new Promise<InstantState>((resolve) =>
+      controller.run("kanata", (s) => !s.pending && resolve(s)),
+    );
     const last = await done;
     expect(last.raw).toBe("kanata");
     await new Promise((r) => setTimeout(r, 80));
@@ -194,7 +309,10 @@ describe("data.json store", () => {
     vi.useRealTimers();
   });
   it("merges saved data with the defaults", async () => {
-    const store = new DataStore({ load: async () => ({ settings: { vimKeys: true }, pins: { a: ["b"] } }), save: async () => undefined });
+    const store = new DataStore({
+      load: async () => ({ settings: { vimKeys: true }, pins: { a: ["b"] } }),
+      save: async () => undefined,
+    });
     await store.load();
     expect(store.settings.vimKeys).toBe(true);
     expect(store.settings.contextWarnTokens).toBe(32000);
@@ -220,7 +338,10 @@ describe("data.json store", () => {
   });
   it("keeps per-device state apart: history, opened times and an LRU of 200 anchors", () => {
     const mem = new Map<string, unknown>();
-    const local = new LocalState({ load: (k) => mem.get(k) ?? null, save: (k, v) => void mem.set(k, v) });
+    const local = new LocalState({
+      load: (k) => mem.get(k) ?? null,
+      save: (k, v) => void mem.set(k, v),
+    });
     local.addHistory({ query: "a", mode: "auto", at: 1 });
     local.addHistory({ query: "b", mode: "deep", at: 2 });
     local.addHistory({ query: "a", mode: "fast", at: 3 });
@@ -238,8 +359,15 @@ describe("data.json store", () => {
 
 describe("engine lifecycle", () => {
   const host = (over: Record<string, unknown> = {}) => ({
-    desktop: true, mode: () => "managed" as const, endpoint: () => null, findBinary: () => null,
-    spawn: () => ({ errorOutput: () => "", exited: () => true }), collections: async () => [], mayIndex: () => true, log: () => undefined, ...over,
+    desktop: true,
+    mode: () => "managed" as const,
+    endpoint: () => null,
+    findBinary: () => null,
+    spawn: () => ({ errorOutput: () => "", exited: () => true }),
+    collections: async () => [],
+    mayIndex: () => true,
+    log: () => undefined,
+    ...over,
   });
   it("is disabled on mobile and never blocks the caller", () => {
     const m = new EngineManager(host({ desktop: false }));
@@ -270,18 +398,35 @@ describe("engine lifecycle", () => {
     vi.useRealTimers();
   });
   it("connects only to an engine that serves API major 1, and says which side to update otherwise", async () => {
-    const health = (body: object) => vi.fn(async () => new Response(JSON.stringify({ ok: true, name: "trova", version: "x", ...body })));
+    const health = (body: object) =>
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true, name: "trova", version: "x", ...body })),
+      );
     const check = async (body: object) => {
       vi.stubGlobal("fetch", health(body));
-      const m = new EngineManager(host({ mode: () => "external" as const, endpoint: () => ({ base: "http://127.0.0.1:1", token: "t" }) }));
+      const m = new EngineManager(
+        host({
+          mode: () => "external" as const,
+          endpoint: () => ({ base: "http://127.0.0.1:1", token: "t" }),
+        }),
+      );
       await m.connect(true);
       const { state, outdated, gotApi } = m.snapshot;
       m.stop();
       return { state, outdated, gotApi };
     };
     try {
-      expect(await check({ api: "2.0", apis: ["2.0"] })).toEqual({ state: "wrong-version", outdated: "plugin", gotApi: "2.0" });
-      expect(await check({ api: "0.9" })).toEqual({ state: "wrong-version", outdated: "engine", gotApi: "0.9" });
+      expect(await check({ api: "2.0", apis: ["2.0"] })).toEqual({
+        state: "wrong-version",
+        outdated: "plugin",
+        gotApi: "2.0",
+      });
+      expect(await check({ api: "0.9" })).toEqual({
+        state: "wrong-version",
+        outdated: "engine",
+        gotApi: "0.9",
+      });
       // An engine that serves both majors, and one from before API 1.1 that sends only `api`.
       expect((await check({ api: "2.0", apis: ["2.0", "1.4"] })).state).not.toBe("wrong-version");
       expect((await check({ api: "1.0" })).state).not.toBe("wrong-version");
@@ -291,29 +436,82 @@ describe("engine lifecycle", () => {
   });
   it("status bar text follows the states table", () => {
     const idle = { done: 0, total: 0, running: false };
-    const base = { api: "1.0", engine: { name: "trova", version: "0.1.0", backend: "qmd" }, capabilities: [], collections: [], jobs: [] };
-    const models = (state: "ready" | "downloading", progress?: number) => ({ embed: { state, progress }, rerank: { state: "missing" as const }, expand: { state: "missing" as const } });
-    expect(statusLine({ state: "ready", status: { ...base, models: models("ready") } }, idle, true).text).toBe("Trova");
-    expect(statusLine({ state: "ready", progress: { kind: "embed", done: 1240, total: 9800 }, status: { ...base, models: models("ready") } }, idle, true).text).toBe("Trova 1,240 / 9,800");
-    expect(statusLine({ state: "ready", status: { ...base, models: models("downloading", 0.45) } }, idle, true).text).toBe("Trova: model 45%");
-    expect(statusLine({ state: "ready", status: { ...base, models: models("ready"), paused: true } }, idle, true).text).toBe("Trova paused");
-    expect(statusLine({ state: "offline", reason: "x" }, idle, true).text).toBe("Trova: engine off");
+    const base = {
+      api: "1.0",
+      engine: { name: "trova", version: "0.1.0", backend: "qmd" },
+      capabilities: [],
+      collections: [],
+      jobs: [],
+    };
+    const models = (state: "ready" | "downloading", progress?: number) => ({
+      embed: { state, progress },
+      rerank: { state: "missing" as const },
+      expand: { state: "missing" as const },
+    });
+    expect(
+      statusLine({ state: "ready", status: { ...base, models: models("ready") } }, idle, true).text,
+    ).toBe("Trova");
+    expect(
+      statusLine(
+        {
+          state: "ready",
+          progress: { kind: "embed", done: 1240, total: 9800 },
+          status: { ...base, models: models("ready") },
+        },
+        idle,
+        true,
+      ).text,
+    ).toBe("Trova 1,240 / 9,800");
+    expect(
+      statusLine(
+        { state: "ready", status: { ...base, models: models("downloading", 0.45) } },
+        idle,
+        true,
+      ).text,
+    ).toBe("Trova: model 45%");
+    expect(
+      statusLine(
+        { state: "ready", status: { ...base, models: models("ready"), paused: true } },
+        idle,
+        true,
+      ).text,
+    ).toBe("Trova paused");
+    expect(statusLine({ state: "offline", reason: "x" }, idle, true).text).toBe(
+      "Trova: engine off",
+    );
     expect(statusLine({ state: "ready", error: "boom" }, idle, true).text).toBe("Trova: error");
-    expect(statusLine({ state: "disabled" }, { done: 50, total: 200, running: true }, false).text).toBe("Trova 50 / 200");
+    expect(
+      statusLine({ state: "disabled" }, { done: 50, total: 200, running: true }, false).text,
+    ).toBe("Trova 50 / 200");
     expect(statusLine({ state: "disabled" }, idle, false).text).toBe("Trova");
   });
 });
 
 describe("small pure helpers", () => {
   it("parses saved-search blocks", () => {
-    expect(parseSavedSearch("kanata tag:#tools\nlimit: 5\nmode: ask")).toEqual({ query: "kanata tag:#tools", limit: 5, mode: "ask" });
-    expect(parseSavedSearch("? what is fusion")).toEqual({ query: "what is fusion", limit: 10, mode: "ask" });
-    expect(parseSavedSearch("status:active")).toEqual({ query: "status:active", limit: 10, mode: "instant" });
+    expect(parseSavedSearch("kanata tag:#tools\nlimit: 5\nmode: ask")).toEqual({
+      query: "kanata tag:#tools",
+      limit: 5,
+      mode: "ask",
+    });
+    expect(parseSavedSearch("? what is fusion")).toEqual({
+      query: "what is fusion",
+      limit: 10,
+      mode: "ask",
+    });
+    expect(parseSavedSearch("status:active")).toEqual({
+      query: "status:active",
+      limit: 10,
+      mode: "instant",
+    });
     expect(parseQuery(parseSavedSearch("status:active").query).query.filters).toHaveLength(1);
   });
   it("ranks link suggestions by 0.5 x title rank score + 0.5 x similarity", () => {
     const ranked = rankLinkSuggestions(
-      [{ path: "a.md", title: "Kanata", score: 10 }, { path: "b.md", title: "Kanban", score: 8 }],
+      [
+        { path: "a.md", title: "Kanata", score: 10 },
+        { path: "b.md", title: "Kanban", score: 8 },
+      ],
       new Map([["b.md", 0.9]]),
     );
     expect(ranked.map((r) => r.path)).toEqual(["b.md", "a.md"]);
@@ -329,12 +527,20 @@ describe("small pure helpers", () => {
     ];
     expect(sectionAt(headings, 0)).toEqual({ headingPath: "", headings: [] });
     expect(sectionAt(headings, 10).headingPath).toBe("setup/install");
-    expect(sectionAt(headings, 13)).toEqual({ headingPath: "setup/install~2", headings: ["Setup", "Install"] });
+    expect(sectionAt(headings, 13)).toEqual({
+      headingPath: "setup/install~2",
+      headings: ["Setup", "Install"],
+    });
     expect(sectionAt(headings, 99).headingPath).toBe("usage");
   });
   it("converts rows to public API results", () => {
     const r = rowToResult(row("a.md", { blockId: `${C}:a.md#x`, headings: ["X"], score: 0.03 }), 1);
-    expect(r).toMatchObject({ id: `${C}:a.md#x`, source: `${C}:a.md`, label: "strong", block: { headings: ["X"] } });
+    expect(r).toMatchObject({
+      id: `${C}:a.md#x`,
+      source: `${C}:a.md`,
+      label: "strong",
+      block: { headings: ["X"] },
+    });
   });
 });
 
@@ -350,7 +556,12 @@ describe("local dates", () => {
 describe("settings text fields", () => {
   it("parses field weights, and rejects anything but four numbers of 0 or more", async () => {
     const { parseFieldWeights } = await import("../src/settingsTab.js");
-    expect(parseFieldWeights(" 4, 3 ,2,1 ")).toEqual({ filename: 4, aliases: 3, headings: 2, body: 1 });
+    expect(parseFieldWeights(" 4, 3 ,2,1 ")).toEqual({
+      filename: 4,
+      aliases: 3,
+      headings: 2,
+      body: 1,
+    });
     expect(parseFieldWeights("4, 3, 2")).toBeNull();
     expect(parseFieldWeights("4, 3, x, 1")).toBeNull();
     expect(parseFieldWeights("4, -1, 2, 1")).toBeNull();
@@ -358,12 +569,18 @@ describe("settings text fields", () => {
 
   it("parses folder context lines and skips lines without a description", async () => {
     const { parseFolderContext } = await import("../src/settingsTab.js");
-    expect(parseFolderContext("Projects/Trova: Design notes\nNo colon\nEmpty:   \n Inbox : To sort: later ")).toEqual({ "Projects/Trova": "Design notes", Inbox: "To sort: later" });
+    expect(
+      parseFolderContext(
+        "Projects/Trova: Design notes\nNo colon\nEmpty:   \n Inbox : To sort: later ",
+      ),
+    ).toEqual({ "Projects/Trova": "Design notes", Inbox: "To sort: later" });
   });
 
   it("names outside folders after their last path segment", async () => {
     const { parseOutsideFolders } = await import("../src/settingsTab.js");
-    expect(parseOutsideFolders("/Users/me/Documents/Research Papers\n\nC:\\Work\\Notes\\\n/")).toEqual([
+    expect(
+      parseOutsideFolders("/Users/me/Documents/Research Papers\n\nC:\\Work\\Notes\\\n/"),
+    ).toEqual([
       { path: "/Users/me/Documents/Research Papers", name: "folder-research-papers" },
       { path: "C:\\Work\\Notes\\", name: "folder-notes" },
       { path: "/", name: "folder-x" },

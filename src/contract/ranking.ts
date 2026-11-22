@@ -41,7 +41,28 @@ export const ASK_RERANK_TOP = 30;
 export const ASK_DEEP_MIN_WORDS = 6;
 export const ASK_DEEP_DEADLINE_MS = 5000;
 /** Auto runs Deep for input that starts with one of these, as a short question usually does. */
-export const ASK_QUESTION_WORDS = ["who", "what", "when", "where", "why", "how", "which", "does", "do", "is", "are", "was", "were", "can", "could", "should", "would", "will", "has", "have"];
+export const ASK_QUESTION_WORDS = [
+  "who",
+  "what",
+  "when",
+  "where",
+  "why",
+  "how",
+  "which",
+  "does",
+  "do",
+  "is",
+  "are",
+  "was",
+  "were",
+  "can",
+  "could",
+  "should",
+  "would",
+  "will",
+  "has",
+  "have",
+];
 export const ASK_STRONG_RANKS = 3;
 export const ASK_RELATED_RANKS = 10;
 /** Ask relaxes an all-words keyword query to any-word when it finds fewer hits than this. */
@@ -83,7 +104,9 @@ export function rrf(lists: RankedList<string>[], k = RRF_K): { id: string; score
       scores.set(id, (scores.get(id) ?? 0) + list.weight / (k + i + 1));
     });
   }
-  return [...scores.entries()].map(([id, score]) => ({ id, score })).sort((a, b) => b.score - a.score || (a.id < b.id ? -1 : 1));
+  return [...scores.entries()]
+    .map(([id, score]) => ({ id, score }))
+    .sort((a, b) => b.score - a.score || (a.id < b.id ? -1 : 1));
 }
 
 /** Multiplier for a note opened `days` days ago. A note never opened gets 1. */
@@ -97,7 +120,10 @@ export function thresholdsFor(modelId?: string): LabelThresholds {
 }
 
 /** Maps a cosine similarity to a label. Returns null below the Loose threshold. */
-export function labelForCosine(cosine: number, t: LabelThresholds = DEFAULT_THRESHOLDS): Label | null {
+export function labelForCosine(
+  cosine: number,
+  t: LabelThresholds = DEFAULT_THRESHOLDS,
+): Label | null {
   if (cosine >= t.strong) return "strong";
   if (cosine >= t.related) return "related";
   if (cosine >= t.loose) return "loose";
@@ -112,7 +138,10 @@ export function labelForRank(rank: number): Label {
 }
 
 /** A source's score: its best block, plus a bonus for each further block above the Related threshold. */
-export function sourceScore(blockScores: number[], t: LabelThresholds = DEFAULT_THRESHOLDS): number {
+export function sourceScore(
+  blockScores: number[],
+  t: LabelThresholds = DEFAULT_THRESHOLDS,
+): number {
   if (blockScores.length === 0) return 0;
   const sorted = [...blockScores].sort((a, b) => b - a);
   const extra = sorted.slice(1).filter((s) => s >= t.related).length;
@@ -133,7 +162,8 @@ export function pickAskMode(q: ParsedQuery | string): "fast" | "deep" {
 
 /** qmd's position-aware blend of the fused rank and the rerank score. `fusedRank` starts at 1. */
 export function blendRerank(fusedRank: number, rrfNormalised: number, rerankScore: number): number {
-  const alpha = fusedRank <= 3 ? BLEND_ALPHA.top3 : fusedRank <= 10 ? BLEND_ALPHA.top10 : BLEND_ALPHA.rest;
+  const alpha =
+    fusedRank <= 3 ? BLEND_ALPHA.top3 : fusedRank <= 10 ? BLEND_ALPHA.top10 : BLEND_ALPHA.rest;
   return alpha * rrfNormalised + (1 - alpha) * rerankScore;
 }
 
@@ -170,7 +200,8 @@ export function damerauLevenshtein(a: string, b: string, max = Infinity): number
     for (let j = 1; j <= lb; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
       let v = Math.min(prev[j]! + 1, cur[j - 1]! + 1, prev[j - 1]! + cost);
-      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, prev2[j - 2]! + 1);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
+        v = Math.min(v, prev2[j - 2]! + 1);
       cur.push(v);
       if (v < rowMin) rowMin = v;
     }
@@ -206,7 +237,11 @@ export function suggestCorrections(
     if (v.term.length - w.length > max || (!stems && w.length - v.term.length > max)) continue;
     let d = damerauLevenshtein(w, v.term, max);
     if (stems && d > 1 && v.term.length >= TYPO_MIN_WORD_LENGTH && v.term.length < w.length) {
-      d = Math.min(d, damerauLevenshtein(w.slice(0, v.term.length), v.term, max), damerauLevenshtein(w.slice(0, v.term.length + 1), v.term, max));
+      d = Math.min(
+        d,
+        damerauLevenshtein(w.slice(0, v.term.length), v.term, max),
+        damerauLevenshtein(w.slice(0, v.term.length + 1), v.term, max),
+      );
     }
     if (d >= 1 && d <= max) out.push({ term: v.term, docs: v.docs, distance: d });
   }
@@ -248,7 +283,9 @@ export function meanVector(vectors: ArrayLike<number>[]): Float32Array | null {
 
 /** nDCG@k for graded relevance labels. */
 export function ndcg(rankedIds: string[], relevant: Record<string, number>, k = 10): number {
-  const dcg = rankedIds.slice(0, k).reduce((sum, id, i) => sum + (2 ** (relevant[id] ?? 0) - 1) / Math.log2(i + 2), 0);
+  const dcg = rankedIds
+    .slice(0, k)
+    .reduce((sum, id, i) => sum + (2 ** (relevant[id] ?? 0) - 1) / Math.log2(i + 2), 0);
   const ideal = Object.values(relevant)
     .sort((a, b) => b - a)
     .slice(0, k)

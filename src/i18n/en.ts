@@ -119,7 +119,8 @@ export const en = {
   deepMissing: "Deep models are not downloaded. Ask ran in Fast mode.",
   downloadModels: "Download models",
   downloadConfirmTitle: "Download Deep models?",
-  downloadConfirmBody: "Deep mode needs the rerank and query-expansion models, about 1.7 GB. They download once and stay on this machine.",
+  downloadConfirmBody:
+    "Deep mode needs the rerank and query-expansion models, about 1.7 GB. They download once and stay on this machine.",
   download: "Download",
   cancel: "Cancel",
   noHistory: "No history yet",
@@ -187,21 +188,25 @@ export const en = {
   graphSize: "Related notes per note",
   graphNotes: "{n} notes",
   graphFit: "Fit to view",
-  graphHint: "Click a note to select it, Shift+click to expand it, double-click to open it. Scroll to zoom, drag to pan.",
+  graphHint:
+    "Click a note to select it, Shift+click to expand it, double-click to open it. Scroll to zoom, drag to pan.",
   graphExpand: "Expand",
   graphCenter: "Centre the graph here",
   graphCentreButton: "Centre",
   graphOpenHere: "Show in similarity graph",
   copyLink: "Copy link",
-  dataRepaired: "Trova found damaged entries in its settings file and repaired them. The original file was copied to {file} in the plugin folder.",
-  dataUnreadable: "Trova could not read its settings file and started with the defaults. The file was left unchanged; your next settings change replaces it.",
+  dataRepaired:
+    "Trova found damaged entries in its settings file and repaired them. The original file was copied to {file} in the plugin folder.",
+  dataUnreadable:
+    "Trova could not read its settings file and started with the defaults. The file was left unchanged; your next settings change replaces it.",
   // connections and ask pane
   seekPlaceholder: "Ask a question…",
   scopeLabel: "Find notes related to",
   relatedTo: "Related to",
   selectionIn: "in",
   clearSelection: "Clear selection",
-  selectionGone: "The selected text is no longer in its note; these results are for the text as it was",
+  selectionGone:
+    "The selected text is no longer in its note; these results are for the text as it was",
   similarNotes: "Similar notes",
   lockAnchor: "Keep showing this note",
   unlockAnchor: "Follow the active note",
@@ -238,9 +243,12 @@ export const en = {
   careTileDuplicates: "Near-duplicate pairs",
   careTileOrphans: "Orphan notes",
   careTileRediscover: "To rediscover today",
-  careDescDuplicates: "Notes that say nearly the same thing. Compare them, link them, or merge them by hand.",
-  careDescOrphans: "Notes that nothing links to and that link nowhere. Link each to a related note, or keep it unlinked.",
-  careDescRediscover: "Notes closely related to what you opened recently, which you have not opened in a long time.",
+  careDescDuplicates:
+    "Notes that say nearly the same thing. Compare them, link them, or merge them by hand.",
+  careDescOrphans:
+    "Notes that nothing links to and that link nowhere. Link each to a related note, or keep it unlinked.",
+  careDescRediscover:
+    "Notes closely related to what you opened recently, which you have not opened in a long time.",
   notDuplicate: "Not a duplicate",
   kindSections: "sections",
   kindWholeNotes: "whole notes",
@@ -290,11 +298,15 @@ export const en = {
   internalError: "Trova: internal error",
   // onboarding
   welcomeTitle: "Welcome to Trova",
-  welcomeIntro: "Instant search already works on titles, aliases and headings. Note bodies are being indexed in the background.",
+  welcomeIntro:
+    "Instant search already works on titles, aliases and headings. Note bodies are being indexed in the background.",
   engineFound: "Engine found: {name} {version}",
-  engineNotFound: "The engine is not installed. It adds Connections, Ask and semantic search. Install it in a terminal:",
-  engineWrongVersion: "The installed engine speaks API {got}; this plugin needs API {want}. Upgrade the engine:",
-  pluginTooOld: "The installed engine speaks API {got}, which is newer than this plugin's API {want}. Update Trova under Settings → Community plugins.",
+  engineNotFound:
+    "The engine is not installed. It adds Connections, Ask and semantic search. Install it in a terminal:",
+  engineWrongVersion:
+    "The installed engine speaks API {got}; this plugin needs API {want}. Upgrade the engine:",
+  pluginTooOld:
+    "The installed engine speaks API {got}, which is newer than this plugin's API {want}. Update Trova under Settings → Community plugins.",
   engineChecking: "Checking for the engine...",
   installCommand: "npm i -g trova-cli",
   upgradeCommand: "npm i -g trova-cli@latest",
@@ -305,7 +317,8 @@ export const en = {
   scopeNotes: "{n} notes",
   scopeExcluded: "Excluded folders: {folders}",
   scopeNoneExcluded: "No folders are excluded",
-  scopeDownload: "The embedding model downloads once, about 330 MB. Nothing downloads before you click Start.",
+  scopeDownload:
+    "The embedding model downloads once, about 330 MB. Nothing downloads before you click Start.",
   start: "Start",
   finishNotice: "Trova indexed {sources} sources ({embedded} embedded).",
   setHotkeys: "Set hotkeys",

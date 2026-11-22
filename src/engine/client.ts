@@ -2,7 +2,14 @@
 // `requestUrl` returns only whole responses and cannot be aborted, so everything uses fetch. The
 // engine listens on 127.0.0.1 and allows the app://obsidian.md origin.
 
-import { EngineError, type EngineEvent, type EngineEventName, type ErrorBody, type HealthResponse, type ResultBatch } from "../contract/index.js";
+import {
+  EngineError,
+  type EngineEvent,
+  type EngineEventName,
+  type ErrorBody,
+  type HealthResponse,
+  type ResultBatch,
+} from "../contract/index.js";
 
 export class EngineClient {
   constructor(
@@ -11,7 +18,11 @@ export class EngineClient {
   ) {}
 
   private headers(): Record<string, string> {
-    return { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json", "X-Request-Id": crypto.randomUUID() };
+    return {
+      Authorization: `Bearer ${this.token}`,
+      "Content-Type": "application/json",
+      "X-Request-Id": crypto.randomUUID(),
+    };
   }
 
   private async fail(res: Response): Promise<never> {
@@ -25,8 +36,18 @@ export class EngineClient {
     );
   }
 
-  async json<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-    const res = await fetch(this.base + path, { method, headers: this.headers(), body: body === undefined ? undefined : JSON.stringify(body), signal });
+  async json<T>(
+    method: "GET" | "POST" | "DELETE",
+    path: string,
+    body?: unknown,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    const res = await fetch(this.base + path, {
+      method,
+      headers: this.headers(),
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal,
+    });
     if (!res.ok) await this.fail(res);
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
@@ -55,18 +76,28 @@ export class EngineClient {
 
   /** A streaming endpoint: one batch per NDJSON line. An error line ends the stream by throwing. */
   async *stream(path: string, body: unknown, signal?: AbortSignal): AsyncGenerator<ResultBatch> {
-    const res = await fetch(this.base + path, { method: "POST", headers: this.headers(), body: JSON.stringify(body), signal });
+    const res = await fetch(this.base + path, {
+      method: "POST",
+      headers: this.headers(),
+      body: JSON.stringify(body),
+      signal,
+    });
     if (!res.ok || !res.body) await this.fail(res);
     for await (const line of this.lines(res)) {
       if (!line.trim()) continue;
       const value = JSON.parse(line) as ResultBatch & Partial<ErrorBody>;
-      if (value.error && !value.stage) throw new EngineError(value.error.code, value.error.message, value.error.retryable);
+      if (value.error && !value.stage)
+        throw new EngineError(value.error.code, value.error.message, value.error.retryable);
       yield value;
     }
   }
 
   /** Reads the event stream until it ends or the signal aborts. Resolves when the stream drops. */
-  async events(onEvent: (e: EngineEvent) => void, signal: AbortSignal, onOpen?: () => void): Promise<void> {
+  async events(
+    onEvent: (e: EngineEvent) => void,
+    signal: AbortSignal,
+    onOpen?: () => void,
+  ): Promise<void> {
     const res = await fetch(`${this.base}/v1/events`, { headers: this.headers(), signal });
     if (!res.ok || !res.body) await this.fail(res);
     onOpen?.();
@@ -77,7 +108,10 @@ export class EngineClient {
       if (line === "") {
         if (event && data) {
           try {
-            onEvent({ event: event as EngineEventName, data: JSON.parse(data) as Record<string, unknown> });
+            onEvent({
+              event: event as EngineEventName,
+              data: JSON.parse(data) as Record<string, unknown>,
+            });
           } catch {
             /* a malformed event is skipped */
           }

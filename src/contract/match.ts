@@ -20,12 +20,14 @@ export function lightStem(word: string): string {
   if (w.length <= 3 || /[^a-z]/.test(w)) return w;
   if (w.endsWith("ies") && w.length > 4) w = `${w.slice(0, -3)}y`;
   else if (w.endsWith("sses")) w = w.slice(0, -2);
-  else if (w.endsWith("s") && !w.endsWith("ss") && !w.endsWith("us") && !w.endsWith("is")) w = w.slice(0, -1);
+  else if (w.endsWith("s") && !w.endsWith("ss") && !w.endsWith("us") && !w.endsWith("is"))
+    w = w.slice(0, -1);
   for (const suffix of ["ingly", "edly", "ing", "ed", "ly"]) {
     if (w.endsWith(suffix) && w.length - suffix.length >= 3) {
       w = w.slice(0, -suffix.length);
       // "remapping" -> "remapp" -> "remap"
-      if (w.length > 3 && w[w.length - 1] === w[w.length - 2] && !/[lsz]$/.test(w)) w = w.slice(0, -1);
+      if (w.length > 3 && w[w.length - 1] === w[w.length - 2] && !/[lsz]$/.test(w))
+        w = w.slice(0, -1);
       break;
     }
   }
@@ -46,10 +48,12 @@ function termRegExp(term: Term): RegExp | null {
     const body = text.split(/\s+/).map(escapeRe).join("\\s+");
     return new RegExp(`(?<!${WORD_CHAR})${body}(?!${WORD_CHAR})`, "gu");
   }
-  if (term.kind === "exact") return new RegExp(`(?<!${WORD_CHAR})${escapeRe(text)}(?!${WORD_CHAR})`, "gu");
+  if (term.kind === "exact")
+    return new RegExp(`(?<!${WORD_CHAR})${escapeRe(text)}(?!${WORD_CHAR})`, "gu");
   // A word matches as a prefix; its stem also matches, so variants are found.
   const stem = lightStem(text);
-  const alt = stem !== text && stem.length >= 3 ? `(?:${escapeRe(text)}|${escapeRe(stem)})` : escapeRe(text);
+  const alt =
+    stem !== text && stem.length >= 3 ? `(?:${escapeRe(text)}|${escapeRe(stem)})` : escapeRe(text);
   return new RegExp(`(?<!${WORD_CHAR})${alt}${WORD_CHAR}*`, "gu");
 }
 
@@ -130,7 +134,13 @@ export interface Snippet {
  * Builds an excerpt of about `maxLen` characters around the densest group of match ranges.
  * Highlights are character ranges inside the returned snippet.
  */
-export function makeSnippet(text: string, ranges: [number, number][], maxLen = 180, from = 0, to = text.length): Snippet {
+export function makeSnippet(
+  text: string,
+  ranges: [number, number][],
+  maxLen = 180,
+  from = 0,
+  to = text.length,
+): Snippet {
   const inside = ranges.filter((r) => r[0] >= from && r[1] <= to);
   let start = from;
   if (inside.length > 0) {
@@ -207,7 +217,9 @@ export function findInText(text: string, q: ParsedQuery, max = 200): LineMatch[]
     const toLine = Math.min(lineStarts.length - 1, line + 1);
     const to = toLine + 1 < lineStarts.length ? lineStarts[toLine + 1]! - 1 : text.length;
     const context = text.slice(from, to);
-    const highlights = ranges.filter((x) => x[0] >= from && x[1] <= to).map((x): [number, number] => [x[0] - from, x[1] - from]);
+    const highlights = ranges
+      .filter((x) => x[0] >= from && x[1] <= to)
+      .map((x): [number, number] => [x[0] - from, x[1] - from]);
     out.push({ line, offset: r[0], context, highlights });
     if (out.length >= max) break;
   }

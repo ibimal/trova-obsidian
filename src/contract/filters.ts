@@ -28,18 +28,28 @@ function compareScalar(actual: unknown, op: Filter["op"], expected: string | num
   if (actual == null) return false;
   if (actual instanceof Date) actual = actual.toISOString();
   const expNum = typeof expected === "number" ? expected : null;
-  const actNum = typeof actual === "number" ? actual : typeof actual === "string" && actual.trim() !== "" && Number.isFinite(Number(actual)) ? Number(actual) : null;
+  const actNum =
+    typeof actual === "number"
+      ? actual
+      : typeof actual === "string" && actual.trim() !== "" && Number.isFinite(Number(actual))
+        ? Number(actual)
+        : null;
   if (op === "eq" || op === "ne") {
     let equal: boolean;
     if (expNum !== null && actNum !== null) equal = expNum === actNum;
-    else if (typeof expected === "string" && parseDay(expected) !== null && toTime(actual) !== null) {
+    else if (
+      typeof expected === "string" &&
+      parseDay(expected) !== null &&
+      toTime(actual) !== null
+    ) {
       const day = parseDay(expected)!;
       const t = toTime(actual)!;
       equal = t >= day && t < day + DAY_MS;
     } else equal = String(actual).trim().toLowerCase() === String(expected).trim().toLowerCase();
     return op === "eq" ? equal : !equal;
   }
-  if (op === "contains") return String(actual).toLowerCase().includes(String(expected).toLowerCase());
+  if (op === "contains")
+    return String(actual).toLowerCase().includes(String(expected).toLowerCase());
   let a: number | null = actNum;
   let b: number | null = expNum;
   if (typeof expected === "string") {
@@ -73,7 +83,9 @@ function matchOne(meta: SourceMeta, f: Filter, ctx: FilterContext): boolean {
       return list.includes(extname(meta.path));
     }
     case "tag": {
-      const wanted = (Array.isArray(f.value) ? f.value : [String(f.value)]).map((t) => t.toLowerCase());
+      const wanted = (Array.isArray(f.value) ? f.value : [String(f.value)]).map((t) =>
+        t.toLowerCase(),
+      );
       return meta.tags.some((tag) => wanted.some((w) => tag === w || tag.startsWith(`${w}/`)));
     }
     case "modified":
@@ -83,7 +95,8 @@ function matchOne(meta: SourceMeta, f: Filter, ctx: FilterContext): boolean {
       return compareScalar(actual, f.op, f.value);
     }
     case "is":
-      if (f.value === "orphan") return ctx.isOrphan ? ctx.isOrphan(meta.path) : meta.orphan === true;
+      if (f.value === "orphan")
+        return ctx.isOrphan ? ctx.isOrphan(meta.path) : meta.orphan === true;
       return false;
     case "links": {
       const target = String(f.value);
@@ -100,7 +113,8 @@ function matchOne(meta: SourceMeta, f: Filter, ctx: FilterContext): boolean {
       const actual = entry[1];
       const expected = Array.isArray(f.value) ? f.value : [f.value];
       const actuals = Array.isArray(actual) ? actual : [actual];
-      if (f.op === "ne") return expected.every((e) => actuals.every((a) => compareScalar(a, "ne", e)));
+      if (f.op === "ne")
+        return expected.every((e) => actuals.every((a) => compareScalar(a, "ne", e)));
       const op = f.op === "in" ? "eq" : f.op;
       return expected.some((e) => actuals.some((a) => compareScalar(a, op, e)));
     }
@@ -108,7 +122,11 @@ function matchOne(meta: SourceMeta, f: Filter, ctx: FilterContext): boolean {
 }
 
 /** True when the source passes every filter. Excluded sources never pass. */
-export function matchesFilters(meta: SourceMeta, filters: Filter[], ctx: FilterContext = {}): boolean {
+export function matchesFilters(
+  meta: SourceMeta,
+  filters: Filter[],
+  ctx: FilterContext = {},
+): boolean {
   if (meta.excluded) return false;
   for (const f of filters) {
     const ok = matchOne(meta, f, ctx);
@@ -118,7 +136,9 @@ export function matchesFilters(meta: SourceMeta, filters: Filter[], ctx: FilterC
 }
 
 /** `trova: false` in the frontmatter excludes a note everywhere. */
-export function isExcludedByFrontmatter(frontmatter: Record<string, unknown> | null | undefined): boolean {
+export function isExcludedByFrontmatter(
+  frontmatter: Record<string, unknown> | null | undefined,
+): boolean {
   if (!frontmatter) return false;
   const v = frontmatter["trova"];
   return v === false || v === "false";
@@ -150,7 +170,11 @@ export function globToRegExp(glob: string): RegExp {
 }
 
 /** True when a path is inside the include globs (or there are none) and outside the exclude globs. */
-export function inScope(path: string, include: string[] | undefined, exclude: string[] | undefined): boolean {
+export function inScope(
+  path: string,
+  include: string[] | undefined,
+  exclude: string[] | undefined,
+): boolean {
   if (exclude?.some((g) => g.trim() && globToRegExp(g).test(path))) return false;
   const inc = include?.filter((g) => g.trim()) ?? [];
   return inc.length === 0 || inc.some((g) => globToRegExp(g).test(path));

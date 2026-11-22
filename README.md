@@ -38,20 +38,20 @@ The plugin starts the engine when the vault opens, so the welcome screen can sho
 
 Open the command palette and type "Trova". You can give any command a hotkey under Settings → Hotkeys; the plugin sets none itself.
 
-| Command | What it does |
-| --- | --- |
-| Instant search | Search the vault as you type |
-| In-file search | Search the open note |
-| Ask, Ask about selection | Ask a question about the vault, or about the selected text |
-| Open Connections and Ask | Open the side pane |
-| Connections for selection | Related notes for the selected text |
-| Random strong connection | Open a note closely related to the active one |
-| Open Context basket, Copy basket | Show the basket, or copy its contents |
-| Add current note to Context basket, Add section at cursor to Context basket | Fill the basket |
-| Open Vault care (duplicates, orphans, Rediscover), Open Rediscover | Open Vault care, or its Rediscover pick |
-| Open topic map, Open similarity graph | Open the canvases |
-| Reindex now, Pause or resume indexing | Control the index |
-| Show welcome screen | Show the first-run screen again |
+| Command                                                                     | What it does                                               |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Instant search                                                              | Search the vault as you type                               |
+| In-file search                                                              | Search the open note                                       |
+| Ask, Ask about selection                                                    | Ask a question about the vault, or about the selected text |
+| Open Connections and Ask                                                    | Open the side pane                                         |
+| Connections for selection                                                   | Related notes for the selected text                        |
+| Random strong connection                                                    | Open a note closely related to the active one              |
+| Open Context basket, Copy basket                                            | Show the basket, or copy its contents                      |
+| Add current note to Context basket, Add section at cursor to Context basket | Fill the basket                                            |
+| Open Vault care (duplicates, orphans, Rediscover), Open Rediscover          | Open Vault care, or its Rediscover pick                    |
+| Open topic map, Open similarity graph                                       | Open the canvases                                          |
+| Reindex now, Pause or resume indexing                                       | Control the index                                          |
+| Show welcome screen                                                         | Show the first-run screen again                            |
 
 All settings are under Settings → Trova, and Obsidian's settings search finds each of them.
 
@@ -99,12 +99,12 @@ Every list and graph follows Obsidian's own rule. A click opens a note in the cu
 
 ## Where data lives
 
-| Data | Location |
-| --- | --- |
-| Engine index and models | Managed by the engine; see its [README](https://github.com/ibimal/trova#where-data-lives) |
-| Settings, pins, hides, pane filters, folder context, Vault care choices | The plugin's `data.json`, synced with the vault. When the plugin repairs damaged entries, it first copies the file to `data.backup-<time>.json` |
-| Query history, last-opened times, basket, today's Rediscover pick, pane layout | Obsidian's local storage, per device |
-| State of open tabs: the similarity graph's centre note, size and lock; Vault care's group | Obsidian's workspace layout, per device |
+| Data                                                                                      | Location                                                                                                                                        |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Engine index and models                                                                   | Managed by the engine; see its [README](https://github.com/ibimal/trova#where-data-lives)                                                       |
+| Settings, pins, hides, pane filters, folder context, Vault care choices                   | The plugin's `data.json`, synced with the vault. When the plugin repairs damaged entries, it first copies the file to `data.backup-<time>.json` |
+| Query history, last-opened times, basket, today's Rediscover pick, pane layout            | Obsidian's local storage, per device                                                                                                            |
+| State of open tabs: the similarity graph's centre note, size and lock; Vault care's group | Obsidian's workspace layout, per device                                                                                                         |
 
 ## Development
 

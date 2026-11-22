@@ -5,12 +5,29 @@
 // are remembered, so a dismissed item does not return with the next scan.
 
 import { ItemView, TFile, setIcon, type ViewStateResult, type WorkspaceLeaf } from "obsidian";
-import { ORPHAN_SUGGESTIONS, REDISCOVER_PER_DAY, REDISCOVER_RECENT_DAYS, REDISCOVER_STALE_DAYS, type DuplicatePair, type DuplicatesResponse, type Result } from "../contract/index.js";
+import {
+  ORPHAN_SUGGESTIONS,
+  REDISCOVER_PER_DAY,
+  REDISCOVER_RECENT_DAYS,
+  REDISCOVER_STALE_DAYS,
+  type DuplicatePair,
+  type DuplicatesResponse,
+  type Result,
+} from "../contract/index.js";
 import { t } from "../i18n/en.js";
 import { idle } from "../indexer.js";
 import type TrovaPlugin from "../main.js";
 import { pairKey } from "../settings.js";
-import { banner, folderOf, linkFor, localDay, navigableInMainArea, onOpen, passEnterKeys, showMenu } from "../ui.js";
+import {
+  banner,
+  folderOf,
+  linkFor,
+  localDay,
+  navigableInMainArea,
+  onOpen,
+  passEnterKeys,
+  showMenu,
+} from "../ui.js";
 
 export const CARE_VIEW = "trova-care";
 export type CareGroup = "duplicates" | "orphans" | "rediscover";
@@ -43,33 +60,67 @@ function savedRediscover(plugin: TrovaPlugin): { day: string; items: RediscoverI
   const ok = (i: unknown): i is RediscoverItem => {
     if (typeof i !== "object" || i === null) return false;
     const r = i as Record<string, unknown>;
-    return typeof r["path"] === "string" && typeof r["title"] === "string" && typeof r["because"] === "string" && typeof r["becausePath"] === "string" && typeof r["snippet"] === "string" && (r["days"] === null || typeof r["days"] === "number");
+    return (
+      typeof r["path"] === "string" &&
+      typeof r["title"] === "string" &&
+      typeof r["because"] === "string" &&
+      typeof r["becausePath"] === "string" &&
+      typeof r["snippet"] === "string" &&
+      (r["days"] === null || typeof r["days"] === "number")
+    );
   };
   return items.every(ok) ? { day, items } : null;
 }
 
 /** Rediscover: strong connections to recently opened notes that were not opened for a long time. */
-async function pickRediscover(plugin: TrovaPlugin, signal?: AbortSignal): Promise<RediscoverItem[]> {
+async function pickRediscover(
+  plugin: TrovaPlugin,
+  signal?: AbortSignal,
+): Promise<RediscoverItem[]> {
   const now = Date.now();
   const today = localDay(new Date(now));
   const saved = savedRediscover(plugin);
   if (saved?.day === today) return saved.items;
   if (!plugin.engine.ready) return [];
-  const recent = plugin.local.recentPaths(40).filter((p) => (plugin.local.daysSinceOpened(p, now) ?? Infinity) <= REDISCOVER_RECENT_DAYS && p.endsWith(".md"));
+  const recent = plugin.local
+    .recentPaths(40)
+    .filter(
+      (p) =>
+        (plugin.local.daysSinceOpened(p, now) ?? Infinity) <= REDISCOVER_RECENT_DAYS &&
+        p.endsWith(".md"),
+    );
   const picked = new Map<string, RediscoverItem>();
   for (const path of recent) {
     if (signal?.aborted || picked.size >= REDISCOVER_PER_DAY) break;
     await idle();
-    const view = await plugin.connections.related({ kind: "note", path }, signal, 20).catch(() => null);
+    const view = await plugin.connections
+      .related({ kind: "note", path }, signal, 20)
+      .catch(() => null);
     if (!view || view.state !== "ok") continue;
     for (const r of view.results) {
-      if (r.label !== "strong" || r.collection !== plugin.collection || picked.has(r.path) || plugin.isCareExcluded(r.path)) continue;
+      if (
+        r.label !== "strong" ||
+        r.collection !== plugin.collection ||
+        picked.has(r.path) ||
+        plugin.isCareExcluded(r.path)
+      )
+        continue;
       const days = plugin.local.daysSinceOpened(r.path, now);
       const file = plugin.app.vault.getAbstractFileByPath(r.path);
       // A note never opened since the plugin was enabled counts when the file itself is old.
-      const stale = days !== null ? days > REDISCOVER_STALE_DAYS : file instanceof TFile && (now - file.stat.mtime) / 86_400_000 > REDISCOVER_STALE_DAYS;
+      const stale =
+        days !== null
+          ? days > REDISCOVER_STALE_DAYS
+          : file instanceof TFile && (now - file.stat.mtime) / 86_400_000 > REDISCOVER_STALE_DAYS;
       if (!stale) continue;
-      picked.set(r.path, { path: r.path, title: r.title, because: path.split("/").pop()!.replace(/\.md$/, ""), becausePath: path, days: days === null ? null : Math.floor(days), snippet: r.blocks?.[0]?.snippet ?? r.snippet });
+      picked.set(r.path, {
+        path: r.path,
+        title: r.title,
+        because: path.split("/").pop()!.replace(/\.md$/, ""),
+        becausePath: path,
+        days: days === null ? null : Math.floor(days),
+        snippet: r.blocks?.[0]?.snippet ?? r.snippet,
+      });
       if (picked.size >= REDISCOVER_PER_DAY) break;
     }
   }
@@ -80,7 +131,8 @@ async function pickRediscover(plugin: TrovaPlugin, signal?: AbortSignal): Promis
 
 /** How long ago a note was last opened, in the largest whole unit: "12 days", "8 months", "2 years". */
 export function agoText(days: number): string {
-  const unit = (n: number, u: Intl.RelativeTimeFormatUnit) => new Intl.NumberFormat(undefined, { style: "unit", unit: u, unitDisplay: "long" }).format(n);
+  const unit = (n: number, u: Intl.RelativeTimeFormatUnit) =>
+    new Intl.NumberFormat(undefined, { style: "unit", unit: u, unitDisplay: "long" }).format(n);
   if (days < 30) return unit(Math.max(1, Math.round(days)), "day");
   if (days < 365) return unit(Math.round(days / 30.44), "month");
   return unit(Math.round(days / 365.25), "year");
@@ -100,7 +152,10 @@ export function sinceText(at: number, now = Date.now()): string {
  * The near-duplicate pairs to show, and those the user marked "Not a duplicate". A pair inside one
  * note, which the scan can report for two of its sections, counts like any other.
  */
-export function splitPairs(pairs: DuplicatePair[], dismissed: (a: string, b: string) => boolean): { active: DuplicatePair[]; dismissed: DuplicatePair[] } {
+export function splitPairs(
+  pairs: DuplicatePair[],
+  dismissed: (a: string, b: string) => boolean,
+): { active: DuplicatePair[]; dismissed: DuplicatePair[] } {
   const active: DuplicatePair[] = [];
   const off: DuplicatePair[] = [];
   for (const p of pairs) (dismissed(p.a, p.b) ? off : active).push(p);
@@ -126,9 +181,21 @@ function titleOf(path: string): string {
 }
 
 const TILE: Record<CareGroup, { icon: string; label: () => string; describe: () => string }> = {
-  duplicates: { icon: "copy", label: () => t("careTileDuplicates"), describe: () => t("careDescDuplicates") },
-  orphans: { icon: "unlink", label: () => t("careTileOrphans"), describe: () => t("careDescOrphans") },
-  rediscover: { icon: "history", label: () => t("careTileRediscover"), describe: () => t("careDescRediscover") },
+  duplicates: {
+    icon: "copy",
+    label: () => t("careTileDuplicates"),
+    describe: () => t("careDescDuplicates"),
+  },
+  orphans: {
+    icon: "unlink",
+    label: () => t("careTileOrphans"),
+    describe: () => t("careDescOrphans"),
+  },
+  rediscover: {
+    icon: "history",
+    label: () => t("careTileRediscover"),
+    describe: () => t("careDescRediscover"),
+  },
 };
 
 export class VaultCareView extends ItemView {
@@ -187,17 +254,29 @@ export class VaultCareView extends ItemView {
     const page = (this.pageEl = el.createDiv({ cls: "trova-care-page" }));
     const head = page.createDiv({ cls: "trova-care-header" });
     const title = head.createDiv({ cls: "trova-care-title" });
-    setIcon(title.createSpan({ cls: "trova-care-title-icon", attr: { "aria-hidden": "true" } }), "heart-pulse");
+    setIcon(
+      title.createSpan({ cls: "trova-care-title-icon", attr: { "aria-hidden": "true" } }),
+      "heart-pulse",
+    );
     title.createEl("h2", { text: t("careTitle") });
     this.summaryEl = head.createDiv({ cls: "trova-care-summary" });
     this.scanEl = head.createDiv({ cls: "trova-care-scan" });
     this.tilesEl = page.createDiv({ cls: "trova-care-tiles", attr: { role: "tablist" } });
-    this.undoEl = page.createDiv({ cls: "trova-care-undo", attr: { role: "status", "aria-live": "polite" } });
+    this.undoEl = page.createDiv({
+      cls: "trova-care-undo",
+      attr: { role: "status", "aria-live": "polite" },
+    });
     this.descEl = page.createDiv({ cls: "trova-care-desc" });
-    this.listEl = page.createDiv({ cls: "trova-care-list", attr: { role: "tabpanel", id: "trova-care-panel" } });
+    this.listEl = page.createDiv({
+      cls: "trova-care-list",
+      attr: { role: "tabpanel", id: "trova-care-panel" },
+    });
     const saved = this.plugin.local.get<CareGroup>("care-tab");
     if (saved && TASKS.includes(saved)) this.task = saved;
-    this.observer = new IntersectionObserver((entries) => this.onVisible(entries), { root: null, rootMargin: "200px" });
+    this.observer = new IntersectionObserver((entries) => this.onVisible(entries), {
+      root: null,
+      rootMargin: "200px",
+    });
     this.register(this.plugin.store.onChange(() => this.renderTiles()));
     this.renderTiles();
     this.renderHeader();
@@ -313,7 +392,8 @@ export class VaultCareView extends ItemView {
   private renderHeader(): void {
     const count = this.app.vault.getMarkdownFiles().length;
     const parts = [t("careNotes", { n: count.toLocaleString() })];
-    if (this.duplicates?.computedAt) parts.push(t("careChecked", { when: sinceText(this.duplicates.computedAt) }));
+    if (this.duplicates?.computedAt)
+      parts.push(t("careChecked", { when: sinceText(this.duplicates.computedAt) }));
     this.summaryEl.setText(parts.join(" · "));
     this.scanEl.empty();
     if (!this.plugin.engine.ready) return;
@@ -322,10 +402,23 @@ export class VaultCareView extends ItemView {
     const running = data?.state === "running";
     const button = this.scanEl.createEl("button", { cls: "trova-care-scan-button" });
     setIcon(button.createSpan({ attr: { "aria-hidden": "true" } }), "refresh-cw");
-    button.appendText(running ? t("scanning", { done: progress?.done ?? 0, total: progress?.total ?? 0 }) : data?.computedAt ? t("rescan") : t("scan"));
+    button.appendText(
+      running
+        ? t("scanning", { done: progress?.done ?? 0, total: progress?.total ?? 0 })
+        : data?.computedAt
+          ? t("rescan")
+          : t("scan"),
+    );
     button.disabled = running;
     if (running) button.addClass("is-running");
-    button.addEventListener("click", () => void this.plugin.engine.duplicates(true).then(() => this.loadDuplicates()).then(() => this.renderTask()));
+    button.addEventListener(
+      "click",
+      () =>
+        void this.plugin.engine
+          .duplicates(true)
+          .then(() => this.loadDuplicates())
+          .then(() => this.renderTask()),
+    );
   }
 
   private renderTiles(): void {
@@ -333,16 +426,32 @@ export class VaultCareView extends ItemView {
     el.empty();
     const pairs = this.duplicates ? this.pairs().active.length : null;
     const orphans = this.orphans ? this.orphanLists().active.length : null;
-    const counts: Record<CareGroup, number | null> = { duplicates: pairs, orphans, rediscover: this.rediscoverCount };
+    const counts: Record<CareGroup, number | null> = {
+      duplicates: pairs,
+      orphans,
+      rediscover: this.rediscoverCount,
+    };
     for (const task of TASKS) {
       const on = task === this.task;
       const tile = el.createEl("button", {
         cls: `trova-care-tile trova-care-tile-${task}${on ? " is-active" : ""}`,
-        attr: { role: "tab", "aria-selected": String(on), "aria-controls": "trova-care-panel", tabindex: on ? "0" : "-1", "data-task": task },
+        attr: {
+          role: "tab",
+          "aria-selected": String(on),
+          "aria-controls": "trova-care-panel",
+          tabindex: on ? "0" : "-1",
+          "data-task": task,
+        },
       });
-      setIcon(tile.createSpan({ cls: "trova-care-tile-icon", attr: { "aria-hidden": "true" } }), TILE[task].icon);
+      setIcon(
+        tile.createSpan({ cls: "trova-care-tile-icon", attr: { "aria-hidden": "true" } }),
+        TILE[task].icon,
+      );
       const text = tile.createSpan({ cls: "trova-care-tile-text" });
-      text.createSpan({ cls: "trova-care-tile-count", text: counts[task] === null ? "–" : counts[task].toLocaleString() });
+      text.createSpan({
+        cls: "trova-care-tile-count",
+        text: counts[task] === null ? "–" : counts[task].toLocaleString(),
+      });
       text.createSpan({ cls: "trova-care-tile-label", text: TILE[task].label() });
       tile.addEventListener("click", () => this.setTask(task));
     }
@@ -351,7 +460,9 @@ export class VaultCareView extends ItemView {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
       const at = TASKS.indexOf(this.task);
-      this.focusGroup(TASKS[(at + (e.key === "ArrowRight" ? 1 : -1) + TASKS.length) % TASKS.length]!);
+      this.focusGroup(
+        TASKS[(at + (e.key === "ArrowRight" ? 1 : -1) + TASKS.length) % TASKS.length]!,
+      );
     };
   }
 
@@ -361,12 +472,17 @@ export class VaultCareView extends ItemView {
     el.empty();
     if (this.undoTimer) window.clearTimeout(this.undoTimer);
     const bar = el.createDiv({ cls: "trova-care-undo-bar" });
-    setIcon(bar.createSpan({ cls: "trova-care-undo-icon", attr: { "aria-hidden": "true" } }), "check");
+    setIcon(
+      bar.createSpan({ cls: "trova-care-undo-icon", attr: { "aria-hidden": "true" } }),
+      "check",
+    );
     bar.createSpan({ cls: "trova-care-undo-text", text });
-    bar.createEl("button", { cls: "trova-link-button", text: t("undo") }).addEventListener("click", () => {
-      el.empty();
-      undo();
-    });
+    bar
+      .createEl("button", { cls: "trova-link-button", text: t("undo") })
+      .addEventListener("click", () => {
+        el.empty();
+        undo();
+      });
     this.undoTimer = window.setTimeout(() => el.empty(), UNDO_MS);
   }
 
@@ -389,14 +505,31 @@ export class VaultCareView extends ItemView {
 
   private empty(icon: string, text: string): HTMLElement {
     const box = this.listEl.createDiv({ cls: "trova-care-empty" });
-    setIcon(box.createSpan({ cls: "trova-care-empty-icon", attr: { "aria-hidden": "true" } }), icon);
+    setIcon(
+      box.createSpan({ cls: "trova-care-empty-icon", attr: { "aria-hidden": "true" } }),
+      icon,
+    );
     box.createDiv({ text });
     return box;
   }
 
   private engineBanner(): boolean {
     if (this.plugin.engine.ready) return false;
-    banner(this.listEl, t("needsEngine"), this.plugin.engine.snapshot.state === "disabled" ? undefined : { label: t("startEngine"), run: () => void this.plugin.engine.connect(true).then(() => this.loadCounts()).then(() => this.renderHeader()).then(() => this.renderTask()) });
+    banner(
+      this.listEl,
+      t("needsEngine"),
+      this.plugin.engine.snapshot.state === "disabled"
+        ? undefined
+        : {
+            label: t("startEngine"),
+            run: () =>
+              void this.plugin.engine
+                .connect(true)
+                .then(() => this.loadCounts())
+                .then(() => this.renderHeader())
+                .then(() => this.renderTask()),
+          },
+    );
     return true;
   }
 
@@ -405,32 +538,52 @@ export class VaultCareView extends ItemView {
   private renderDuplicates(): void {
     if (this.engineBanner()) return;
     // Before the last scan's pairs arrive, "run a scan" would be wrong.
-    if (!this.loaded) return void this.listEl.createDiv({ cls: "trova-care-meta", text: t("careLoading") });
+    if (!this.loaded)
+      return void this.listEl.createDiv({ cls: "trova-care-meta", text: t("careLoading") });
     const data = this.duplicates;
     if (!data || (!data.computedAt && data.state !== "running")) {
       const box = this.empty("copy", t("duplicatesNeverRun"));
-      if (data?.state !== "running") box.createEl("button", { cls: "mod-cta", text: t("scan") }).addEventListener("click", () => void this.plugin.engine.duplicates(true).then(() => this.loadDuplicates()).then(() => this.renderTask()));
+      if (data?.state !== "running")
+        box.createEl("button", { cls: "mod-cta", text: t("scan") }).addEventListener(
+          "click",
+          () =>
+            void this.plugin.engine
+              .duplicates(true)
+              .then(() => this.loadDuplicates())
+              .then(() => this.renderTask()),
+        );
       return;
     }
     const { active, dismissed } = this.pairs();
     if (active.length === 0) this.empty("circle-check", t("duplicatesEmpty"));
     for (const pair of active.slice(0, MAX_PAIRS)) this.renderPair(pair);
     const foot = this.listEl.createDiv({ cls: "trova-care-foot" });
-    foot.createSpan({ text: active.length > MAX_PAIRS ? t("morePairs", { n: active.length - MAX_PAIRS }) : "" });
+    foot.createSpan({
+      text: active.length > MAX_PAIRS ? t("morePairs", { n: active.length - MAX_PAIRS }) : "",
+    });
     if (dismissed.length) {
-      foot.createEl("button", { cls: "trova-link-button", text: this.showDismissed ? t("hideDismissed") : t("showDismissed", { n: dismissed.length }) }).addEventListener("click", () => {
-        this.showDismissed = !this.showDismissed;
-        void this.renderTask();
-      });
+      foot
+        .createEl("button", {
+          cls: "trova-link-button",
+          text: this.showDismissed
+            ? t("hideDismissed")
+            : t("showDismissed", { n: dismissed.length }),
+        })
+        .addEventListener("click", () => {
+          this.showDismissed = !this.showDismissed;
+          void this.renderTask();
+        });
       if (this.showDismissed) {
         const list = this.listEl.createDiv({ cls: "trova-care-dismissed" });
         for (const p of dismissed) {
           const row = list.createDiv({ cls: "trova-care-dismissed-row" });
           row.createSpan({ text: `${p.aTitle} ↔ ${p.bTitle}` });
-          row.createEl("button", { cls: "trova-link-button", text: t("restore") }).addEventListener("click", () => {
-            this.plugin.store.setNotDuplicate(p.a, p.b, false);
-            void this.renderTask();
-          });
+          row
+            .createEl("button", { cls: "trova-link-button", text: t("restore") })
+            .addEventListener("click", () => {
+              this.plugin.store.setNotDuplicate(p.a, p.b, false);
+              void this.renderTask();
+            });
         }
       }
     }
@@ -441,10 +594,19 @@ export class VaultCareView extends ItemView {
    * their text; and Compare, the main action, as the round button between them.
    */
   private renderPair(pair: DuplicatePair): void {
-    const card = this.listEl.createDiv({ cls: "trova-care-card trova-care-pair", attr: { "data-pair": pairKey(pair.a, pair.b) } });
+    const card = this.listEl.createDiv({
+      cls: "trova-care-card trova-care-pair",
+      attr: { "data-pair": pairKey(pair.a, pair.b) },
+    });
     const top = card.createDiv({ cls: "trova-care-pair-top" });
-    top.createSpan({ cls: "trova-care-pill", text: t("similarity", { pct: Math.round(pair.similarity * 100) }) });
-    top.createSpan({ cls: "trova-care-meta", text: pair.kind === "block" ? t("kindSections") : t("kindWholeNotes") });
+    top.createSpan({
+      cls: "trova-care-pill",
+      text: t("similarity", { pct: Math.round(pair.similarity * 100) }),
+    });
+    top.createSpan({
+      cls: "trova-care-meta",
+      text: pair.kind === "block" ? t("kindSections") : t("kindWholeNotes"),
+    });
     const quiet = top.createDiv({ cls: "trova-care-quiet" });
     this.quiet(quiet, "eye-off", t("notDuplicate"), () => {
       this.plugin.store.setNotDuplicate(pair.a, pair.b, true);
@@ -457,19 +619,32 @@ export class VaultCareView extends ItemView {
     this.quiet(quiet, "link", t("linkThem"), () => void this.appendLink(pair.aPath, pair.bPath));
     const cols = card.createDiv({ cls: "trova-care-pair-cols" });
     const side = (id: string, path: string, title: string) => {
-      const el = cols.createDiv({ cls: "trova-care-note trova-care-side", attr: { tabindex: "0", role: "link" } });
+      const el = cols.createDiv({
+        cls: "trova-care-note trova-care-side",
+        attr: { tabindex: "0", role: "link" },
+      });
       el.createDiv({ cls: "trova-care-card-title", text: title });
       const heading = id.includes("#") ? id.slice(id.lastIndexOf("#") + 1) : "";
-      el.createDiv({ cls: "trova-care-meta", text: [folderOf(path) || "/", heading].filter(Boolean).join(" › ") });
+      el.createDiv({
+        cls: "trova-care-meta",
+        text: [folderOf(path) || "/", heading].filter(Boolean).join(" › "),
+      });
       this.snippetSlot(el, id, "trova-care-snippet");
       onOpen(el, (where) => void this.plugin.openById(id, where));
     };
     side(pair.a, pair.aPath, pair.aTitle);
     const mid = cols.createDiv({ cls: "trova-care-pair-mid" });
-    const compare = mid.createEl("button", { cls: "trova-care-compare", attr: { "aria-label": t("compareSideBySide") } });
+    const compare = mid.createEl("button", {
+      cls: "trova-care-compare",
+      attr: { "aria-label": t("compareSideBySide") },
+    });
     setIcon(compare, "columns-2");
     compare.addEventListener("click", () => void this.plugin.compare(pair.a, pair.b));
-    mid.createSpan({ cls: "trova-care-compare-label", text: t("compare"), attr: { "aria-hidden": "true" } });
+    mid.createSpan({
+      cls: "trova-care-compare-label",
+      text: t("compare"),
+      attr: { "aria-hidden": "true" },
+    });
     side(pair.b, pair.bPath, pair.bTitle);
   }
 
@@ -485,7 +660,12 @@ export class VaultCareView extends ItemView {
   }
 
   /** A low-key text button with an icon, for the actions that are not the main one. */
-  private quiet(parent: HTMLElement, icon: string, label: string, run: () => void): HTMLButtonElement {
+  private quiet(
+    parent: HTMLElement,
+    icon: string,
+    label: string,
+    run: () => void,
+  ): HTMLButtonElement {
     const b = parent.createEl("button", { cls: "trova-care-quiet-button" });
     setIcon(b.createSpan({ attr: { "aria-hidden": "true" } }), icon);
     b.appendText(label);
@@ -530,7 +710,10 @@ export class VaultCareView extends ItemView {
       before = content;
       return `${content.replace(/\s*$/, "")}\n\n${linkFor(this.app, toPath, undefined, fromPath)}\n`;
     });
-    this.confirm(t("linkedTo", { from: titleOf(fromPath), to: titleOf(toPath) }), () => void this.app.vault.modify(file, before));
+    this.confirm(
+      t("linkedTo", { from: titleOf(fromPath), to: titleOf(toPath) }),
+      () => void this.app.vault.modify(file, before),
+    );
   }
 
   // ---------- orphans ----------
@@ -548,24 +731,36 @@ export class VaultCareView extends ItemView {
       inPair.set(p.aPath, p);
       inPair.set(p.bPath, p);
     }
-    const rows = active.length ? this.listEl.createDiv({ cls: "trova-care-rows", attr: { role: "list" } }) : null;
-    for (const path of active.slice(0, MAX_ORPHANS)) this.renderOrphan(rows!, path, inPair.get(path));
+    const rows = active.length
+      ? this.listEl.createDiv({ cls: "trova-care-rows", attr: { role: "list" } })
+      : null;
+    for (const path of active.slice(0, MAX_ORPHANS))
+      this.renderOrphan(rows!, path, inPair.get(path));
     const foot = this.listEl.createDiv({ cls: "trova-care-foot" });
-    foot.createSpan({ text: active.length > MAX_ORPHANS ? t("moreOrphans", { n: active.length - MAX_ORPHANS }) : "" });
+    foot.createSpan({
+      text: active.length > MAX_ORPHANS ? t("moreOrphans", { n: active.length - MAX_ORPHANS }) : "",
+    });
     if (kept.length) {
-      foot.createEl("button", { cls: "trova-link-button", text: this.showDismissed ? t("hideDismissed") : t("showKept", { n: kept.length }) }).addEventListener("click", () => {
-        this.showDismissed = !this.showDismissed;
-        void this.renderTask();
-      });
+      foot
+        .createEl("button", {
+          cls: "trova-link-button",
+          text: this.showDismissed ? t("hideDismissed") : t("showKept", { n: kept.length }),
+        })
+        .addEventListener("click", () => {
+          this.showDismissed = !this.showDismissed;
+          void this.renderTask();
+        });
       if (this.showDismissed) {
         const list = this.listEl.createDiv({ cls: "trova-care-dismissed" });
         for (const path of kept) {
           const row = list.createDiv({ cls: "trova-care-dismissed-row" });
           row.createSpan({ text: titleOf(path) });
-          row.createEl("button", { cls: "trova-link-button", text: t("restore") }).addEventListener("click", () => {
-            this.plugin.store.setKeptUnlinked(this.plugin.sourceId(path), false);
-            void this.renderTask();
-          });
+          row
+            .createEl("button", { cls: "trova-link-button", text: t("restore") })
+            .addEventListener("click", () => {
+              this.plugin.store.setKeptUnlinked(this.plugin.sourceId(path), false);
+              void this.renderTask();
+            });
         }
       }
     }
@@ -582,18 +777,28 @@ export class VaultCareView extends ItemView {
     setIcon(row.createSpan({ cls: "trova-care-oicon", attr: { "aria-hidden": "true" } }), "unlink");
     const col = row.createDiv({ cls: "trova-care-ocol" });
     const top = col.createDiv({ cls: "trova-care-otop" });
-    const name = top.createDiv({ cls: "trova-care-oname trova-care-side", attr: { tabindex: "0", role: "link" } });
+    const name = top.createDiv({
+      cls: "trova-care-oname trova-care-side",
+      attr: { tabindex: "0", role: "link" },
+    });
     name.createSpan({ cls: "trova-care-card-title", text: titleOf(path) });
     name.createSpan({ cls: "trova-care-meta", text: ` · ${folderOf(path) || "/"}` });
     onOpen(name, (where) => void this.plugin.open({ path }, where));
     if (pair) {
-      const tag = top.createEl("button", { cls: "trova-care-tag", text: `${t("alsoDuplicate")} ›`, attr: { "aria-label": `${t("alsoDuplicate")}: ${t("viewPair")}` } });
+      const tag = top.createEl("button", {
+        cls: "trova-care-tag",
+        text: `${t("alsoDuplicate")} ›`,
+        attr: { "aria-label": `${t("alsoDuplicate")}: ${t("viewPair")}` },
+      });
       tag.addEventListener("click", () => void this.showPair(pair));
     }
     this.snippetSlot(col, this.plugin.sourceId(path), "trova-care-osnippet");
     const actions = col.createDiv({ cls: "trova-care-oactions" });
     const slot = actions.createDiv({ cls: "trova-care-oslot", attr: { "data-orphan": path } });
-    slot.createSpan({ cls: "trova-care-meta", text: this.plugin.engine.ready ? t("findingLink") : "" });
+    slot.createSpan({
+      cls: "trova-care-meta",
+      text: this.plugin.engine.ready ? t("findingLink") : "",
+    });
     if (this.plugin.engine.ready) this.observer?.observe(slot);
     this.quiet(actions, "eye-off", t("keepUnlinked"), () => {
       const source = this.plugin.sourceId(path);
@@ -611,7 +816,11 @@ export class VaultCareView extends ItemView {
    * list. Focus moves to the near-duplicates tile, as the link's own button is redrawn away.
    */
   private async showPair(pair: DuplicatePair): Promise<void> {
-    await this.leaf.setViewState({ type: CARE_VIEW, active: true, state: { group: "duplicates", pair: pairKey(pair.a, pair.b) } });
+    await this.leaf.setViewState({
+      type: CARE_VIEW,
+      active: true,
+      state: { group: "duplicates", pair: pairKey(pair.a, pair.b) },
+    });
     this.tilesEl.querySelector<HTMLElement>('[data-task="duplicates"]')?.focus();
   }
 
@@ -632,9 +841,13 @@ export class VaultCareView extends ItemView {
       while (this.suggestQueue.length && !signal?.aborted) {
         const { path, el } = this.suggestQueue.shift()!;
         await idle();
-        const view = await this.plugin.connections.related({ kind: "note", path }, signal, 10).catch(() => null);
+        const view = await this.plugin.connections
+          .related({ kind: "note", path }, signal, 10)
+          .catch(() => null);
         if (signal?.aborted) return;
-        const top = (view?.results ?? []).filter((r) => r.collection === this.plugin.collection && r.path.endsWith(".md")).slice(0, ORPHAN_SUGGESTIONS);
+        const top = (view?.results ?? [])
+          .filter((r) => r.collection === this.plugin.collection && r.path.endsWith(".md"))
+          .slice(0, ORPHAN_SUGGESTIONS);
         this.renderSuggestions(el, path, top);
       }
     } finally {
@@ -644,7 +857,8 @@ export class VaultCareView extends ItemView {
 
   private renderSuggestions(el: HTMLElement, orphan: string, top: Result[]): void {
     el.empty();
-    if (top.length === 0) return void el.createSpan({ cls: "trova-care-meta", text: t("noSuggestion") });
+    if (top.length === 0)
+      return void el.createSpan({ cls: "trova-care-meta", text: t("noSuggestion") });
     const split = el.createDiv({ cls: "trova-care-split" });
     // A long note name is cut with "…" to fit the row; the tooltip and the screen reader get it whole.
     const label = t("linkTo", { title: top[0]!.title });
@@ -658,11 +872,20 @@ export class VaultCareView extends ItemView {
     main.addEventListener("click", () => link(top[0]!));
     const rest = top.slice(1);
     if (!rest.length) return;
-    const more = split.createEl("button", { cls: "trova-care-split-more", attr: { "aria-label": t("moreSuggestions", { n: rest.length }), "aria-haspopup": "menu" } });
+    const more = split.createEl("button", {
+      cls: "trova-care-split-more",
+      attr: { "aria-label": t("moreSuggestions", { n: rest.length }), "aria-haspopup": "menu" },
+    });
     setIcon(more, "chevron-down");
     more.addEventListener("click", (e) =>
       showMenu(e, (menu) => {
-        for (const r of rest) menu.addItem((i) => i.setTitle(t("linkTo", { title: r.title })).setIcon("link").onClick(() => link(r)));
+        for (const r of rest)
+          menu.addItem((i) =>
+            i
+              .setTitle(t("linkTo", { title: r.title }))
+              .setIcon("link")
+              .onClick(() => link(r)),
+          );
       }),
     );
   }
@@ -672,7 +895,9 @@ export class VaultCareView extends ItemView {
   private async renderRediscover(signal: AbortSignal): Promise<void> {
     if (!this.plugin.settings.rediscover) {
       const box = this.empty("history", t("rediscoverOff"));
-      box.createEl("button", { text: t("openSetting") }).addEventListener("click", () => this.plugin.openSettings());
+      box
+        .createEl("button", { text: t("openSetting") })
+        .addEventListener("click", () => this.plugin.openSettings());
       return;
     }
     if (this.engineBanner()) return;
@@ -693,15 +918,28 @@ export class VaultCareView extends ItemView {
    * split next to the note being worked on.
    */
   private renderRediscoverCard(grid: HTMLElement, item: RediscoverItem): void {
-    const card = grid.createDiv({ cls: "trova-care-card trova-care-redis", attr: { role: "listitem" } });
+    const card = grid.createDiv({
+      cls: "trova-care-card trova-care-redis",
+      attr: { role: "listitem" },
+    });
     const head = card.createDiv({ cls: "trova-care-redis-head" });
-    setIcon(head.createSpan({ cls: "trova-care-rediscover-icon", attr: { "aria-hidden": "true" } }), "history");
-    const name = head.createDiv({ cls: "trova-care-redis-name trova-care-side", attr: { tabindex: "0", role: "link" } });
+    setIcon(
+      head.createSpan({ cls: "trova-care-rediscover-icon", attr: { "aria-hidden": "true" } }),
+      "history",
+    );
+    const name = head.createDiv({
+      cls: "trova-care-redis-name trova-care-side",
+      attr: { tabindex: "0", role: "link" },
+    });
     name.createDiv({ cls: "trova-care-card-title", text: item.title });
     name.createDiv({ cls: "trova-care-meta", text: folderOf(item.path) || "/" });
     onOpen(name, (where) => void this.plugin.open({ path: item.path }, where));
-    head.createSpan({ cls: "trova-care-redis-age", text: item.days === null ? t("notOpenedYet") : agoText(item.days) });
-    if (item.snippet) card.createDiv({ cls: "trova-care-redis-snippet", text: excerpt(item.snippet, 220) });
+    head.createSpan({
+      cls: "trova-care-redis-age",
+      text: item.days === null ? t("notOpenedYet") : agoText(item.days),
+    });
+    if (item.snippet)
+      card.createDiv({ cls: "trova-care-redis-snippet", text: excerpt(item.snippet, 220) });
     const foot = card.createDiv({ cls: "trova-care-redis-foot" });
     const why = foot.createDiv({ cls: "trova-care-redis-why" });
     why.createSpan({ cls: "trova-care-meta", text: t("relatedToRecent") });
@@ -709,6 +947,15 @@ export class VaultCareView extends ItemView {
     setIcon(chip.createSpan({ attr: { "aria-hidden": "true" } }), "file-text");
     chip.appendText(item.because);
     onOpen(chip, (where) => void this.plugin.open({ path: item.becausePath }, where));
-    this.quiet(foot, "columns-2", t("openBeside"), () => void this.plugin.openBeside(this.plugin.sourceId(item.path), { besidePath: item.becausePath, reuse: true }));
+    this.quiet(
+      foot,
+      "columns-2",
+      t("openBeside"),
+      () =>
+        void this.plugin.openBeside(this.plugin.sourceId(item.path), {
+          besidePath: item.becausePath,
+          reuse: true,
+        }),
+    );
   }
 }

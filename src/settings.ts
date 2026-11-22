@@ -113,5 +113,13 @@ export function pairKey(a: string, b: string): string {
 }
 
 export function defaultData(): TrovaData {
-  return { schema: 1, settings: { ...DEFAULT_SETTINGS }, pins: {}, hides: {}, filters: { connections: [] }, folderContext: {}, care: { notDuplicates: [], keepUnlinked: [] } };
+  return {
+    schema: 1,
+    settings: { ...DEFAULT_SETTINGS },
+    pins: {},
+    hides: {},
+    filters: { connections: [] },
+    folderContext: {},
+    care: { notDuplicates: [], keepUnlinked: [] },
+  };
 }

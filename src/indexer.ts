@@ -2,8 +2,19 @@
 // vault events, and forwards changes to the engine. Vault-wide work is chunked and yields to the
 // UI between chunks; it pauses while the user types.
 
-import { getAllTags, parseFrontMatterAliases, TFile, type App, type CachedMetadata } from "obsidian";
-import { countWords, globToRegExp, isExcludedByFrontmatter, titleFromPath } from "./contract/index.js";
+import {
+  getAllTags,
+  parseFrontMatterAliases,
+  TFile,
+  type App,
+  type CachedMetadata,
+} from "obsidian";
+import {
+  countWords,
+  globToRegExp,
+  isExcludedByFrontmatter,
+  titleFromPath,
+} from "./contract/index.js";
 import type { WorkerDoc } from "./worker/index.js";
 import type { WorkerHost } from "./worker/host.js";
 
@@ -17,13 +28,21 @@ export interface IndexerDeps {
   scope(): { include: string[]; exclude: string[] };
   /** True when the engine keeps its own index, so worker bodies edited later form the overlay. */
   engineIndexes(): boolean;
-  onChange(change: { changed?: string; deleted?: string; renamed?: { from: string; to: string } }): void;
+  onChange(change: {
+    changed?: string;
+    deleted?: string;
+    renamed?: { from: string; to: string };
+  }): void;
   onProgress(done: number, total: number): void;
 }
 
 export function idle(): Promise<void> {
   return new Promise((resolve) => {
-    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback;
+    const ric = (
+      window as unknown as {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void;
+      }
+    ).requestIdleCallback;
     if (ric) ric(() => resolve(), { timeout: 200 });
     else window.setTimeout(resolve, 0);
   });
@@ -43,7 +62,10 @@ export class VaultIndexer {
 
   refreshScope(): void {
     const scope = this.deps.scope();
-    const ignore = ((this.deps.app.vault as unknown as { getConfig?: (k: string) => unknown }).getConfig?.("userIgnoreFilters") as string[] | undefined) ?? [];
+    const ignore =
+      ((this.deps.app.vault as unknown as { getConfig?: (k: string) => unknown }).getConfig?.(
+        "userIgnoreFilters",
+      ) as string[] | undefined) ?? [];
     const toRe = (g: string) => {
       // Obsidian's excluded files are folder prefixes or /regex/ patterns.
       if (g.startsWith("/") && g.endsWith("/") && g.length > 2) {
@@ -55,14 +77,23 @@ export class VaultIndexer {
       }
       return globToRegExp(g);
     };
-    this.excludeRes = [...scope.exclude, ...ignore].filter((g) => g.trim()).map(toRe).filter((r): r is RegExp => r !== null);
+    this.excludeRes = [...scope.exclude, ...ignore]
+      .filter((g) => g.trim())
+      .map(toRe)
+      .filter((r): r is RegExp => r !== null);
     this.includeRes = scope.include.filter((g) => g.trim()).map((g) => globToRegExp(g));
   }
 
   /** Obsidian's excluded files, as globs the engine understands. */
   excludeGlobs(): string[] {
-    const ignore = ((this.deps.app.vault as unknown as { getConfig?: (k: string) => unknown }).getConfig?.("userIgnoreFilters") as string[] | undefined) ?? [];
-    return [...this.deps.scope().exclude, ...ignore.filter((g) => !(g.startsWith("/") && g.endsWith("/")))].filter((g) => g.trim());
+    const ignore =
+      ((this.deps.app.vault as unknown as { getConfig?: (k: string) => unknown }).getConfig?.(
+        "userIgnoreFilters",
+      ) as string[] | undefined) ?? [];
+    return [
+      ...this.deps.scope().exclude,
+      ...ignore.filter((g) => !(g.startsWith("/") && g.endsWith("/"))),
+    ].filter((g) => g.trim());
   }
 
   isExcluded(path: string, cache?: CachedMetadata | null): boolean {
@@ -77,7 +108,8 @@ export class VaultIndexer {
 
   private async calm(): Promise<void> {
     await idle();
-    while (Date.now() - this.lastInput < TYPING_PAUSE_MS && !this.stopped) await new Promise((r) => window.setTimeout(r, TYPING_PAUSE_MS));
+    while (Date.now() - this.lastInput < TYPING_PAUSE_MS && !this.stopped)
+      await new Promise((r) => window.setTimeout(r, TYPING_PAUSE_MS));
   }
 
   docFor(file: TFile): WorkerDoc {
@@ -90,14 +122,22 @@ export class VaultIndexer {
       path: file.path,
       title: titleFromPath(file.path),
       aliases: cache?.frontmatter ? (parseFrontMatterAliases(cache.frontmatter) ?? []) : [],
-      tags: cache ? [...new Set((getAllTags(cache) ?? []).map((t) => t.replace(/^#/, "").toLowerCase()))] : [],
-      links: Object.keys(metadataCache.resolvedLinks[file.path] ?? {}).filter((p) => p !== file.path),
+      tags: cache
+        ? [...new Set((getAllTags(cache) ?? []).map((t) => t.replace(/^#/, "").toLowerCase()))]
+        : [],
+      links: Object.keys(metadataCache.resolvedLinks[file.path] ?? {}).filter(
+        (p) => p !== file.path,
+      ),
       frontmatter,
       created: file.stat.ctime,
       modified: file.stat.mtime,
       wordCount: 0,
       excluded: this.isExcluded(file.path, cache),
-      headings: (cache?.headings ?? []).map((h) => ({ text: h.heading, level: h.level, offset: h.position.start.offset })),
+      headings: (cache?.headings ?? []).map((h) => ({
+        text: h.heading,
+        level: h.level,
+        offset: h.position.start.offset,
+      })),
     };
   }
 
@@ -119,7 +159,12 @@ export class VaultIndexer {
       await this.calm();
       if (!live()) return;
       const batch = notes.slice(i, i + BODY_BATCH);
-      const items = await Promise.all(batch.map(async (f) => ({ path: f.path, body: await app.vault.cachedRead(f).catch(() => "") })));
+      const items = await Promise.all(
+        batch.map(async (f) => ({
+          path: f.path,
+          body: await app.vault.cachedRead(f).catch(() => ""),
+        })),
+      );
       await worker.upsertBodies(items, false);
       if (!live()) return;
       this.progress.done = Math.min(notes.length, i + BODY_BATCH);

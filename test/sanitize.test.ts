@@ -18,7 +18,11 @@ describe("data.json checks", () => {
   });
 
   it("keeps sound data exactly", () => {
-    const sound = { ...defaultData(), pins: { "v:a.md": ["v:b.md"] }, care: { notDuplicates: ["v:a.md\nv:b.md"], keepUnlinked: ["v:x.md"] } };
+    const sound = {
+      ...defaultData(),
+      pins: { "v:a.md": ["v:b.md"] },
+      care: { notDuplicates: ["v:a.md\nv:b.md"], keepUnlinked: ["v:x.md"] },
+    };
     const { data, problems } = sanitizeData(JSON.parse(JSON.stringify(sound)));
     expect(problems).toEqual([]);
     expect(data).toEqual(sound);
@@ -26,7 +30,17 @@ describe("data.json checks", () => {
 
   it("repairs settings of the wrong type, out of range, or not among the choices", () => {
     const { data, problems } = sanitizeData({
-      settings: { vimKeys: "yes", graphLabels: 99, askDeepSeconds: Number.NaN, askMode: "turbo", typoTolerance: 1, includeGlobs: ["a/**", 3], fieldWeights: { filename: -1, body: 2 }, outsideFolders: [{ name: "x", path: "/x" }, "bad"], unknownKey: 1 },
+      settings: {
+        vimKeys: "yes",
+        graphLabels: 99,
+        askDeepSeconds: Number.NaN,
+        askMode: "turbo",
+        typoTolerance: 1,
+        includeGlobs: ["a/**", 3],
+        fieldWeights: { filename: -1, body: 2 },
+        outsideFolders: [{ name: "x", path: "/x" }, "bad"],
+        unknownKey: 1,
+      },
     });
     const s = data.settings;
     expect(s.vimKeys).toBe(DEFAULT_SETTINGS.vimKeys);
@@ -45,7 +59,13 @@ describe("data.json checks", () => {
     const { data } = sanitizeData({
       pins: { "v:a.md": ["v:b.md", 5], "v:c.md": "nope" },
       hides: "nope",
-      filters: { connections: [{ field: "tag", op: "eq", value: "x" }, { field: "tag", op: "nope", value: "x" }, null] },
+      filters: {
+        connections: [
+          { field: "tag", op: "eq", value: "x" },
+          { field: "tag", op: "nope", value: "x" },
+          null,
+        ],
+      },
       folderContext: { Inbox: "captures", Bad: 3 },
       care: { notDuplicates: ["v:a.md\nv:b.md", "not a pair", 7], keepUnlinked: "nope" },
     });
@@ -62,7 +82,9 @@ describe("data.json checks", () => {
     expect(clampSetting("restoreQuerySeconds", 0)).toBe(0);
     expect(clampSetting("vimKeys", 3)).toBe(3);
     // A clamped value passes the load check without a repair.
-    expect(sanitizeData({ settings: { httpApiPort: clampSetting("httpApiPort", 99_999) } }).problems).toEqual([]);
+    expect(
+      sanitizeData({ settings: { httpApiPort: clampSetting("httpApiPort", 99_999) } }).problems,
+    ).toEqual([]);
   });
 
   it("reads browser-storage values only when they fit", () => {
@@ -77,7 +99,12 @@ describe("data.json checks", () => {
 describe("DataStore with a damaged or unreadable file", () => {
   it("starts from the defaults when the file cannot be read, and leaves it alone without a copy", async () => {
     const save = vi.fn(async () => undefined);
-    const store = new DataStore({ load: async () => { throw new SyntaxError("Unexpected token"); }, save });
+    const store = new DataStore({
+      load: async () => {
+        throw new SyntaxError("Unexpected token");
+      },
+      save,
+    });
     await store.load();
     expect(store.loadFailed).toBe(true);
     expect(store.data).toEqual(defaultData());
@@ -87,7 +114,11 @@ describe("DataStore with a damaged or unreadable file", () => {
   it("copies a damaged file, then saves the repaired data once", async () => {
     const save = vi.fn(async () => undefined);
     const backup = vi.fn(async () => "data.backup-1.json");
-    const store = new DataStore({ load: async () => ({ settings: { graphLabels: "ten" } }), save, backup });
+    const store = new DataStore({
+      load: async () => ({ settings: { graphLabels: "ten" } }),
+      save,
+      backup,
+    });
     await store.load();
     expect(backup).toHaveBeenCalledOnce();
     expect(save).toHaveBeenCalledOnce();
@@ -108,7 +139,13 @@ describe("DataStore with a damaged or unreadable file", () => {
     vi.useFakeTimers();
     try {
       let calls = 0;
-      const store = new DataStore({ load: async () => null, save: async () => { calls++; if (calls === 1) throw new Error("disk full"); } });
+      const store = new DataStore({
+        load: async () => null,
+        save: async () => {
+          calls++;
+          if (calls === 1) throw new Error("disk full");
+        },
+      });
       await store.load();
       const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
       await expect(store.flush()).resolves.toBeUndefined();
@@ -128,14 +165,24 @@ describe("LocalState with damaged browser storage", () => {
       "trova-history": [{ query: "ok", mode: "auto", at: 1 }, { query: 3 }, "junk"],
       "trova-opened": { "a.md": 5, "b.md": "x" },
     };
-    const local = new LocalState({ load: (k) => values[k] ?? null, save: () => { throw new Error("quota"); } });
+    const local = new LocalState({
+      load: (k) => values[k] ?? null,
+      save: () => {
+        throw new Error("quota");
+      },
+    });
     expect(local.history()).toEqual([{ query: "ok", mode: "auto", at: 1 }]);
     expect(local.lastOpened("a.md")).toBe(5);
     expect(local.lastOpened("b.md")).toBeUndefined();
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     expect(() => local.set("x", 1)).not.toThrow();
     error.mockRestore();
-    const broken = new LocalState({ load: () => { throw new Error("no storage"); }, save: () => undefined });
+    const broken = new LocalState({
+      load: () => {
+        throw new Error("no storage");
+      },
+      save: () => undefined,
+    });
     expect(broken.history()).toEqual([]);
     expect(broken.get("anything")).toBeNull();
   });

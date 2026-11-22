@@ -4,7 +4,13 @@
 // in a list is dropped without losing the rest. Nothing here throws.
 
 import type { Filter, FilterOp } from "../contract/index.js";
-import { DEFAULT_SETTINGS, defaultData, type CareData, type TrovaData, type TrovaSettings } from "../settings.js";
+import {
+  DEFAULT_SETTINGS,
+  defaultData,
+  type CareData,
+  type TrovaData,
+  type TrovaSettings,
+} from "../settings.js";
 
 export interface Sanitized {
   data: TrovaData;
@@ -27,7 +33,9 @@ const CHOICES: Partial<Record<keyof TrovaSettings, readonly unknown[]>> = {
 };
 
 /** Numeric settings and the range each may take; a value outside it is clamped. */
-const RANGES: Partial<Record<keyof TrovaSettings, { min: number; max: number; integer?: boolean }>> = {
+const RANGES: Partial<
+  Record<keyof TrovaSettings, { min: number; max: number; integer?: boolean }>
+> = {
   restoreQuerySeconds: { min: 0, max: 86_400 },
   graphLabels: { min: 0, max: 10, integer: true },
   askDeepSeconds: { min: 1, max: 600 },
@@ -38,7 +46,9 @@ const RANGES: Partial<Record<keyof TrovaSettings, { min: number; max: number; in
 const FILTER_OPS: readonly FilterOp[] = ["eq", "ne", "lt", "lte", "gt", "gte", "contains", "in"];
 
 /** The range a numeric setting may take, or undefined when it has none. */
-export function settingRange(key: keyof TrovaSettings): { min: number; max: number; integer?: boolean } | undefined {
+export function settingRange(
+  key: keyof TrovaSettings,
+): { min: number; max: number; integer?: boolean } | undefined {
   return RANGES[key];
 }
 
@@ -92,12 +102,17 @@ function sanitizeSettings(raw: unknown, problems: string[]): TrovaSettings {
         continue;
       }
       if (key === "outsideFolders") {
-        const kept = value.filter((f): f is { name: string; path: string } => isObj(f) && isString(f["name"]) && isString(f["path"]));
-        if (kept.length !== value.length) problems.push(`settings.${key}: dropped ${value.length - kept.length} bad entries`);
+        const kept = value.filter(
+          (f): f is { name: string; path: string } =>
+            isObj(f) && isString(f["name"]) && isString(f["path"]),
+        );
+        if (kept.length !== value.length)
+          problems.push(`settings.${key}: dropped ${value.length - kept.length} bad entries`);
         target[key] = kept.map((f) => ({ name: f.name, path: f.path }));
       } else {
         const kept = value.filter(isString);
-        if (kept.length !== value.length) problems.push(`settings.${key}: dropped ${value.length - kept.length} bad entries`);
+        if (kept.length !== value.length)
+          problems.push(`settings.${key}: dropped ${value.length - kept.length} bad entries`);
         target[key] = kept;
       }
     } else if (key === "fieldWeights") {
@@ -109,7 +124,8 @@ function sanitizeSettings(raw: unknown, problems: string[]): TrovaSettings {
       for (const field of Object.keys(weights) as (keyof typeof weights)[]) {
         const w = value[field];
         if (typeof w === "number" && Number.isFinite(w) && w >= 0) weights[field] = w;
-        else if (field in value) problems.push(`settings.fieldWeights.${field}: unexpected value; using the default`);
+        else if (field in value)
+          problems.push(`settings.fieldWeights.${field}: unexpected value; using the default`);
       }
       target[key] = weights;
     }
@@ -146,17 +162,35 @@ function sanitizeFilters(raw: unknown, problems: string[]): Filter[] {
   const out: Filter[] = [];
   for (const f of raw) {
     const value = isObj(f) ? f["value"] : undefined;
-    const valueOk = isString(value) || (typeof value === "number" && Number.isFinite(value)) || (Array.isArray(value) && value.every(isString));
-    if (!isObj(f) || !isString(f["field"]) || !FILTER_OPS.includes(f["op"] as FilterOp) || !valueOk) {
+    const valueOk =
+      isString(value) ||
+      (typeof value === "number" && Number.isFinite(value)) ||
+      (Array.isArray(value) && value.every(isString));
+    if (
+      !isObj(f) ||
+      !isString(f["field"]) ||
+      !FILTER_OPS.includes(f["op"] as FilterOp) ||
+      !valueOk
+    ) {
       problems.push("filters.connections: dropped a bad filter");
       continue;
     }
-    out.push({ field: f["field"], op: f["op"] as FilterOp, value: value, ...(f["negate"] === true ? { negate: true } : {}) });
+    out.push({
+      field: f["field"],
+      op: f["op"] as FilterOp,
+      value: value,
+      ...(f["negate"] === true ? { negate: true } : {}),
+    });
   }
   return out;
 }
 
-function sanitizeStrings(raw: unknown, name: string, problems: string[], valid: (s: string) => boolean = () => true): string[] {
+function sanitizeStrings(
+  raw: unknown,
+  name: string,
+  problems: string[],
+  valid: (s: string) => boolean = () => true,
+): string[] {
   if (raw === undefined) return [];
   if (!Array.isArray(raw)) {
     problems.push(`${name}: not a list; cleared`);
@@ -172,10 +206,15 @@ function sanitizeCare(raw: unknown, problems: string[]): CareData {
     problems.push("care: not an object; cleared");
     return { notDuplicates: [], keepUnlinked: [] };
   }
-  const care = (raw ?? {});
+  const care = raw ?? {};
   return {
     // A pair key is two ids joined by a newline.
-    notDuplicates: sanitizeStrings(care["notDuplicates"], "care.notDuplicates", problems, (s) => s.split("\n").length === 2),
+    notDuplicates: sanitizeStrings(
+      care["notDuplicates"],
+      "care.notDuplicates",
+      problems,
+      (s) => s.split("\n").length === 2,
+    ),
     keepUnlinked: sanitizeStrings(care["keepUnlinked"], "care.keepUnlinked", problems),
   };
 }
@@ -184,7 +223,8 @@ function sanitizeCare(raw: unknown, problems: string[]): CareData {
 export function sanitizeData(raw: unknown): Sanitized {
   const problems: string[] = [];
   if (raw === null || raw === undefined) return { data: defaultData(), problems };
-  if (!isObj(raw)) return { data: defaultData(), problems: ["data.json: not an object; using the defaults"] };
+  if (!isObj(raw))
+    return { data: defaultData(), problems: ["data.json: not an object; using the defaults"] };
   const folderContext: Record<string, string> = {};
   if (raw["folderContext"] !== undefined) {
     if (isObj(raw["folderContext"])) {
@@ -202,7 +242,9 @@ export function sanitizeData(raw: unknown): Sanitized {
       settings: sanitizeSettings(raw["settings"], problems),
       pins: sanitizeIdMap(raw["pins"], "pins", problems),
       hides: sanitizeIdMap(raw["hides"], "hides", problems),
-      filters: { connections: sanitizeFilters(isObj(filters) ? filters["connections"] : undefined, problems) },
+      filters: {
+        connections: sanitizeFilters(isObj(filters) ? filters["connections"] : undefined, problems),
+      },
       folderContext,
       care: sanitizeCare(raw["care"], problems),
     },
@@ -212,7 +254,9 @@ export function sanitizeData(raw: unknown): Sanitized {
 
 /** A browser-storage number, or `fallback` when it is missing, not a finite number, or out of range. */
 export function storedNumber(value: unknown, min: number, max: number, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max ? value : fallback;
+  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max
+    ? value
+    : fallback;
 }
 
 /** A browser-storage boolean, or null when missing or not a boolean. */

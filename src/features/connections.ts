@@ -85,7 +85,10 @@ export class ConnectionsService {
 
   /** Pane filters from the settings and the persisted filter list. */
   private filters(): { filters: Filter[]; hideLinked: boolean } {
-    return { filters: this.deps.store.data.filters.connections, hideLinked: this.deps.settings().hideLinked };
+    return {
+      filters: this.deps.store.data.filters.connections,
+      hideLinked: this.deps.settings().hideLinked,
+    };
   }
 
   private async anchorText(a: Anchor): Promise<{ text: string; whole: string } | null> {
@@ -105,7 +108,12 @@ export class ConnectionsService {
     const pins = this.deps.store.pins(anchor);
     const pinned = new Set(pins);
     const settings = this.deps.settings();
-    const visible = results.filter((r) => !hidden.has(r.id) && !hidden.has(r.source) && (settings.showLoose || r.label !== "loose" || pinned.has(r.id)));
+    const visible = results.filter(
+      (r) =>
+        !hidden.has(r.id) &&
+        !hidden.has(r.source) &&
+        (settings.showLoose || r.label !== "loose" || pinned.has(r.id)),
+    );
     const top = visible.filter((r) => pinned.has(r.id));
     const rest = visible.filter((r) => !pinned.has(r.id));
     // A pinned result that the engine no longer returns still shows, without a score.
@@ -113,7 +121,18 @@ export class ConnectionsService {
       if (top.some((r) => r.id === id)) continue;
       const parsed = parseId(id);
       if (!parsed || hidden.has(id)) continue;
-      top.push({ id, source: parsed.source, path: parsed.path, title: parsed.path.split("/").pop()!.replace(/\.md$/, ""), collection: parsed.collection, snippet: "", highlights: [], scores: {}, matchedBy: [], label: "related" });
+      top.push({
+        id,
+        source: parsed.source,
+        path: parsed.path,
+        title: parsed.path.split("/").pop()!.replace(/\.md$/, ""),
+        collection: parsed.collection,
+        snippet: "",
+        highlights: [],
+        scores: {},
+        matchedBy: [],
+        label: "related",
+      });
     }
     return { results: [...top, ...rest], pinned };
   }
@@ -122,7 +141,13 @@ export class ConnectionsService {
     const hit = this.cache.get(anchorKey(a));
     if (!hit) return null;
     const { results, pinned } = this.decorate(a, hit.results);
-    return { state: "ok", anchor: a, results, stale: this.staleSources.has(this.anchorSource(a)), pinned };
+    return {
+      state: "ok",
+      anchor: a,
+      results,
+      stale: this.staleSources.has(this.anchorSource(a)),
+      pinned,
+    };
   }
 
   /**
@@ -130,7 +155,13 @@ export class ConnectionsService {
    * them. A note that is not embedded yet is embedded live from its text.
    */
   async related(a: Anchor, signal?: AbortSignal, limit = 30): Promise<RelatedView> {
-    const empty = (state: RelatedState): RelatedView => ({ state, anchor: a, results: [], stale: false, pinned: new Set() });
+    const empty = (state: RelatedState): RelatedView => ({
+      state,
+      anchor: a,
+      results: [],
+      stale: false,
+      pinned: new Set(),
+    });
     if (this.deps.isExcluded(a.path)) return empty("excluded");
     const text = await this.anchorText(a);
     if (!text) return empty("noNote");
@@ -156,26 +187,50 @@ export class ConnectionsService {
       loose: settings.showLoose,
     };
     const edited = hit !== undefined && hit.hash !== hash;
-    const anchorId = a.kind === "block" ? { block: blockId(source, a.headingPath) } : a.kind === "note" ? { source } : { text: a.text.slice(0, 8000) };
+    const anchorId =
+      a.kind === "block"
+        ? { block: blockId(source, a.headingPath) }
+        : a.kind === "note"
+          ? { source }
+          : { text: a.text.slice(0, 8000) };
     let res = await this.deps.engine.related({ ...base, anchor: anchorId }, signal).catch((err) => {
-      if ((err as { code?: string }).code === "not_found") return { anchorIndexed: false, results: [] };
+      if ((err as { code?: string }).code === "not_found")
+        return { anchorIndexed: false, results: [] };
       throw err;
     });
     let live = false;
     if (!res.anchorIndexed && a.kind !== "selection") {
       // Not embedded yet: embed the text live.
       live = true;
-      res = await this.deps.engine.related({ ...base, anchor: { text: text.text.slice(0, 8000) }, exclude: { ...base.exclude, sources: [source] } }, signal);
+      res = await this.deps.engine.related(
+        {
+          ...base,
+          anchor: { text: text.text.slice(0, 8000) },
+          exclude: { ...base.exclude, sources: [source] },
+        },
+        signal,
+      );
       if (!res.anchorIndexed) return empty("notIndexed");
     }
     this.cache.set(key, { hash, results: res.results });
     if (!live && !edited) this.staleSources.delete(source);
     const { results, pinned } = this.decorate(a, res.results);
-    return { state: "ok", anchor: a, results, stale: live || this.staleSources.has(source), pinned };
+    return {
+      state: "ok",
+      anchor: a,
+      results,
+      stale: live || this.staleSources.has(source),
+      pinned,
+    };
   }
 
   /** Strong matches for one section, for the inline badges. */
-  async strongBlocks(path: string, headingPath: string, headings: string[], signal?: AbortSignal): Promise<Result[]> {
+  async strongBlocks(
+    path: string,
+    headingPath: string,
+    headings: string[],
+    signal?: AbortSignal,
+  ): Promise<Result[]> {
     const view = await this.related({ kind: "block", path, headingPath, headings }, signal, 20);
     if (view.state !== "ok") return [];
     return view.results.filter((r) => r.label === "strong");

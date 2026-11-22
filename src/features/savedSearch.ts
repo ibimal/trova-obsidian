@@ -19,8 +19,10 @@ export function parseSavedSearch(source: string): SavedSearch {
   const queryLines: string[] = [];
   for (const line of source.split("\n")) {
     const m = /^\s*(limit|mode)\s*:\s*(\S+)\s*$/i.exec(line);
-    if (m && m[1]!.toLowerCase() === "limit" && /^\d+$/.test(m[2]!)) out.limit = Math.max(1, Math.min(100, Number(m[2])));
-    else if (m && m[1]!.toLowerCase() === "mode" && /^(instant|ask)$/i.test(m[2]!)) out.mode = m[2]!.toLowerCase() as "instant" | "ask";
+    if (m && m[1]!.toLowerCase() === "limit" && /^\d+$/.test(m[2]!))
+      out.limit = Math.max(1, Math.min(100, Number(m[2])));
+    else if (m && m[1]!.toLowerCase() === "mode" && /^(instant|ask)$/i.test(m[2]!))
+      out.mode = m[2]!.toLowerCase() as "instant" | "ask";
     else if (line.trim()) queryLines.push(line.trim());
   }
   out.query = queryLines.join(" ");
@@ -71,15 +73,22 @@ class SavedSearchChild extends MarkdownRenderChild {
     let results: Result[] = [];
     try {
       const { api } = this.plugin;
-      const stream = this.search.mode === "ask" ? api.ask(this.search.query, { signal: abort.signal, limit: this.search.limit }) : api.search(this.search.query, { signal: abort.signal, limit: this.search.limit });
+      const stream =
+        this.search.mode === "ask"
+          ? api.ask(this.search.query, { signal: abort.signal, limit: this.search.limit })
+          : api.search(this.search.query, { signal: abort.signal, limit: this.search.limit });
       for await (const batch of stream) {
         if (abort.signal.aborted) return;
-        if (batch.stage !== "vec" || this.search.mode === "ask") results = batch.results.length ? batch.results : results;
+        if (batch.stage !== "vec" || this.search.mode === "ask")
+          results = batch.results.length ? batch.results : results;
         this.render(results, !batch.final);
       }
     } catch (err) {
       if (abort.signal.aborted) return;
-      if (!hit) this.containerEl.setText(this.plugin.engine.ready ? (err as Error).message : t("needsEngine"));
+      if (!hit)
+        this.containerEl.setText(
+          this.plugin.engine.ready ? (err as Error).message : t("needsEngine"),
+        );
       return;
     }
     this.cache.set(key, { at: Date.now(), results });
@@ -91,22 +100,32 @@ class SavedSearchChild extends MarkdownRenderChild {
     el.empty();
     el.addClass("trova-saved");
     const head = el.createDiv({ cls: "trova-saved-head" });
-    head.createSpan({ cls: "trova-saved-query", text: `${this.search.mode === "ask" ? "? " : ""}${this.search.query}` });
+    head.createSpan({
+      cls: "trova-saved-query",
+      text: `${this.search.mode === "ask" ? "? " : ""}${this.search.query}`,
+    });
     if (refining) head.createSpan({ cls: "trova-badge trova-badge-refining", text: t("refining") });
-    if (results.length === 0) return void el.createDiv({ cls: "trova-empty", text: t("noMatches") });
+    if (results.length === 0)
+      return void el.createDiv({ cls: "trova-empty", text: t("noMatches") });
     const list = el.createEl("ul");
     for (const r of results.slice(0, this.search.limit)) {
       const li = list.createEl("li");
       const heading = r.block?.headings[r.block.headings.length - 1];
-      const link = li.createEl("a", { cls: "internal-link", text: r.title + (heading ? ` › ${heading}` : ""), href: r.path });
+      const link = li.createEl("a", {
+        cls: "internal-link",
+        text: r.title + (heading ? ` › ${heading}` : ""),
+        href: r.path,
+      });
       link.dataset["href"] = heading ? `${r.path}#${heading}` : r.path;
       onOpen(link, (where) => void this.plugin.openResult(r, where, this.search.query));
       // Reading view opens any clicked internal link too, which would open the note twice. This
       // list opens the result itself, at the match; hover previews still come from reading view.
-      for (const type of ["click", "auxclick"]) link.addEventListener(type, (e) => e.stopPropagation());
+      for (const type of ["click", "auxclick"])
+        link.addEventListener(type, (e) => e.stopPropagation());
       const folder = folderOf(r.path);
       if (folder) li.createSpan({ cls: "trova-row-path", text: ` ${folder}` });
-      if (r.snippet) renderHighlighted(li.createDiv({ cls: "trova-row-snippet" }), r.snippet, r.highlights);
+      if (r.snippet)
+        renderHighlighted(li.createDiv({ cls: "trova-row-snippet" }), r.snippet, r.highlights);
     }
     void this.sourcePath;
   }

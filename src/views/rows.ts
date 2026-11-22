@@ -15,8 +15,14 @@ export function strengthLevel(label: Label): 1 | 2 | 3 {
  * reads without colour; the accessible name carries the label and, when known, the similarity.
  */
 export function renderMeter(parent: HTMLElement, label: Label, similarity?: number): HTMLElement {
-  const name = similarity === undefined ? labelText(label) : `${labelText(label)} · ${t("whySimilarity", { score: similarity.toFixed(2) })}`;
-  const meter = parent.createSpan({ cls: "trova-meter3", attr: { role: "img", "aria-label": name, "data-level": String(strengthLevel(label)) } });
+  const name =
+    similarity === undefined
+      ? labelText(label)
+      : `${labelText(label)} · ${t("whySimilarity", { score: similarity.toFixed(2) })}`;
+  const meter = parent.createSpan({
+    cls: "trova-meter3",
+    attr: { role: "img", "aria-label": name, "data-level": String(strengthLevel(label)) },
+  });
   for (let i = 1; i <= 3; i++) meter.createSpan({ cls: "trova-meter3-bar" });
   return meter;
 }
@@ -27,11 +33,22 @@ function rowsIn(list: HTMLElement): HTMLElement[] {
 }
 
 /** Moves focus to the row `step` rows away from `from`, staying at the ends. */
-export function moveFocus(list: HTMLElement, from: HTMLElement | null, step: number): HTMLElement | null {
+export function moveFocus(
+  list: HTMLElement,
+  from: HTMLElement | null,
+  step: number,
+): HTMLElement | null {
   const rows = rowsIn(list);
   if (rows.length === 0) return null;
   const at = from ? rows.indexOf(from) : -1;
-  const next = rows[at === -1 ? (step > 0 ? 0 : rows.length - 1) : Math.max(0, Math.min(rows.length - 1, at + step))]!;
+  const next =
+    rows[
+      at === -1
+        ? step > 0
+          ? 0
+          : rows.length - 1
+        : Math.max(0, Math.min(rows.length - 1, at + step))
+    ]!;
   next.focus();
   next.scrollIntoView({ block: "nearest" });
   return next;

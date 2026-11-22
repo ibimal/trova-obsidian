@@ -27,7 +27,15 @@ export interface BasketItem {
 function isBasketItem(v: unknown): v is BasketItem {
   if (typeof v !== "object" || v === null) return false;
   const i = v as Record<string, unknown>;
-  return typeof i["key"] === "string" && typeof i["path"] === "string" && typeof i["title"] === "string" && ["note", "block", "neighbours"].includes(i["kind"] as string) && (i["headingPath"] === undefined || typeof i["headingPath"] === "string") && (i["headings"] === undefined || (Array.isArray(i["headings"]) && i["headings"].every((h) => typeof h === "string")));
+  return (
+    typeof i["key"] === "string" &&
+    typeof i["path"] === "string" &&
+    typeof i["title"] === "string" &&
+    ["note", "block", "neighbours"].includes(i["kind"] as string) &&
+    (i["headingPath"] === undefined || typeof i["headingPath"] === "string") &&
+    (i["headings"] === undefined ||
+      (Array.isArray(i["headings"]) && i["headings"].every((h) => typeof h === "string")))
+  );
 }
 
 export function itemKey(path: string, headingPath?: string, neighbours = false): string {
@@ -35,14 +43,20 @@ export function itemKey(path: string, headingPath?: string, neighbours = false):
 }
 
 /** Reads the items' files asynchronously and in parallel, and merges duplicates and overlaps. */
-export async function piecesFor(app: App, items: BasketItem[], onProgress?: (done: number, total: number) => void, signal?: AbortSignal): Promise<ContextPiece[]> {
+export async function piecesFor(
+  app: App,
+  items: BasketItem[],
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal,
+): Promise<ContextPiece[]> {
   const texts = new Map<string, string>();
   const paths = [...new Set(items.map((i) => i.path))];
   let done = 0;
   await Promise.all(
     paths.map(async (path) => {
       const file = app.vault.getAbstractFileByPath(path);
-      if (file instanceof TFile && file.extension === "md") texts.set(path, await app.vault.cachedRead(file));
+      if (file instanceof TFile && file.extension === "md")
+        texts.set(path, await app.vault.cachedRead(file));
       onProgress?.(++done, paths.length);
     }),
   );
@@ -69,11 +83,17 @@ export async function piecesFor(app: App, items: BasketItem[], onProgress?: (don
       end = last.end;
       headings = first.headings;
     }
-    raw.push({ path: item.path, title: item.title, headings, start, end, content: text.slice(start, end) });
+    raw.push({
+      path: item.path,
+      title: item.title,
+      headings,
+      start,
+      end,
+      content: text.slice(start, end),
+    });
   }
   return mergePieces(raw, (path) => texts.get(path));
 }
-
 
 export class Basket {
   items: BasketItem[];
@@ -99,10 +119,19 @@ export class Basket {
   }
 
   /** Adds a note or a block. Returns false when it is already in the basket. */
-  add(path: string, block?: { headingPath: string; headings: string[] }, neighbours = false): boolean {
+  add(
+    path: string,
+    block?: { headingPath: string; headings: string[] },
+    neighbours = false,
+  ): boolean {
     const key = itemKey(path, block?.headingPath, neighbours);
     if (this.items.some((i) => i.key === key)) return false;
-    const item: BasketItem = { key, path, title: titleFromPath(path), kind: block ? (neighbours ? "neighbours" : "block") : "note" };
+    const item: BasketItem = {
+      key,
+      path,
+      title: titleFromPath(path),
+      kind: block ? (neighbours ? "neighbours" : "block") : "note",
+    };
     if (block) {
       item.headingPath = block.headingPath;
       item.headings = block.headings;
@@ -155,11 +184,17 @@ export class Basket {
     return added;
   }
 
-  pieces(onProgress?: (done: number, total: number) => void, signal?: AbortSignal): Promise<ContextPiece[]> {
+  pieces(
+    onProgress?: (done: number, total: number) => void,
+    signal?: AbortSignal,
+  ): Promise<ContextPiece[]> {
     return piecesFor(this.app, this.items, onProgress, signal);
   }
 
-  async assemble(format: ContextFormat, onProgress?: (done: number, total: number) => void): Promise<{ text: string; tokens: number }> {
+  async assemble(
+    format: ContextFormat,
+    onProgress?: (done: number, total: number) => void,
+  ): Promise<{ text: string; tokens: number }> {
     const pieces = await this.pieces(onProgress);
     return { text: formatContext(pieces, format), tokens: contextTokens(pieces) };
   }
