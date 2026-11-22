@@ -145,7 +145,7 @@ export function hasCjk(text: string): boolean {
 /** Maximum edits typo rescue allows for a word, or 0 when the word is never corrected. */
 export function typoMaxEdits(word: string, userMax: 0 | 1 | 2 = 1): number {
   if (userMax === 0 || hasCjk(word)) return 0;
-  const len = [...word].length;
+  const len = Array.from(word).length;
   if (len < TYPO_MIN_WORD_LENGTH) return 0;
   if (len >= TYPO_TWO_EDITS_MIN_LENGTH) return 2;
   return userMax === 2 ? 2 : 1;
