@@ -97,7 +97,8 @@ export class InstantModal extends Modal {
   private inFileText = "";
   private noFuzzy = false;
   private cancelSkeleton: (() => void) | null = null;
-  private uid = `trova-${Math.random().toString(36).slice(2, 8)}`;
+  /** Links the modal's elements for screen readers; unique per modal. */
+  private uid = `trova-${crypto.randomUUID().slice(0, 8)}`;
   /** Position in the query history while the user walks it with Alt+Up and Alt+Down; -1 is the live query. */
   private historyAt = -1;
   private draft = "";
