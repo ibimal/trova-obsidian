@@ -6,6 +6,7 @@ All notable changes to the Trova plugin for Obsidian. Versions follow [semantic 
 
 - Vault care's near-duplicates and the topic map show only this vault's notes. One engine serves every vault on the computer and scans all of them together, so a second vault's notes could appear in these lists. The topic map's clusters and labels are still computed from all vaults together.
 - Instant search's spelling correction shows the word as you would write it. It showed the index's shortened form instead, such as "coffe" for "coffee", when the word appeared in the matching note only as a folder name.
+- The status bar no longer shows a finished job as running, such as "Trova 27 / 50" after the topic map was built. The engine sends no event when a background job ends, so the plugin now reads the engine's status once progress events stop.
 - The README leads with what Trova does, in short workflows with screenshots. The build and release steps moved to `CONTRIBUTING.md`.
 
 ## 0.1.3

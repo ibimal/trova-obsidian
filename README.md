@@ -17,7 +17,7 @@
 
 2. In Obsidian, open **Settings → Community plugins → Browse**, search for **Trova**, choose **Install**, then **Enable**.
 
-3. The welcome screen shows what Trova will index. Click **Start**. Instant search works at once. Related notes and Ask follow when the first index is done, which takes a few minutes for most vaults.
+3. The welcome screen shows what Trova will index. Click **Start**. Instant search works at once. Related notes and Ask follow when the first index is done; the status bar shows its progress.
 
 <img src="https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/welcome.png" alt="The welcome screen: the engine was found, 24 notes will be indexed, and a Start button." width="600">
 
@@ -57,9 +57,13 @@ The **Context basket** gathers whole notes and single sections. Add them from In
 
 ### Explore your vault visually
 
-The **similarity graph** puts the active note in the centre, with its related notes around it and lines between the notes that are similar to each other. Shift-click a note to add its own related notes, and double-click it to open it. The **topic map** groups the whole vault by topic on one canvas that pans and zooms, even with thousands of notes.
+The **similarity graph** puts the active note in the centre, with its related notes around it and lines between the notes that are similar to each other. Shift-click a note to add its own related notes, and double-click it to open it.
 
 ![The similarity graph around "Pour-over recipe": coffee notes on one side and sourdough notes on the other.](https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/similarity-graph.png)
+
+The **topic map** shows the whole vault at once. Notes about the same topic sit close together, each group has its own colour, and words shared by its notes name it. Click a dot to see the note, double-click to open it, and scroll to zoom; the map stays fast with thousands of notes.
+
+![The topic map of a small vault: four coloured groups named "coffee · recipe · baking", "travel · japan · list", "reading · habits · learning" and "project · projects · home".](https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/topic-map.png)
 
 ### And more
 
