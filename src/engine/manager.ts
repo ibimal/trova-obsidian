@@ -73,6 +73,11 @@ const MODEL_WATCH_MAX_MS = 60 * 60 * 1000;
 const MODEL_WATCH_IDLE_POLLS = 3;
 /** Polls to wait for a queued download to start. */
 const MODEL_WATCH_START_POLLS = 30;
+/**
+ * How long after the last progress event the status is read again. The engine sends no event when
+ * a background job, such as the topic map, ends, so the status read is what clears the progress.
+ */
+export const PROGRESS_SETTLE_MS = 2000;
 
 export interface Endpoint {
   base: string;
@@ -133,6 +138,7 @@ export class EngineManager {
   private unsupported = new Set<string>();
   private keepAlive: number | null = null;
   private modelWatch: number | null = null;
+  private progressSettle: number | null = null;
   private allCollections: string[] = [];
 
   constructor(private host: EngineHost) {}
@@ -381,6 +387,7 @@ export class EngineManager {
           total: Number(e.data["total"] ?? 0),
         },
       });
+      this.settleProgress();
     } else if (e.event === "index.ready") {
       this.set({ progress: undefined });
       void this.refreshStatus();
@@ -393,6 +400,21 @@ export class EngineManager {
       void this.refreshStatus();
     }
     this.emitEvent(e);
+  }
+
+  /**
+   * Reads the status once progress events stop, and again while a job is still listed, until the
+   * engine lists none; refreshStatus then clears the progress. Each progress event restarts it.
+   */
+  private settleProgress(): void {
+    if (this.progressSettle) window.clearTimeout(this.progressSettle);
+    this.progressSettle = window.setTimeout(() => {
+      this.progressSettle = null;
+      void this.refreshStatus().then((status) => {
+        if (status && status.jobs.length > 0 && !this.stopped && !this.progressSettle)
+          this.settleProgress();
+      });
+    }, PROGRESS_SETTLE_MS);
   }
 
   async refreshStatus(): Promise<IndexStatus | undefined> {
@@ -414,7 +436,13 @@ export class EngineManager {
     if (this.syncTimer) window.clearTimeout(this.syncTimer);
     if (this.keepAlive) window.clearInterval(this.keepAlive);
     if (this.modelWatch) window.clearInterval(this.modelWatch);
-    this.retryTimer = this.syncTimer = this.keepAlive = this.modelWatch = null;
+    if (this.progressSettle) window.clearTimeout(this.progressSettle);
+    this.retryTimer =
+      this.syncTimer =
+      this.keepAlive =
+      this.modelWatch =
+      this.progressSettle =
+        null;
     // A download the plugin no longer follows is not shown as running.
     if (this.snapshot.deepDownload) this.set({ deepDownload: undefined });
     this.eventsAbort?.abort();

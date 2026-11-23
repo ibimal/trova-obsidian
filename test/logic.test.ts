@@ -9,6 +9,7 @@ import { rankLinkSuggestions } from "../src/editor/linkSuggest.js";
 import {
   EngineManager,
   MODEL_WATCH_MS,
+  PROGRESS_SETTLE_MS,
   RETRY_SCHEDULE_MS,
   ownIds,
   type EngineSnapshot,
@@ -483,6 +484,32 @@ describe("engine lifecycle", () => {
     expect(topics.clusters.map((c) => [c.id, c.sources.map((s) => s.id)])).toEqual([
       [1, ["v1:a.md"]],
     ]);
+  });
+  it("clears a background job's progress once the engine lists no job, as no event says it ended", async () => {
+    vi.useFakeTimers();
+    try {
+      const m = new EngineManager(host());
+      const inner = m as unknown as {
+        client: unknown;
+        onEngineEvent(e: { event: string; data: Record<string, unknown> }): void;
+      };
+      let jobs = [{ kind: "topics" }];
+      inner.client = { json: async () => ({ jobs }) };
+      inner.onEngineEvent({
+        event: "index.progress",
+        data: { kind: "topics", done: 27, total: 50 },
+      });
+      expect(m.snapshot.progress).toEqual({ kind: "topics", done: 27, total: 50 });
+      // While the engine still lists the job, the progress stays and the status is read again.
+      await vi.advanceTimersByTimeAsync(PROGRESS_SETTLE_MS);
+      expect(m.snapshot.progress).toBeDefined();
+      jobs = [];
+      await vi.advanceTimersByTimeAsync(PROGRESS_SETTLE_MS);
+      expect(m.snapshot.progress).toBeUndefined();
+      m.stop();
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it("sums up the two Deep models: ready, missing, or downloading with the average progress", () => {
     const m = new EngineManager(host());
