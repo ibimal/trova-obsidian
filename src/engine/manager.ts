@@ -562,27 +562,36 @@ export class EngineManager {
   }
   /**
    * Near-duplicate pairs within this vault's collections. One engine serves every vault on the
-   * computer and scans all of them, so pairs from other vaults are left out.
+   * computer. An engine with `scopedAnalysis` scans only the collections sent; an older one scans
+   * all of them, so pairs from other vaults are left out here as well.
    */
   async duplicates(start: boolean): Promise<DuplicatesResponse> {
     const res = await this.call<DuplicatesResponse>(
-      () => this.client!.json(start ? "POST" : "GET", "/v1/duplicates", start ? {} : undefined),
+      () => this.analysis("/v1/duplicates", start),
       "duplicates",
     );
     const own = ownIds(this.collections());
     return { ...res, pairs: res.pairs.filter((p) => own(p.a) && own(p.b)) };
   }
-  /** Topic clusters with only this vault's notes, for the same reason as duplicates. */
+  /**
+   * Topic clusters of this vault's notes. With `scopedAnalysis`, the engine clusters and labels
+   * only this vault's collections. An older engine clusters every vault together, so other
+   * vaults' notes are left out here, but their words can still be in the labels.
+   */
   async topics(start: boolean): Promise<TopicsResponse> {
-    const res = await this.call<TopicsResponse>(
-      () => this.client!.json(start ? "POST" : "GET", "/v1/topics", start ? {} : undefined),
-      "topics",
-    );
+    const res = await this.call<TopicsResponse>(() => this.analysis("/v1/topics", start), "topics");
     const own = ownIds(this.collections());
     const clusters = (res.clusters ?? [])
       .map((c) => ({ ...c, sources: c.sources.filter((s) => own(s.id)) }))
       .filter((c) => c.sources.length > 0);
     return { ...res, clusters };
+  }
+  /** Starts (POST) or reads (GET) one analysis, for this vault's collections when the engine can. */
+  private analysis<T>(path: string, start: boolean): Promise<T> {
+    const collections = this.has("scopedAnalysis") ? this.collections() : [];
+    if (start) return this.client!.json("POST", path, collections.length ? { collections } : {});
+    const query = collections.map((c) => `collection=${encodeURIComponent(c)}`).join("&");
+    return this.client!.json("GET", query ? `${path}?${query}` : path);
   }
   /** Starts the Deep-model download and follows it until the models are ready. */
   async downloadModels(): Promise<{ jobId: string }> {

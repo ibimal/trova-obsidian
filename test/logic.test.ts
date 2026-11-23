@@ -511,6 +511,50 @@ describe("engine lifecycle", () => {
       vi.useRealTimers();
     }
   });
+  it("sends this vault's collections to an engine with scopedAnalysis, and none to an older one", async () => {
+    const m = new EngineManager(host());
+    const inner = m as unknown as {
+      client: unknown;
+      allCollections: string[];
+      set(s: object): void;
+    };
+    inner.allCollections = ["v1", "out dir"];
+    const calls: [string, string, unknown][] = [];
+    inner.client = {
+      json: async (method: string, path: string, body?: unknown) => {
+        calls.push([method, path, body]);
+        return path.startsWith("/v1/duplicates")
+          ? { state: "done", pairs: [] }
+          : { state: "done", clusters: [] };
+      },
+    };
+    const run = async () => {
+      calls.length = 0;
+      await m.duplicates(true);
+      await m.duplicates(false);
+      await m.topics(true);
+      await m.topics(false);
+      return calls;
+    };
+    inner.set({ state: "ready", status: { capabilities: ["duplicates", "topics"] } });
+    expect(await run()).toEqual([
+      ["POST", "/v1/duplicates", {}],
+      ["GET", "/v1/duplicates", undefined],
+      ["POST", "/v1/topics", {}],
+      ["GET", "/v1/topics", undefined],
+    ]);
+    inner.set({
+      state: "ready",
+      status: { capabilities: ["duplicates", "topics", "scopedAnalysis"] },
+    });
+    const query = "collection=v1&collection=out%20dir";
+    expect(await run()).toEqual([
+      ["POST", "/v1/duplicates", { collections: ["v1", "out dir"] }],
+      ["GET", `/v1/duplicates?${query}`, undefined],
+      ["POST", "/v1/topics", { collections: ["v1", "out dir"] }],
+      ["GET", `/v1/topics?${query}`, undefined],
+    ]);
+  });
   it("sums up the two Deep models: ready, missing, or downloading with the average progress", () => {
     const m = new EngineManager(host());
     const withModels = (rerank: object, expand: object) => {

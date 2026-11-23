@@ -7,7 +7,7 @@
  * fields, new capabilities. A new major version gets new paths (/v2) and is announced in `apis`.
  * docs/api.md in github.com/ibimal/trova states the rules.
  */
-export const API_VERSION = "1.1";
+export const API_VERSION = "1.2";
 export const API_MAJOR = 1;
 
 /** The answer to GET /health, which needs no token. */
@@ -249,7 +249,9 @@ export type Capability =
   | "attachments"
   | "duplicates"
   | "topics"
-  | "graph";
+  | "graph"
+  /** The duplicates and topics endpoints take `collections` and keep one result per collection set. Added in API 1.2. */
+  | "scopedAnalysis";
 
 export type JobKind = "sync" | "embed" | "duplicates" | "topics" | "models";
 export type JobState = "queued" | "running" | "paused" | "done" | "failed" | "cancelled";
@@ -323,6 +325,16 @@ export interface AttachmentTextRequest {
   collection: string;
   path: string;
   text: string;
+}
+
+/**
+ * The body of POST /v1/duplicates and POST /v1/topics. GET takes the same collections as repeated
+ * `collection` query parameters. Without collections, the analysis covers every collection.
+ * The engine computes and keeps one result for each set of collections. Added in API 1.2, with the
+ * `scopedAnalysis` capability; an older engine ignores the field and analyses every collection.
+ */
+export interface AnalysisRequest {
+  collections?: string[];
 }
 
 /** Extension: background near-duplicate scan. */
