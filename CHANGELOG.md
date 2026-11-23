@@ -2,7 +2,7 @@
 
 All notable changes to the Trova plugin for Obsidian. Versions follow [semantic versioning](https://semver.org).
 
-## Unreleased
+## 0.1.4
 
 - Vault care's near-duplicates and the topic map show only this vault's notes. One engine serves every vault on the computer and scans all of them together, so a second vault's notes could appear in these lists. With `trova-cli` 0.2.0 or later (engine API 1.2), the plugin asks the engine to scan only this vault's collections, so the topic map's clusters and labels come from this vault's notes alone, and one vault's scan no longer replaces another's. With an older engine, the clusters and labels are still computed from all vaults together. The contract copy is updated to API 1.2.
 - Instant search's spelling correction shows the word as you would write it. It showed the index's shortened form instead, such as "coffe" for "coffee", when the word appeared in the matching note only as a folder name.
