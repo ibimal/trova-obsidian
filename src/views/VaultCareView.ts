@@ -37,6 +37,8 @@ const MAX_PAIRS = 200;
 const MAX_ORPHANS = 300;
 /** How long the Undo bar stays after an action. */
 const UNDO_MS = 8000;
+/** How long a restored scroll position waits for the list to grow tall enough for it. */
+const SCROLL_RESTORE_MS = 3000;
 
 interface RediscoverItem {
   path: string;
@@ -324,10 +326,30 @@ export class VaultCareView extends ItemView {
     void drawing?.then(() => drawing === this.rendering && this.applyScroll());
   }
 
+  /**
+   * Restores the scroll position. Parts of the list, such as an orphan's suggestions, arrive after
+   * the drawing, and the browser clamps a position the page is not yet tall enough for. So the
+   * position is applied again on each frame until the page reaches it, for at most
+   * SCROLL_RESTORE_MS, and never after the user scrolls, clicks or types in the page.
+   */
   private applyScroll(): void {
     if (!this.loaded || this.pendingScroll === null) return;
-    this.pageEl.scrollTop = this.pendingScroll;
+    const target = this.pendingScroll;
     this.pendingScroll = null;
+    const page = this.pageEl;
+    const until = Date.now() + SCROLL_RESTORE_MS;
+    let userMoved = false;
+    const stop = () => (userMoved = true);
+    const events = ["wheel", "pointerdown", "keydown", "touchstart"] as const;
+    for (const e of events) page.addEventListener(e, stop, { once: true, passive: true });
+    const step = () => {
+      if (!userMoved && this.loaded) page.scrollTop = target;
+      const done =
+        userMoved || !this.loaded || Math.abs(page.scrollTop - target) < 1 || Date.now() > until;
+      if (!done) return void window.requestAnimationFrame(step);
+      for (const e of events) page.removeEventListener(e, stop);
+    };
+    step();
   }
 
   /** Shows one task and focuses its tile, for the "Open Rediscover" command and the arrow keys. */
