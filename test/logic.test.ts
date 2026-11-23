@@ -6,7 +6,12 @@ import {
   type SearchRequest,
 } from "../src/contract/index.js";
 import { rankLinkSuggestions } from "../src/editor/linkSuggest.js";
-import { EngineManager, RETRY_SCHEDULE_MS, type EngineSnapshot } from "../src/engine/manager.js";
+import {
+  EngineManager,
+  MODEL_WATCH_MS,
+  RETRY_SCHEDULE_MS,
+  type EngineSnapshot,
+} from "../src/engine/manager.js";
 import { rowToResult } from "../src/features/api.js";
 import { parseSavedSearch } from "../src/features/savedSearch.js";
 import {
@@ -453,6 +458,62 @@ describe("engine lifecycle", () => {
       state: "downloading",
       progress: 0.75,
     });
+  });
+  it("follows a Deep-model download until the models are ready, or marks it failed", async () => {
+    vi.useFakeTimers();
+    try {
+      const follow = (steps: [string, number?][]) => {
+        const m = new EngineManager(host());
+        const set = (state: string, progress?: number) =>
+          (m as unknown as { set(s: object): void }).set({
+            status: {
+              models: {
+                embed: { state: "ready" },
+                rerank: { state, progress },
+                expand: { state, progress },
+              },
+            },
+          });
+        let i = 0;
+        const polls = vi.fn(async () => {
+          const [state, progress] = steps[Math.min(i++, steps.length - 1)]!;
+          set(state, progress);
+          return undefined;
+        });
+        (m as unknown as { refreshStatus: () => Promise<undefined> }).refreshStatus = polls;
+        set("missing");
+        (m as unknown as { watchModelDownload(): void }).watchModelDownload();
+        return { m, polls };
+      };
+      // Downloads, then the models are ready: no longer followed, and polling stops.
+      const done = follow([["downloading", 0.5], ["downloading", 0.9], ["ready"]]);
+      expect(done.m.snapshot.deepDownload).toBe("running");
+      await vi.advanceTimersByTimeAsync(MODEL_WATCH_MS);
+      expect(done.m.deepModels()).toEqual({ state: "downloading", progress: 0.5 });
+      await vi.advanceTimersByTimeAsync(MODEL_WATCH_MS * 2);
+      expect(done.m.snapshot.deepDownload).toBeUndefined();
+      const calls = done.polls.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(MODEL_WATCH_MS * 5);
+      expect(done.polls.mock.calls.length).toBe(calls);
+      // Starts, then stops partway: failed after three polls without progress.
+      const stopped = follow([["downloading", 0.3], ["missing"]]);
+      await vi.advanceTimersByTimeAsync(MODEL_WATCH_MS * 3);
+      expect(stopped.m.snapshot.deepDownload).toBe("running");
+      await vi.advanceTimersByTimeAsync(MODEL_WATCH_MS);
+      expect(stopped.m.snapshot.deepDownload).toBe("failed");
+      // Queued but never started: failed after 30 polls.
+      const never = follow([["missing"]]);
+      await vi.advanceTimersByTimeAsync(MODEL_WATCH_MS * 29);
+      expect(never.m.snapshot.deepDownload).toBe("running");
+      await vi.advanceTimersByTimeAsync(MODEL_WATCH_MS);
+      expect(never.m.snapshot.deepDownload).toBe("failed");
+      // Stopping the manager stops following.
+      const quit = follow([["downloading", 0.1]]);
+      quit.m.stop();
+      expect(quit.m.snapshot.deepDownload).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it("status bar text follows the states table", () => {
     const idle = { done: 0, total: 0, running: false };

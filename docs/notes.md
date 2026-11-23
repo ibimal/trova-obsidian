@@ -5,7 +5,7 @@ The plugin implements a written features and API specification that is not publi
 ## Deviations from the spec
 
 - **Bases.** Obsidian's Bases API has no way to register custom functions. `trova_score()` and `trova_related()` ship as a Bases view named "Trova related" with a Score column and a Related column.
-- **Related notes are ordered by the similarity shown.** The engine ranks a related note by its best section's similarity plus a bonus for each further matching section, as the spec defines. The pane shows the best section's similarity, so it orders by that and uses the engine's score only to break ties; otherwise the list would look out of order.
+- **Related notes are ordered by the similarity shown.** The engine ranks a related note by its best section's similarity plus a bonus for each further matching section, as the spec defines. The pane shows the best section's similarity, so it orders by that and uses the engine's score only to break ties; otherwise the list would look out of order. Every plugin surface uses this order: the pane, the footer, Vault care, Ask's related answers, the Bases view, the public API and the local HTTP API. The engine's own `related` command, MCP tool and HTTP endpoint keep the spec's ranking.
 - **Ask lives in the Connections pane.** The spec has separate Connections and Ask panes. They share one pane: with an empty search box it lists related notes; a typed question replaces them with answers, and Esc goes back.
 
 ## Additions beyond the spec

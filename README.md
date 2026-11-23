@@ -5,7 +5,7 @@ Trova searches your vault by keyword and by meaning, on your own machine. It add
 ## What it does
 
 - **Instant search.** A search modal that answers as you type, with typo correction, exact words, phrases, `in:title` and exclusions. Alt+Up and Alt+Down walk through earlier queries.
-- **Connections and Ask.** A side pane that lists the notes and sections related to the active note, or to the text you select. Type a question in its search box and it answers with the passages that match, ranked by keyword and meaning; Esc goes back to the related notes.
+- **Connections and Ask.** A side pane that lists the notes and sections related to the active note, or to the text you select, most similar first. Type a question in its search box and it answers with the passages that match, ranked by keyword and meaning; Esc goes back to the related notes.
 - **Similarity graph.** The active note, its related notes and the links between them on one canvas. A smaller copy sits in a drawer at the bottom of the Connections pane.
 - **Context basket.** Collect notes and sections, then copy them as one block of text, for example to paste into an AI chat. It shows the estimated token count.
 - **Vault care.** Near-duplicate notes, orphan notes and a daily Rediscover pick (off until you turn it on in the settings), in one tab. "Not a duplicate" and "Keep unlinked" are remembered, with Undo.
@@ -38,7 +38,7 @@ The plugin starts the engine when the vault opens, so the welcome screen can sho
 
 ## Commands
 
-Open the command palette and type "Trova". You can give any command a hotkey under Settings → Hotkeys; the plugin sets none itself.
+Open the command palette and type "Trova". You can give any command a hotkey under Settings → Hotkeys; the plugin sets none itself. After the first index, a notice suggests hotkeys for Instant search and Ask that no other command uses.
 
 | Command                                                                     | What it does                                               |
 | --------------------------------------------------------------------------- | ---------------------------------------------------------- |

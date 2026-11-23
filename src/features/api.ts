@@ -17,6 +17,7 @@ import {
 import type TrovaPlugin from "../main.js";
 import { QueryController, type InstantState, type Row } from "../query/controller.js";
 import { itemKey, piecesFor, type BasketItem } from "./basket.js";
+import { bySimilarity } from "./connections.js";
 
 export interface Opts {
   signal?: AbortSignal;
@@ -174,7 +175,8 @@ export function createApi(plugin: TrovaPlugin): TrovaApi {
         },
         opts?.signal,
       );
-      return res.results;
+      // The same order as the Connections pane: by the similarity a result shows.
+      return bySimilarity(res.results);
     },
 
     async score(a, b, opts) {

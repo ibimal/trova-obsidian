@@ -10,6 +10,7 @@ import {
   TFile,
   normalizePath,
   type Editor,
+  type Hotkey,
   type WorkspaceLeaf,
 } from "obsidian";
 import {
@@ -58,20 +59,7 @@ import { StatusBar } from "./views/StatusBar.js";
 import { TOPIC_VIEW, TopicMapView } from "./views/TopicMapView.js";
 import { CARE_VIEW, VaultCareView, type CareGroup } from "./views/VaultCareView.js";
 import { startInline, startWorker, type WorkerHost } from "./worker/host.js";
-
-/** The hotkeys the finish notice suggests, as Obsidian's modifier names. */
-const SUGGESTED_HOTKEYS: ["cmdInstant" | "cmdInFile" | "cmdAsk", string[]][] = [
-  ["cmdInstant", ["Mod", "Shift", "O"]],
-  ["cmdInFile", ["Mod", "Alt", "F"]],
-  ["cmdAsk", ["Mod", "Shift", "A"]],
-];
-
-/** A key as this platform writes it: ⌘ ⇧ ⌥ on macOS, Ctrl, Shift and Alt elsewhere. */
-function keyLabel(key: string): string {
-  const mac: Record<string, string> = { Mod: "⌘", Shift: "⇧", Alt: "⌥" };
-  const other: Record<string, string> = { Mod: "Ctrl" };
-  return (Platform.isMacOS ? mac[key] : other[key]) ?? key;
-}
+import { SUGGESTED_HOTKEYS, hotkeyKeys, hotkeyRows, type HotkeyRow } from "./hotkeys.js";
 
 class PromptModal extends Modal {
   constructor(
@@ -862,13 +850,17 @@ export default class TrovaPlugin extends Plugin {
         embedded: embedded.toLocaleString(),
       }),
     });
-    el.createDiv({ cls: "trova-finish-label", text: t("hotkeysTitle") });
-    const list = el.createDiv({ cls: "trova-finish-keys" });
-    for (const [command, keys] of SUGGESTED_HOTKEYS) {
-      const row = list.createDiv({ cls: "trova-finish-key" });
-      row.createSpan({ text: t(command) });
-      const combo = row.createSpan({ cls: "trova-finish-combo" });
-      for (const key of keys) combo.createEl("kbd", { text: keyLabel(key) });
+    const rows = this.hotkeyRows();
+    if (rows.length) {
+      el.createDiv({ cls: "trova-finish-label", text: t("hotkeysTitle") });
+      const list = el.createDiv({ cls: "trova-finish-keys" });
+      for (const row of rows) {
+        const line = list.createDiv({ cls: "trova-finish-key" });
+        line.createSpan({ text: t(row.label) });
+        const combo = line.createSpan({ cls: "trova-finish-combo" });
+        for (const key of hotkeyKeys(row.hotkey, Platform.isMacOS))
+          combo.createEl("kbd", { text: key });
+      }
     }
     const button = el.createEl("button", { cls: "mod-cta", text: t("setHotkeys") });
     button.addEventListener("click", (e) => {
@@ -876,6 +868,30 @@ export default class TrovaPlugin extends Plugin {
       notice.hide();
       this.openHotkeys();
     });
+  }
+
+  /**
+   * The hotkeys the finish notice shows: each command's own hotkey when it has one, else the
+   * suggestion when no other command uses it. Obsidian's hotkey manager is not public API; without
+   * it, nothing is suggested.
+   */
+  private hotkeyRows(): HotkeyRow[] {
+    const manager = (
+      this.app as unknown as {
+        hotkeyManager?: {
+          defaultKeys?: Record<string, Hotkey[]>;
+          customKeys?: Record<string, Hotkey[]>;
+        };
+      }
+    ).hotkeyManager;
+    if (!manager?.defaultKeys) return [];
+    return hotkeyRows(
+      this.manifest.id,
+      SUGGESTED_HOTKEYS,
+      manager.defaultKeys,
+      manager.customKeys ?? {},
+      Platform.isMacOS,
+    );
   }
 
   /** Opens Settings → Hotkeys, filtered to Trova's commands when Obsidian allows it. */

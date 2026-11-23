@@ -5,9 +5,10 @@ All notable changes to the Trova plugin for Obsidian. Versions follow [semantic 
 ## 0.1.3
 
 - Downloading the Deep models from the Ask pane shows the download's progress, and the question runs again in Deep mode by itself when the models are ready. If the download stops, the pane says so and offers to try again.
-- Related notes are ordered by the similarity the pane shows. The engine's ranking adds a bonus for further matching sections, which made the list look out of order; it now only breaks ties.
+- Related notes are ordered by the similarity the pane shows, everywhere the plugin lists them: the Connections pane, the footer, Vault care, Ask's related answers, the Bases view, the public API and the local HTTP API. The engine's ranking adds a bonus for further matching sections, which made the list look out of order; it now only breaks ties.
 - The Note, Section and Selection tabs are drawn from the theme's own colours: a track like the search field, and the selected tab in the accent-tinted highlight Obsidian uses for active items.
 - The notice at the end of the first index is clearer: what was indexed, the suggested hotkeys with this platform's key symbols, and a Set hotkeys button that opens the Hotkeys settings filtered to Trova's commands.
+- The notice suggests only Cmd+Shift+O for Instant search and Cmd+Shift+A for Ask (Ctrl on Windows and Linux), and only when no command already uses the combination. A command that already has a hotkey shows its own. The In-file search suggestion is gone, because Cmd+Alt+F is Obsidian's Find and replace.
 - The README describes installing and updating from Obsidian's community plugins.
 
 ## 0.1.2

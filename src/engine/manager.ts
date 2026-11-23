@@ -409,6 +409,8 @@ export class EngineManager {
     if (this.keepAlive) window.clearInterval(this.keepAlive);
     if (this.modelWatch) window.clearInterval(this.modelWatch);
     this.retryTimer = this.syncTimer = this.keepAlive = this.modelWatch = null;
+    // A download the plugin no longer follows is not shown as running.
+    if (this.snapshot.deepDownload) this.set({ deepDownload: undefined });
     this.eventsAbort?.abort();
     this.client = null;
   }

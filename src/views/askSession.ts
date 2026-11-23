@@ -32,6 +32,7 @@ import {
   skeletonAfter,
   type OpenIn,
 } from "../ui.js";
+import { bySimilarity } from "../features/connections.js";
 
 export type AskMode = "auto" | "fast" | "deep";
 
@@ -99,6 +100,8 @@ export class AskSession {
   final = true;
   private note: ResultBatch["note"];
   private ranMode: "fast" | "deep" | undefined;
+  /** The question that already ran again after the Deep models became ready. */
+  private rerunFor = "";
   private expansions: { type: Lane; query: string }[] = [];
   private neighbours = new Map<string, DocumentBody>();
   private error: string | null = null;
@@ -362,7 +365,8 @@ export class AskSession {
         abort.signal,
       );
       if (abort.signal.aborted) return;
-      this.results = res.results;
+      // The same order as the Connections pane: by the similarity each answer shows.
+      this.results = bySimilarity(res.results);
     } catch (err) {
       // A newer search cancelled this one; its state is not this one's to finish.
       if (abort.signal.aborted) return;
@@ -587,8 +591,11 @@ export class AskSession {
    */
   engineChanged(): void {
     if (this.note !== "model_missing" || !this.question) return;
-    if (this.plugin.engine.deepModels().state === "ready")
+    // Once per question: if the engine still lacks the models after the rerun, do not loop.
+    if (this.plugin.engine.deepModels().state === "ready" && this.rerunFor !== this.question) {
+      this.rerunFor = this.question;
       return void this.run(this.question, { mode: "deep", record: false, label: this.label });
+    }
     this.host.changed();
   }
 
