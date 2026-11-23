@@ -2,6 +2,11 @@
 
 All notable changes to the Trova plugin for Obsidian. Versions follow [semantic versioning](https://semver.org).
 
+## Unreleased
+
+- Vault care's near-duplicates and the topic map show only this vault's notes. One engine serves every vault on the computer and scans all of them together, so a second vault's notes could appear in these lists. The topic map's clusters and labels are still computed from all vaults together.
+- The README leads with what Trova does, in short workflows with screenshots. The build and release steps moved to `CONTRIBUTING.md`.
+
 ## 0.1.3
 
 - Downloading the Deep models from the Ask pane shows the download's progress, and the question runs again in Deep mode by itself when the models are ready. If the download stops, the pane says so and offers to try again.

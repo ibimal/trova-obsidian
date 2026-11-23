@@ -1,44 +1,103 @@
 # Trova for Obsidian
 
-Trova searches your vault by keyword and by meaning, on your own machine. It adds four surfaces on one local index: Instant search, a Connections and Ask pane, a Context basket, and Vault care. Semantic search comes from the [Trova engine](https://github.com/ibimal/trova) (`trova-cli`), a separate program that runs on your computer.
+[![Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=downloads&query=%24%5B%22trova%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json)](https://community.obsidian.md/plugins/trova)
+[![Latest release](https://img.shields.io/github/v/release/ibimal/trova-obsidian?sort=semver)](https://github.com/ibimal/trova-obsidian/releases/latest)
 
-## What it does
+**Find notes by what they mean, not only by the words in them.** Trova shows the notes related to the one you are writing, answers questions from your vault, and finds notes you forgot you had. Everything runs on your own computer, and your notes never leave it.
 
-- **Instant search.** A search modal that answers as you type, with typo correction, exact words, phrases, `in:title` and exclusions. Alt+Up and Alt+Down walk through earlier queries.
-- **Connections and Ask.** A side pane that lists the notes and sections related to the active note, or to the text you select, most similar first. Type a question in its search box and it answers with the passages that match, ranked by keyword and meaning; Esc goes back to the related notes.
-- **Similarity graph.** The active note, its related notes and the links between them on one canvas. A smaller copy sits in a drawer at the bottom of the Connections pane.
-- **Context basket.** Collect notes and sections, then copy them as one block of text, for example to paste into an AI chat. It shows the estimated token count.
-- **Vault care.** Near-duplicate notes, orphan notes and a daily Rediscover pick (off until you turn it on in the settings), in one tab. "Not a duplicate" and "Keep unlinked" are remembered, with Undo.
-- **Topic map.** Your notes grouped by topic on a canvas that pans and zooms with thousands of notes.
-- **Bases view.** A Bases view named "Trova related" adds a similarity Score column and a Related column.
+![The Connections pane beside a coffee recipe. It lists related notes, most similar first; the top one is expanded to show the matching passage, and a small graph below shows how the notes connect.](https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/connections.png)
 
-## Requirements
+## Quick start
 
-- Obsidian 1.13.4 or later, on a computer. This version is desktop only: Obsidian on phones and tablets does not offer it.
-- For everything except Instant search: the Trova engine, `trova-cli`, on the same computer. It needs Node 22 or later; Node 24 is the verified version.
-- The plugin and the engine are checked on macOS on Apple Silicon. Windows and Linux are not tested yet.
-
-Without the engine, Instant search still works from the plugin's own keyword index, and Ask falls back to keyword matches and says so. Related notes, semantic results, the similarity graph, the topic map and the near-duplicate scan need the engine.
-
-## Install
-
-1. Install the engine:
+1. Install the Trova engine, the program that does the searching. It needs [Node.js](https://nodejs.org) 22 or later. In a terminal, run:
 
    ```bash
    npm install -g trova-cli
    ```
 
-2. Install the plugin: in Obsidian, open Settings → Community plugins → Browse, search for "Trova", choose Install, then Enable. Its page in Obsidian's directory is [community.obsidian.md/plugins/trova](https://community.obsidian.md/plugins/trova).
+2. In Obsidian, open **Settings → Community plugins → Browse**, search for **Trova**, choose **Install**, then **Enable**.
 
-   To install it by hand instead, download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/ibimal/trova-obsidian/releases/latest), put them in `<vault>/.obsidian/plugins/trova/`, and enable Trova under Settings → Community plugins.
+3. The welcome screen shows what Trova will index. Click **Start**. Instant search works at once. Related notes and Ask follow when the first index is done, which takes a few minutes for most vaults.
 
-The plugin looks for `trova` on your `PATH` and in the usual install folders. If it does not find it, set the path under Settings → Trova → Engine binary path.
+<img src="https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/welcome.png" alt="The welcome screen: the engine was found, 24 notes will be indexed, and a Start button." width="600">
 
-The plugin starts the engine when the vault opens, so the welcome screen can show what will be indexed and whether the models still need downloading. Nothing is indexed or downloaded until you click Start. "Continue without engine" disconnects the plugin, which then does not start the engine again until you choose "Show welcome screen"; an engine it already started exits by itself after 30 minutes with no client.
+When the first index is done, a notice suggests hotkeys for Instant search and Ask. It suggests only combinations that no other command uses.
+
+## What you can do
+
+### Find any note as you type
+
+Open **Instant search** from the command palette, or with its hotkey. Results update with each key you press. Trova corrects misspelled words, and you can search for exact words, phrases and `in:title`, or leave words out with `-word`. Press Enter to open a note. The hints at the bottom list the other keys, such as inserting a link or adding the note to the Context basket.
+
+![Typing "sourdogh startr" in Instant search: Trova shows results for "sourdough starter" and offers the original spelling as a link.](https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/instant-search.gif)
+
+### See what's related while you write
+
+The **Connections** pane lists the notes most similar to the one you are reading, most similar first. The bars show how close each note is. Expand a note to see the passage that matches. Switch to **Section** for notes related to the part of the note at your cursor, or to **Selection** for the text you have selected. The graph at the bottom shows how the related notes connect to each other.
+
+The notes do not need links between them, because Trova compares what they say. In the picture at the top, a coffee recipe finds the notes from a coffee class, although neither note links to the other.
+
+### Ask your vault a question
+
+Type a question in the Connections pane's search box and press Enter. Trova answers with the passages that match best, ranked by keyword and by meaning. Press Enter again for a **Deep** search, which reads the best passages more closely and ranks them again. Deep search needs an extra download of about 1.7 GB, which Trova asks you about first. Esc goes back to the related notes.
+
+![The question "is the rail pass worth it for Tokyo to Kyoto?" answered with the passage from the note "Japan rail pass" at the top.](https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/ask.png)
+
+### Collect context for an AI chat
+
+The **Context basket** gathers whole notes and single sections. Add them from Instant search, from the Connections pane, or with the "Add current note" and "Add section at cursor" commands. The basket shows the estimated token count. Copy everything as Markdown, XML or plain text and paste it into the AI chat you use, or save it as a new note.
+
+<img src="https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/basket.png" alt="The Context basket with four travel notes, about 360 tokens, and buttons to copy them as Markdown, XML or plain text." width="420">
+
+### Tidy your vault
+
+**Vault care** finds near-duplicate notes, so you can compare them side by side, link them or merge them. It also lists orphan notes, which no other note links to, with suggestions for where they belong. If you turn on **Rediscover** in the settings, Vault care also picks old notes each day that are related to what you are working on now. Your choices, such as "Not a duplicate" and "Keep unlinked", are remembered, with Undo.
+
+![Vault care found one near-duplicate pair: "Pour-over recipe" and its copy "Pour-over recipe 1", 99% similar, with Compare, Not a duplicate and Link them.](https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/vault-care.png)
+
+### Explore your vault visually
+
+The **similarity graph** puts the active note in the centre, with its related notes around it and lines between the notes that are similar to each other. Shift-click a note to add its own related notes, and double-click it to open it. The **topic map** groups the whole vault by topic on one canvas that pans and zooms, even with thousands of notes.
+
+![The similarity graph around "Pour-over recipe": coffee notes on one side and sourdough notes on the other.](https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/similarity-graph.png)
+
+### And more
+
+- **Bases:** a view named "Trova related" adds a similarity Score column and a Related column to a base.
+- **Folders outside the vault:** add them under **Settings → Trova → Outside folders**, and Instant search shows their files too. They open in your default app.
+- **Text in images:** with the Text Extractor plugin installed, Trova also searches the text in your image attachments.
+- **A local HTTP API** for your own scripts, off by default.
+
+## Requirements
+
+- Obsidian 1.13.4 or later, on a desktop computer. Obsidian on phones and tablets is not supported yet.
+- The Trova engine, `trova-cli`, on the same computer, with Node.js 22 or later. Node 24 is the tested version.
+- Trova is tested on macOS on Apple Silicon. Windows and Linux are not tested yet.
+
+Without the engine, Instant search still works from the plugin's own keyword index, and Ask falls back to keyword matches and says so. Related notes, meaning-based results, the graphs and the near-duplicate scan need the engine.
+
+The plugin looks for `trova` on your `PATH` and in the usual install folders. If it does not find it, set the path under **Settings → Trova → Engine binary path**.
+
+## Privacy
+
+Trova works entirely on your computer.
+
+- **Your notes stay on your computer.** The plugin talks only to the engine on your own computer (`127.0.0.1`), with a token that only your user account can read.
+- **The engine downloads its models once,** from Hugging Face, after you click Start: about 330 MB, and about 1.7 GB more for Deep search, which it downloads only after you confirm. The models have their own licences, listed in the [engine's README](https://github.com/ibimal/trova#models).
+- **No telemetry.** The plugin and the engine collect no usage data and send nothing anywhere.
+
+Obsidian also asks plugins to state these things:
+
+- **It reads the files in your vault.** To build its index, the plugin lists the files in the vault and reads the text of the notes and attachments it indexes. It skips the folders you exclude, notes with `trova: false` in their frontmatter, and Obsidian's own excluded files.
+- **Files outside the vault:** only if you add folders under **Settings → Trova → Outside folders**. The engine then indexes those folders too.
+- **It runs a separate program.** The plugin starts the `trova` engine that you installed, as a background process. It never downloads or installs programs itself.
+- **Clipboard:** the plugin only writes to the clipboard, when you choose a copy action: copying the basket, links, a saved search, the debug info or the install command. It never reads the clipboard.
+- **Optional local HTTP API:** off by default. When you turn it on, the plugin serves read-only search, Ask and related-notes endpoints on `127.0.0.1`, protected by a token shown in the settings.
+- **Image text:** if the Text Extractor plugin is installed and image attachments are indexed, Trova asks it for the text in your images and sends that text to the engine.
 
 ## Commands
 
-Open the command palette and type "Trova". You can give any command a hotkey under Settings → Hotkeys; the plugin sets none itself. After the first index, a notice suggests hotkeys for Instant search and Ask that no other command uses.
+Open the command palette and type "Trova". You can give any command a hotkey under **Settings → Hotkeys**; the plugin sets none itself.
 
 | Command                                                                     | What it does                                               |
 | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
@@ -55,11 +114,13 @@ Open the command palette and type "Trova". You can give any command a hotkey und
 | Reindex now, Pause or resume indexing                                       | Control the index                                          |
 | Show welcome screen                                                         | Show the first-run screen again                            |
 
-All settings are under Settings → Trova, and Obsidian's settings search finds each of them.
+All settings are under **Settings → Trova**, and Obsidian's settings search finds each of them.
+
+**Where notes open.** Every list and graph follows Obsidian's own rule. A click opens a note in the current tab; with Cmd (Ctrl on Windows and Linux) in a new tab, with Cmd+Alt in a split, and with Cmd+Alt+Shift in a new window. A middle-click opens a new tab. Enter takes the same modifiers in Instant search, the Connections pane, Vault care and the two graphs. The similarity graph, Vault care and the topic map keep their state in the tab's history, so Back returns to them as they were. To keep one of them in place while notes open beside it, pin its tab.
 
 ## Update
 
-Obsidian updates the plugin: Settings → Community plugins → Check for updates. Update the engine in a terminal:
+Obsidian updates the plugin: **Settings → Community plugins → Check for updates**. Update the engine in a terminal:
 
 ```bash
 npm install -g trova-cli@latest
@@ -67,39 +128,26 @@ npm install -g trova-cli@latest
 
 If the plugin needs a newer engine, the welcome screen says so and shows this command.
 
+To install the plugin by hand instead, download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/ibimal/trova-obsidian/releases/latest), put them in `<vault>/.obsidian/plugins/trova/`, and enable Trova under **Settings → Community plugins**.
+
+## Troubleshooting
+
+- **The welcome screen says the engine is not installed, but it is.** Obsidian started from the Dock does not see your terminal's `PATH`. The plugin also searches the usual install folders. If it still misses `trova`, run `which trova` (`where trova` on Windows) in a terminal and paste the result under **Settings → Trova → Engine binary path**.
+- **The engine does not start, or stops.** Run `trova doctor` in a terminal. It checks the Node version, SQLite, the models and the index. Node 22.12.0 crashes in the SQLite library the engine uses; update Node.
+- **Something else.** Click Trova in the status bar. When the engine is off or has failed, the popover has a "Copy debug info" button. Paste its output into a [GitHub issue](https://github.com/ibimal/trova-obsidian/issues).
+
+The plugin starts the engine when the vault opens, so the welcome screen can show what will be indexed. Nothing is indexed or downloaded until you click Start. "Continue without engine" disconnects the plugin, which then does not start the engine again until you choose "Show welcome screen". An engine that the plugin started exits by itself after 30 minutes with no client.
+
 ## Uninstall
 
-1. Disable and uninstall Trova under Settings → Community plugins.
+1. Disable and uninstall Trova under **Settings → Community plugins**.
 2. Remove the engine:
 
    ```bash
    npm uninstall -g trova-cli
    ```
 
-3. Delete the engine's index, `~/.cache/trova/`. The models are in qmd's model cache, `~/.cache/qmd/models/`; delete them too, unless you also use [qmd](https://github.com/tobi/qmd) itself, which shares that folder.
-
-## Troubleshooting
-
-- **The welcome screen says the engine is not installed, but it is.** Obsidian started from the Dock does not see your terminal's `PATH`. The plugin also searches the usual install folders; if it still misses `trova`, run `which trova` (`where trova` on Windows) in a terminal and paste the result under Settings → Trova → Engine binary path.
-- **The engine does not start, or stops.** Run `trova doctor` in a terminal. It checks the Node version, SQLite, the models and the index. Node 22.12.0 crashes in the SQLite library the engine uses; update Node.
-- **Something else.** Click Trova in the status bar. When the engine is off or has failed, the popover has a "Copy debug info" button; paste its output into a [GitHub issue](https://github.com/ibimal/trova-obsidian/issues).
-
-## What the plugin does on your computer
-
-Obsidian asks plugins to state these things.
-
-- **It lists the files in your vault.** To build its index, the plugin reads the list of files in the vault, and the text of the notes and attachments it indexes. It skips the folders you exclude, notes with `trova: false` in their frontmatter, and Obsidian's own excluded files.
-- **Clipboard.** The plugin only writes to the clipboard, when you choose a copy action: copying the basket, links, a saved search, the debug info or the install command. It never reads the clipboard.
-- **It runs a separate program.** The plugin starts the `trova` engine that you installed, as a background process. It never downloads or installs programs itself.
-- **Network.** The plugin talks only to the engine, on `127.0.0.1`, with a token that only your user account can read. The engine downloads its models from Hugging Face once, after you click Start (about 330 MB, and about 1.7 GB more for Deep mode, which the plugin downloads only after you confirm). The models have their own licences, listed in the [engine's README](https://github.com/ibimal/trova#models). Your notes never leave the computer.
-- **No telemetry.** The plugin and the engine collect no usage data and send nothing anywhere.
-- **Files outside the vault.** Only if you add folders under Settings → Trova → Outside folders. The engine then indexes those folders, and Instant search shows their files.
-- **Optional local HTTP API.** Off by default. When you turn it on, the plugin serves read-only search, Ask and related-notes endpoints on `127.0.0.1`, protected by a token shown in the settings.
-- **Image text.** If the Text Extractor plugin is installed and image attachments are indexed, Trova asks it for the text in your images and sends that text to the engine.
-
-## Where notes open
-
-Every list and graph follows Obsidian's own rule. A click opens a note in the current tab; with Cmd (Ctrl on Windows and Linux) in a new tab, with Cmd+Alt in a split, and with Cmd+Alt+Shift in a new window. A middle-click opens a new tab. Enter takes the same modifiers in Instant search, the Connections pane, Vault care and the two graphs. The similarity graph, Vault care and the topic map keep their state in the tab's history, so Back returns to them as they were. To keep one of them in place while notes open beside it, pin its tab.
+3. Delete the engine's index, `~/.cache/trova/`. The models are in qmd's model cache, `~/.cache/qmd/models/`. Delete them too, unless you also use [qmd](https://github.com/tobi/qmd) itself, which shares that folder.
 
 ## Where data lives
 
@@ -110,47 +158,9 @@ Every list and graph follows Obsidian's own rule. A click opens a note in the cu
 | Query history, last-opened times, basket, today's Rediscover pick, pane layout            | Obsidian's local storage, per device                                                                                                            |
 | State of open tabs: the similarity graph's centre note, size and lock; Vault care's group | Obsidian's workspace layout, per device                                                                                                         |
 
-## Development
+## Contributing
 
-```bash
-npm install
-```
-
-```bash
-npm run build
-```
-
-```bash
-npm test
-```
-
-```bash
-npm run lint
-```
-
-`npm run lint` checks the code against Obsidian's own ESLint rules (`eslint-plugin-obsidianmd`), with two stricter local rules where Obsidian's review is stricter than the published rules, and checks `styles.css` with Stylelint as the review does (no `!important`, and browser features of the Chromium versions Obsidian runs on). The review can still find more than these checks, so run it before each release, as below. `npm run format` formats the code with [Oxfmt](https://oxc.rs/docs/guide/usage/formatter), at the version and settings the engine repository uses, so the shared contract stays identical; `npm run format:check` checks it, as CI does. Update Oxfmt only together with the engine's Vite+, as [its `docs/development.md`](https://github.com/ibimal/trova/blob/main/docs/development.md#updating-vite) describes.
-
-`npm run dev` rebuilds `main.js` on every change. To try a build, copy `main.js`, `manifest.json` and `styles.css` into a vault's `.obsidian/plugins/trova/` folder and reload Obsidian. A git-ignored `test-vault/` folder in this repository is a convenient place for that vault.
-
-`docs/notes.md` records where the plugin differs from its specification, what it adds, and what was measured. `src/contract/` is a copy of the engine's `/v1` contract from the [trova repository](https://github.com/ibimal/trova/tree/main/src/contract); keep the two identical, and copy any change across. `test/contract.test.ts` and the notes in `test/fixture.ts` are copied from there too; the contract test differs only in its test import (`vitest` here, `vite-plus/test` there). The plugin connects only to an engine that serves its API major version; [the engine's `docs/api.md`](https://github.com/ibimal/trova/blob/main/docs/api.md) gives the rules. The plugin's logic is tested with a mocked `obsidian` module; the views are checked in a running Obsidian.
-
-Each release's files carry a GitHub build provenance attestation, which shows they were built from this repository by its release workflow. To check one, download it and run `gh attestation verify main.js --repo ibimal/trova-obsidian`.
-
-To release a version:
-
-1. Push your changes to `main` and let CI pass.
-2. On the plugin's page in the [Obsidian community directory](https://community.obsidian.md), choose **Review branch** for `main`, and fix anything it reports. This runs Obsidian's own review before anything is published.
-3. Run `npm version` with `patch`, `minor` or `major`, then push the commit and the tag:
-
-```bash
-npm version patch
-```
-
-```bash
-git push --follow-tags
-```
-
-`npm version` sets the version in `package.json`, `manifest.json` and `versions.json` (with the lowest Obsidian version it supports, from `manifest.json`'s `minAppVersion`), commits them, and tags the commit with the bare version, as Obsidian requires. GitHub Actions then check that the tag matches `manifest.json` and `versions.json`, run the type check, lint, format check and tests, build the plugin, attest the build, and create a draft release with `main.js`, `manifest.json` and `styles.css` attached. Review the draft on GitHub and publish it.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) describes how to build, test and release the plugin. The screenshots show a demo vault of invented notes.
 
 ## Licence
 

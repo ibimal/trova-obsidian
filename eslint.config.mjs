@@ -23,6 +23,7 @@ export default defineConfig([
     "version-bump.mjs",
     "vitest.config.mts",
     "test-vault",
+    "demo-vault",
   ]),
   ...obsidianmd.configs.recommended,
   // Stricter than the published rules, as Obsidian's plugin review is: assigning any literal to an

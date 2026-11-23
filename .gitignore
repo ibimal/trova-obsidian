@@ -3,3 +3,4 @@ main.js
 *.tsbuildinfo
 .DS_Store
 test-vault/
+demo-vault/
