@@ -521,12 +521,16 @@ export class SearchIndex {
     return best ? this.unstem(best[0], best[1].path) : null;
   }
 
-  /** The index holds stems; the correction shows the word as it is written in the best hit. */
+  /**
+   * The index holds stems; the correction shows the word as it is written in the best hit. It reads
+   * the same fields the index holds, so a stem that matched only the folder name is found too.
+   */
   private unstem(stem: string, path: string | undefined): string {
     const doc = path ? this.docs.get(path) : undefined;
     if (!doc) return stem;
-    const text = `${doc.title}\n${doc.aliases.join("\n")}\n${doc.headings.map((h) => h.text).join("\n")}\n${doc.tags.join(" ")}\n${this.bodies.get(doc.path) ?? ""}`;
-    for (const token of tokenize(text)) if (processTerm(token) === stem) return fold(token);
+    const { id: _id, ...fields } = this.indexed(doc);
+    for (const token of tokenize(Object.values(fields).join("\n")))
+      if (processTerm(token) === stem) return fold(token);
     return stem;
   }
 

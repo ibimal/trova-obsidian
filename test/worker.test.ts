@@ -80,6 +80,25 @@ describe("worker: body lane, filters and typo rescue", () => {
     expect(index.search(q("lighthuose"), { fuzzy: 0 }).body).toEqual([]);
     expect(index.search(q("kanata")).correction).toBeUndefined();
   });
+  it("shows a correction as written, also when only a folder name holds the word", () => {
+    // "coffee" is stored as the stem "coffe" and appears here only in the folder name.
+    const { docs } = fixtureDocs();
+    const folderOnly = new SearchIndex();
+    folderOnly.upsertMeta([
+      {
+        ...docs[0]!,
+        path: "Coffee/Grind sheet.md",
+        title: "Grind sheet",
+        aliases: [],
+        headings: [],
+        tags: [],
+      },
+    ]);
+    folderOnly.upsertBodies([
+      { path: "Coffee/Grind sheet.md", body: "A burr grinder gives even particles." },
+    ]);
+    expect(folderOnly.search(q("cofee")).correction).toEqual({ from: "cofee", to: "coffee" });
+  });
   it("finds CJK text", () => {
     expect(bodyPaths("検索エンジン")).toEqual(["Sprachen/日本語.md"]);
   });
