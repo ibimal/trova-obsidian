@@ -2,6 +2,14 @@
 
 All notable changes to the Trova plugin for Obsidian. Versions follow [semantic versioning](https://semver.org).
 
+## 0.1.3
+
+- Downloading the Deep models from the Ask pane shows the download's progress, and the question runs again in Deep mode by itself when the models are ready. If the download stops, the pane says so and offers to try again.
+- Related notes are ordered by the similarity the pane shows. The engine's ranking adds a bonus for further matching sections, which made the list look out of order; it now only breaks ties.
+- The Note, Section and Selection tabs are drawn from the theme's own colours: a track like the search field, and the selected tab in the accent-tinted highlight Obsidian uses for active items.
+- The notice at the end of the first index is clearer: what was indexed, the suggested hotkeys with this platform's key symbols, and a Set hotkeys button that opens the Hotkeys settings filtered to Trova's commands.
+- The README describes installing and updating from Obsidian's community plugins.
+
 ## 0.1.2
 
 - Fixes the error in Obsidian's review of 0.1.1: the Connections pane's room for the status bar now passes through a CSS custom property, which the stylesheet turns into padding.

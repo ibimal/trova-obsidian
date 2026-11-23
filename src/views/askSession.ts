@@ -477,22 +477,7 @@ export class AskSession {
     if (this.error) return void banner(el, `${t("internalError")}: ${this.error}`);
     const pct = this.plugin.indexedPercent();
     if (pct < 100) banner(el, t("indexPartial", { pct }));
-    if (this.note === "model_missing") {
-      banner(el, t("deepMissing"), {
-        label: t("downloadModels"),
-        run: () =>
-          new ConfirmModal(
-            this.plugin.app,
-            t("downloadConfirmTitle"),
-            t("downloadConfirmBody"),
-            [],
-            t("download"),
-            () => {
-              void this.plugin.engine.downloadModels().catch((e: Error) => new Notice(e.message));
-            },
-          ).open(),
-      });
-    }
+    if (this.note === "model_missing") this.renderDeepModels(el);
     if (this.note === "rerank_skipped") {
       // The answers shown are the fused ones; the user can ask for the reranked order.
       const box = el.createDiv({ cls: "trova-rerank-note", attr: { role: "status" } });
@@ -549,6 +534,62 @@ export class AskSession {
   /** Runs the shown question as Enter does: in the selected mode, saved to history. */
   runAgain(): void {
     if (this.question) void this.run(this.question, { label: this.label });
+  }
+
+  /**
+   * The Deep models are missing for this question: offer the download, show its progress while it
+   * runs, and offer it again if it fails. When the models are ready, engineChanged() reruns the
+   * question in Deep mode.
+   */
+  private renderDeepModels(el: HTMLElement): void {
+    const engine = this.plugin.engine;
+    const deep = engine.deepModels();
+    const download = () =>
+      new ConfirmModal(
+        this.plugin.app,
+        t("downloadConfirmTitle"),
+        t("downloadConfirmBody"),
+        [],
+        t("download"),
+        () => {
+          void engine.downloadModels().catch((e: Error) => new Notice(e.message));
+        },
+      ).open();
+    if (deep.state === "downloading" || engine.snapshot.deepDownload === "running") {
+      const pct = deep.state === "downloading" ? Math.round(deep.progress * 100) : 0;
+      const box = banner(
+        el,
+        deep.state === "downloading" ? t("deepDownloading", { pct }) : t("deepDownloadStarting"),
+      );
+      box.addClass("trova-banner-progress");
+      box.setAttr("role", "status");
+      const bar = box.createDiv({
+        cls: "trova-progress",
+        attr: {
+          role: "progressbar",
+          "aria-valuemin": "0",
+          "aria-valuemax": "100",
+          "aria-valuenow": String(pct),
+        },
+      });
+      bar.createDiv({ cls: "trova-progress-fill" }).setCssProps({ "--trova-progress": `${pct}%` });
+      return;
+    }
+    if (engine.snapshot.deepDownload === "failed")
+      return void banner(el, t("deepDownloadFailed"), { label: t("tryAgain"), run: download });
+    banner(el, t("deepMissing"), { label: t("downloadModels"), run: download });
+  }
+
+  /**
+   * Called when the engine's state changes. While a question waits for the Deep models, the pane
+   * redraws to show the download's progress, and the question runs again in Deep mode once they
+   * are ready.
+   */
+  engineChanged(): void {
+    if (this.note !== "model_missing" || !this.question) return;
+    if (this.plugin.engine.deepModels().state === "ready")
+      return void this.run(this.question, { mode: "deep", record: false, label: this.label });
+    this.host.changed();
   }
 
   renderList(list: HTMLElement): void {

@@ -59,6 +59,20 @@ import { TOPIC_VIEW, TopicMapView } from "./views/TopicMapView.js";
 import { CARE_VIEW, VaultCareView, type CareGroup } from "./views/VaultCareView.js";
 import { startInline, startWorker, type WorkerHost } from "./worker/host.js";
 
+/** The hotkeys the finish notice suggests, as Obsidian's modifier names. */
+const SUGGESTED_HOTKEYS: ["cmdInstant" | "cmdInFile" | "cmdAsk", string[]][] = [
+  ["cmdInstant", ["Mod", "Shift", "O"]],
+  ["cmdInFile", ["Mod", "Alt", "F"]],
+  ["cmdAsk", ["Mod", "Shift", "A"]],
+];
+
+/** A key as this platform writes it: ⌘ ⇧ ⌥ on macOS, Ctrl, Shift and Alt elsewhere. */
+function keyLabel(key: string): string {
+  const mac: Record<string, string> = { Mod: "⌘", Shift: "⇧", Alt: "⌥" };
+  const other: Record<string, string> = { Mod: "Ctrl" };
+  return (Platform.isMacOS ? mac[key] : other[key]) ?? key;
+}
+
 class PromptModal extends Modal {
   constructor(
     plugin: TrovaPlugin,
@@ -445,18 +459,7 @@ export default class TrovaPlugin extends Plugin {
         this.announceFinish = false;
         void this.engine.refreshStatus().then((status) => {
           const c = status?.collections.find((x) => x.name === this.collection);
-          const notice = new Notice("", 15000);
-          const el = notice.messageEl ?? (notice as unknown as { noticeEl: HTMLElement }).noticeEl;
-          el.createDiv({
-            text: t("finishNotice", {
-              sources: (c?.sources ?? 0).toLocaleString(),
-              embedded: (c?.embedded ?? 0).toLocaleString(),
-            }),
-          });
-          el.createDiv({ cls: "trova-row-path", text: t("hotkeysHint") });
-          el.createEl("button", { text: t("setHotkeys") }).addEventListener("click", () =>
-            this.openSettings("hotkeys"),
-          );
+          this.showFinishNotice(c?.sources ?? 0, c?.embedded ?? 0);
         });
       }
     }
@@ -845,6 +848,52 @@ export default class TrovaPlugin extends Plugin {
     const name = `data.backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
     await adapter.write(`${dir}/${name}`, await adapter.read(source));
     return name;
+  }
+
+  /** Tells the user the first index is done, and suggests hotkeys for the main commands. */
+  showFinishNotice(sources: number, embedded: number): void {
+    const notice = new Notice("", 20000);
+    const el = notice.messageEl;
+    el.addClass("trova-finish");
+    el.createDiv({ cls: "trova-finish-title", text: t("finishTitle") });
+    el.createDiv({
+      text: t("finishBody", {
+        sources: sources.toLocaleString(),
+        embedded: embedded.toLocaleString(),
+      }),
+    });
+    el.createDiv({ cls: "trova-finish-label", text: t("hotkeysTitle") });
+    const list = el.createDiv({ cls: "trova-finish-keys" });
+    for (const [command, keys] of SUGGESTED_HOTKEYS) {
+      const row = list.createDiv({ cls: "trova-finish-key" });
+      row.createSpan({ text: t(command) });
+      const combo = row.createSpan({ cls: "trova-finish-combo" });
+      for (const key of keys) combo.createEl("kbd", { text: keyLabel(key) });
+    }
+    const button = el.createEl("button", { cls: "mod-cta", text: t("setHotkeys") });
+    button.addEventListener("click", (e) => {
+      e.stopPropagation();
+      notice.hide();
+      this.openHotkeys();
+    });
+  }
+
+  /** Opens Settings → Hotkeys, filtered to Trova's commands when Obsidian allows it. */
+  openHotkeys(): void {
+    this.openSettings("hotkeys");
+    const tab = (
+      this.app as unknown as {
+        setting?: {
+          activeTab?: {
+            searchComponent?: { setValue(v: string): unknown; inputEl?: HTMLInputElement };
+          };
+        };
+      }
+    ).setting?.activeTab;
+    const search = tab?.searchComponent;
+    if (!search) return;
+    search.setValue(this.manifest.name);
+    search.inputEl?.dispatchEvent(new Event("input"));
   }
 
   openSettings(tab = "trova"): void {

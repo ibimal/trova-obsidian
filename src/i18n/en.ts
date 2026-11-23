@@ -118,6 +118,10 @@ export const en = {
   rerankFailed: "Couldn't rerank these results.",
   deepMissing: "Deep models are not downloaded. Ask ran in Fast mode.",
   downloadModels: "Download models",
+  deepDownloadStarting: "Starting the download of the Deep models.",
+  deepDownloading:
+    "Downloading the Deep models: {pct}%. Your question runs again in Deep mode when they are ready.",
+  deepDownloadFailed: "The Deep models did not finish downloading.",
   downloadConfirmTitle: "Download Deep models?",
   downloadConfirmBody:
     "Deep mode needs the rerank and query-expansion models, about 1.7 GB. They download once and stay on this machine.",
@@ -320,9 +324,10 @@ export const en = {
   scopeDownload:
     "The embedding model downloads once, about 330 MB. Nothing downloads before you click Start.",
   start: "Start",
-  finishNotice: "Trova indexed {sources} sources ({embedded} embedded).",
+  finishTitle: "Trova is ready",
+  finishBody: "Indexed {sources} notes and attachments; {embedded} are ready for semantic search.",
+  hotkeysTitle: "Suggested hotkeys",
   setHotkeys: "Set hotkeys",
-  hotkeysHint: "Suggested: Instant search Mod+Shift+O, In-file search Mod+Alt+F, Ask Mod+Shift+A",
   // settings
   secScope: "Scope",
   secSearch: "Search",

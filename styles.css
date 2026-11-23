@@ -154,6 +154,23 @@ body {
 .trova-banner button {
   flex: 0 0 auto;
 }
+/* A download in progress: the text above a bar that fills as the models arrive. */
+.trova-banner.trova-banner-progress {
+  flex-wrap: wrap;
+}
+.trova-progress {
+  flex: 1 0 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+  overflow: hidden;
+}
+.trova-progress-fill {
+  width: var(--trova-progress, 0%);
+  height: 100%;
+  background: var(--interactive-accent);
+  transition: width var(--trova-ease);
+}
 
 .trova-list {
   overflow-y: auto;
@@ -1093,13 +1110,17 @@ body {
   gap: var(--size-2-3);
   margin-top: var(--size-4-2);
 }
+/* A segmented control drawn from the theme's own variables: a track like the search field above it,
+   and the selected segment in the accent-tinted overlay Obsidian uses for active items, so it
+   follows each theme and accent colour. */
 .trova-segmented {
   display: flex;
   flex: 1 1 auto;
   gap: 2px;
   padding: 2px;
-  background: var(--background-secondary);
-  border-radius: var(--trova-radius);
+  background: var(--background-modifier-form-field);
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+  border-radius: var(--radius-m);
   min-width: 0;
 }
 .trova-segmented button {
@@ -1110,20 +1131,22 @@ body {
   box-shadow: none;
   background: transparent;
   color: var(--text-muted);
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   font-size: var(--font-ui-smaller);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition:
+    background-color var(--trova-ease),
+    color var(--trova-ease);
 }
 .trova-segmented button:hover {
   color: var(--text-normal);
 }
 .trova-segmented button.is-active {
-  background: var(--background-primary);
-  color: var(--text-normal);
+  background: var(--background-modifier-active-hover);
+  color: var(--text-accent);
   font-weight: var(--font-medium);
-  box-shadow: 0 0 0 1px var(--background-modifier-border);
 }
 .trova-segmented button:focus-visible {
   outline: 2px solid var(--interactive-accent);
@@ -2354,4 +2377,52 @@ body button.trova-anchor-source:focus-visible {
 .trova-seek-context button.trova-selection-clear svg {
   width: 14px;
   height: 14px;
+}
+
+/* The notice shown when the first index is done. */
+.trova-finish {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  max-width: 320px;
+}
+.trova-finish-title {
+  font-weight: var(--font-semibold);
+}
+/* Notices keep their own colours in every theme, so these follow the notice's text colour. */
+.trova-finish-label {
+  margin-top: var(--size-2-2);
+  color: inherit;
+  opacity: 0.7;
+  font-size: var(--font-ui-smaller);
+}
+.trova-finish-keys {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+}
+.trova-finish-key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+}
+.trova-finish-combo {
+  display: flex;
+  gap: 2px;
+}
+.trova-finish-combo kbd {
+  min-width: 1.6em;
+  padding: 0 var(--size-2-1);
+  border: none;
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, currentcolor 16%, transparent);
+  box-shadow: none;
+  color: inherit;
+  font-size: var(--font-ui-smaller);
+  text-align: center;
+}
+.trova-finish button {
+  align-self: flex-start;
+  margin-top: var(--size-2-2);
 }

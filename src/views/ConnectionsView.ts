@@ -378,6 +378,7 @@ export class ConnectionsView extends ItemView {
       void this.refresh(true);
       if (this.drawerOpen) void this.graph?.load(this.anchor?.path ?? null, true);
     } else this.renderBar();
+    if (this.ask.active) this.ask.engineChanged();
   }
 
   // ---------- search box ----------

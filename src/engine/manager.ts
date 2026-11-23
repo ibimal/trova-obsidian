@@ -51,7 +51,22 @@ export interface EngineSnapshot {
   outdated?: "engine" | "plugin";
   progress?: { kind: string; done: number; total: number };
   error?: string;
+  /** A Deep-model download the plugin is following: running, or failed before the models were ready. */
+  deepDownload?: "running" | "failed";
 }
+
+/** The two Deep models together: ready, missing, or downloading with the fraction done. */
+export type DeepModels =
+  | { state: "ready" | "missing" }
+  | { state: "downloading"; progress: number };
+
+/** How often the status is read while the Deep models download, and how long to follow at most. */
+export const MODEL_WATCH_MS = 1000;
+const MODEL_WATCH_MAX_MS = 60 * 60 * 1000;
+/** Polls without a download in progress before a download that started counts as failed. */
+const MODEL_WATCH_IDLE_POLLS = 3;
+/** Polls to wait for a queued download to start. */
+const MODEL_WATCH_START_POLLS = 30;
 
 export interface Endpoint {
   base: string;
@@ -111,6 +126,7 @@ export class EngineManager {
   private syncTimer: number | null = null;
   private unsupported = new Set<string>();
   private keepAlive: number | null = null;
+  private modelWatch: number | null = null;
   private allCollections: string[] = [];
 
   constructor(private host: EngineHost) {}
@@ -364,6 +380,8 @@ export class EngineManager {
       void this.refreshStatus();
     } else if (e.event === "engine.state") {
       if (e.data["state"] === "error") this.set({ error: text(e.data["message"]) });
+      // A download started elsewhere, such as by a Deep search that allowed it.
+      if (e.data["state"] === "downloading") this.watchModelDownload();
       void this.refreshStatus();
     } else if (e.event === "model.changed") {
       void this.refreshStatus();
@@ -389,7 +407,8 @@ export class EngineManager {
     if (this.retryTimer) window.clearTimeout(this.retryTimer);
     if (this.syncTimer) window.clearTimeout(this.syncTimer);
     if (this.keepAlive) window.clearInterval(this.keepAlive);
-    this.retryTimer = this.syncTimer = this.keepAlive = null;
+    if (this.modelWatch) window.clearInterval(this.modelWatch);
+    this.retryTimer = this.syncTimer = this.keepAlive = this.modelWatch = null;
     this.eventsAbort?.abort();
     this.client = null;
   }
@@ -517,8 +536,58 @@ export class EngineManager {
       "topics",
     );
   }
-  downloadModels(): Promise<{ jobId: string }> {
-    return this.call(() => this.client!.json("POST", "/v1/models/download", {}));
+  /** Starts the Deep-model download and follows it until the models are ready. */
+  async downloadModels(): Promise<{ jobId: string }> {
+    const job = await this.call(() =>
+      this.client!.json<{ jobId: string }>("POST", "/v1/models/download", {}),
+    );
+    this.watchModelDownload();
+    return job;
+  }
+
+  /** The Deep models' state, from the engine's last status. */
+  deepModels(): DeepModels {
+    const m = this.snapshot.status?.models;
+    if (!m) return { state: "missing" };
+    const parts = [m.rerank, m.expand];
+    if (parts.every((p) => p.state === "ready" || p.state === "loading")) return { state: "ready" };
+    if (!parts.some((p) => p.state === "downloading")) return { state: "missing" };
+    const done = parts.map((p) =>
+      p.state === "downloading" ? (p.progress ?? 0) : p.state === "missing" ? 0 : 1,
+    );
+    return { state: "downloading", progress: done.reduce((a, b) => a + b, 0) / parts.length };
+  }
+
+  /**
+   * Reads the status every second while the Deep models download. The engine reports progress
+   * only in its status, so without this the download looks stalled and its end goes unnoticed.
+   */
+  private watchModelDownload(): void {
+    if (this.modelWatch !== null) return;
+    this.set({ deepDownload: "running" });
+    const started = Date.now();
+    let seen = false;
+    let idle = 0;
+    const finish = (state: "failed" | undefined) => {
+      if (this.modelWatch !== null) window.clearInterval(this.modelWatch);
+      this.modelWatch = null;
+      this.set({ deepDownload: state });
+    };
+    this.modelWatch = window.setInterval(() => {
+      void this.refreshStatus().then(() => {
+        if (this.modelWatch === null) return;
+        const deep = this.deepModels();
+        if (deep.state === "ready") return finish(undefined);
+        if (deep.state === "downloading") {
+          seen = true;
+          idle = 0;
+          return;
+        }
+        idle++;
+        const limit = seen ? MODEL_WATCH_IDLE_POLLS : MODEL_WATCH_START_POLLS;
+        if (idle >= limit || Date.now() - started > MODEL_WATCH_MAX_MS) finish("failed");
+      });
+    }, MODEL_WATCH_MS);
   }
   cancelJob(jobId: string): Promise<void> {
     return this.call(() =>

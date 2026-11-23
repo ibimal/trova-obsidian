@@ -434,6 +434,26 @@ describe("engine lifecycle", () => {
       vi.unstubAllGlobals();
     }
   });
+  it("sums up the two Deep models: ready, missing, or downloading with the average progress", () => {
+    const m = new EngineManager(host());
+    const withModels = (rerank: object, expand: object) => {
+      (m as unknown as { set(s: object): void }).set({
+        status: { models: { embed: { state: "ready" }, rerank, expand } },
+      });
+      return m.deepModels();
+    };
+    expect(m.deepModels()).toEqual({ state: "missing" });
+    expect(withModels({ state: "ready" }, { state: "ready" })).toEqual({ state: "ready" });
+    expect(withModels({ state: "missing" }, { state: "missing" })).toEqual({ state: "missing" });
+    expect(withModels({ state: "downloading", progress: 0.4 }, { state: "missing" })).toEqual({
+      state: "downloading",
+      progress: 0.2,
+    });
+    expect(withModels({ state: "ready" }, { state: "downloading", progress: 0.5 })).toEqual({
+      state: "downloading",
+      progress: 0.75,
+    });
+  });
   it("status bar text follows the states table", () => {
     const idle = { done: 0, total: 0, running: false };
     const base = {
@@ -584,6 +604,36 @@ describe("settings text fields", () => {
       { path: "/Users/me/Documents/Research Papers", name: "folder-research-papers" },
       { path: "C:\\Work\\Notes\\", name: "folder-notes" },
       { path: "/", name: "folder-x" },
+    ]);
+  });
+});
+
+describe("related notes order", () => {
+  it("orders by the similarity shown, breaks ties with the engine's score, and keeps results without one last", async () => {
+    const { bySimilarity } = await import("../src/features/connections.js");
+    const r = (id: string, vec?: number, fused?: number) =>
+      ({
+        id,
+        scores: {
+          ...(vec === undefined ? {} : { vec }),
+          ...(fused === undefined ? {} : { fused }),
+        },
+      }) as unknown as Result;
+    const ordered = bySimilarity([
+      r("bonus", 0.6, 0.75),
+      r("plain", 0.7, 0.7),
+      r("noScore-a"),
+      r("tieLow", 0.65, 0.65),
+      r("tieHigh", 0.65, 0.7),
+      r("noScore-b"),
+    ]);
+    expect(ordered.map((x) => x.id)).toEqual([
+      "plain",
+      "tieHigh",
+      "tieLow",
+      "bonus",
+      "noScore-a",
+      "noScore-b",
     ]);
   });
 });

@@ -28,7 +28,9 @@ Without the engine, Instant search still works from the plugin's own keyword ind
    npm install -g trova-cli
    ```
 
-2. Install the plugin. Until it is listed in Obsidian's community plugins, download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/ibimal/trova-obsidian/releases), put them in `<vault>/.obsidian/plugins/trova/`, and enable Trova under Settings → Community plugins.
+2. Install the plugin: in Obsidian, open Settings → Community plugins → Browse, search for "Trova", choose Install, then Enable. Its page in Obsidian's directory is [community.obsidian.md/plugins/trova](https://community.obsidian.md/plugins/trova).
+
+   To install it by hand instead, download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/ibimal/trova-obsidian/releases/latest), put them in `<vault>/.obsidian/plugins/trova/`, and enable Trova under Settings → Community plugins.
 
 The plugin looks for `trova` on your `PATH` and in the usual install folders. If it does not find it, set the path under Settings → Trova → Engine binary path.
 
@@ -57,7 +59,7 @@ All settings are under Settings → Trova, and Obsidian's settings search finds 
 
 ## Update
 
-Update the plugin from Settings → Community plugins once it is listed there, or replace its three files with those of a newer release. Update the engine in a terminal:
+Obsidian updates the plugin: Settings → Community plugins → Check for updates. Update the engine in a terminal:
 
 ```bash
 npm install -g trova-cli@latest

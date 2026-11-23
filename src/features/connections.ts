@@ -101,7 +101,10 @@ export class ConnectionsService {
     return block ? { text: blockText(whole, block), whole } : null;
   }
 
-  /** Applies hides and pins: hidden results never return for the anchor; pinned ones stay on top. */
+  /**
+   * Applies hides and pins: hidden results never return for the anchor; pinned ones stay on top.
+   * The rest are ordered by the similarity the pane shows.
+   */
   private decorate(a: Anchor, results: Result[]): { results: Result[]; pinned: Set<string> } {
     const anchor = this.anchorSource(a);
     const hidden = new Set(this.deps.store.hides(anchor));
@@ -115,7 +118,7 @@ export class ConnectionsService {
         (settings.showLoose || r.label !== "loose" || pinned.has(r.id)),
     );
     const top = visible.filter((r) => pinned.has(r.id));
-    const rest = visible.filter((r) => !pinned.has(r.id));
+    const rest = bySimilarity(visible.filter((r) => !pinned.has(r.id)));
     // A pinned result that the engine no longer returns still shows, without a score.
     for (const id of pins) {
       if (top.some((r) => r.id === id)) continue;
@@ -235,4 +238,19 @@ export class ConnectionsService {
     if (view.state !== "ok") return [];
     return view.results.filter((r) => r.label === "strong");
   }
+}
+
+/**
+ * Orders related results by the similarity the pane shows (their best section's), highest first.
+ * The engine ranks with a bonus for each further matching section, so its order can disagree with
+ * the percentages; here that score only breaks ties. Results without a similarity keep their
+ * order, after the rest.
+ */
+export function bySimilarity(results: Result[]): Result[] {
+  const sim = (r: Result) => r.scores.vec ?? -Infinity;
+  const fused = (r: Result) => r.scores.fused ?? r.scores.vec ?? -Infinity;
+  return results
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => sim(b.r) - sim(a.r) || fused(b.r) - fused(a.r) || a.i - b.i)
+    .map((x) => x.r);
 }
