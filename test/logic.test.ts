@@ -10,6 +10,7 @@ import {
   EngineManager,
   MODEL_WATCH_MS,
   RETRY_SCHEDULE_MS,
+  ownIds,
   type EngineSnapshot,
 } from "../src/engine/manager.js";
 import { rowToResult } from "../src/features/api.js";
@@ -438,6 +439,50 @@ describe("engine lifecycle", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+  it("keeps only this vault's near-duplicates and topic notes, as one engine scans every vault", async () => {
+    expect(ownIds(["v1", "out"])("v1:a.md")).toBe(true);
+    expect(ownIds(["v1"])("v10:a.md")).toBe(false);
+    const m = new EngineManager(host());
+    const inner = m as unknown as { client: unknown; allCollections: string[] };
+    inner.allCollections = ["v1", "out"];
+    const pair = (a: string, b: string) => ({
+      a,
+      b,
+      aTitle: "",
+      bTitle: "",
+      aPath: "",
+      bPath: "",
+      kind: "source",
+      similarity: 0.9,
+    });
+    const source = (id: string) => ({ id, path: id.split(":")[1], title: "", x: 0, y: 0 });
+    inner.client = {
+      json: async (_method: string, path: string) =>
+        path === "/v1/duplicates"
+          ? {
+              state: "done",
+              pairs: [
+                pair("v1:a.md", "out:b.md"),
+                pair("v1:a.md", "v2:c.md"),
+                pair("v2:c.md", "v2:d.md"),
+              ],
+            }
+          : {
+              state: "done",
+              clusters: [
+                { id: 1, label: [], x: 0, y: 0, sources: [source("v1:a.md"), source("v2:c.md")] },
+                { id: 2, label: [], x: 0, y: 0, sources: [source("v2:d.md")] },
+              ],
+            },
+    };
+    expect((await m.duplicates(false)).pairs.map((p) => [p.a, p.b])).toEqual([
+      ["v1:a.md", "out:b.md"],
+    ]);
+    const topics = await m.topics(false);
+    expect(topics.clusters.map((c) => [c.id, c.sources.map((s) => s.id)])).toEqual([
+      [1, ["v1:a.md"]],
+    ]);
   });
   it("sums up the two Deep models: ready, missing, or downloading with the average progress", () => {
     const m = new EngineManager(host());

@@ -31,6 +31,12 @@ function text(v: unknown): string {
   return typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
 }
 
+/** A test for whether a source id (`<collection>:<path>`) belongs to one of these collections. */
+export function ownIds(collections: string[]): (id: string) => boolean {
+  const set = new Set(collections);
+  return (id) => set.has(id.slice(0, id.indexOf(":")));
+}
+
 export type EngineState =
   | "disabled"
   | "idle"
@@ -526,17 +532,29 @@ export class EngineManager {
   metadataKeys(): Promise<{ keys: Record<string, string[]> }> {
     return this.call(() => this.client!.json("GET", "/v1/metadata/keys"));
   }
-  duplicates(start: boolean): Promise<DuplicatesResponse> {
-    return this.call(
+  /**
+   * Near-duplicate pairs within this vault's collections. One engine serves every vault on the
+   * computer and scans all of them, so pairs from other vaults are left out.
+   */
+  async duplicates(start: boolean): Promise<DuplicatesResponse> {
+    const res = await this.call<DuplicatesResponse>(
       () => this.client!.json(start ? "POST" : "GET", "/v1/duplicates", start ? {} : undefined),
       "duplicates",
     );
+    const own = ownIds(this.collections());
+    return { ...res, pairs: res.pairs.filter((p) => own(p.a) && own(p.b)) };
   }
-  topics(start: boolean): Promise<TopicsResponse> {
-    return this.call(
+  /** Topic clusters with only this vault's notes, for the same reason as duplicates. */
+  async topics(start: boolean): Promise<TopicsResponse> {
+    const res = await this.call<TopicsResponse>(
       () => this.client!.json(start ? "POST" : "GET", "/v1/topics", start ? {} : undefined),
       "topics",
     );
+    const own = ownIds(this.collections());
+    const clusters = (res.clusters ?? [])
+      .map((c) => ({ ...c, sources: c.sources.filter((s) => own(s.id)) }))
+      .filter((c) => c.sources.length > 0);
+    return { ...res, clusters };
   }
   /** Starts the Deep-model download and follows it until the models are ready. */
   async downloadModels(): Promise<{ jobId: string }> {
