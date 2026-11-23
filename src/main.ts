@@ -957,6 +957,23 @@ export default class TrovaPlugin extends Plugin {
     return this.reveal<ConnectionsView>(CONNECTIONS_VIEW, "right");
   }
 
+  /**
+   * Shows the Connections pane in the right sidebar without taking focus from the note, once, when
+   * the user starts Trova on the welcome screen. Obsidian's layout keeps it open from then on, and a
+   * pane the user closes stays closed.
+   */
+  async showConnectionsAfterStart(): Promise<void> {
+    const { workspace } = this.app;
+    let leaf = workspace.getLeavesOfType(CONNECTIONS_VIEW)[0];
+    if (!leaf) {
+      const side = workspace.getRightLeaf(false);
+      if (!side) return;
+      await side.setViewState({ type: CONNECTIONS_VIEW, active: false });
+      leaf = side;
+    }
+    await workspace.revealLeaf(leaf);
+  }
+
   /** Opens Ask in the Connections pane: runs the question, or focuses the search box. */
   async openAsk(question?: string, opts: { label?: string } = {}): Promise<void> {
     const view = await this.connectionsPane();

@@ -79,6 +79,7 @@ export class OnboardingModal extends Modal {
         this.plugin.announceFinish = true;
         void engine.startIndexing();
         this.close();
+        void this.plugin.showConnectionsAfterStart();
       });
       buttons
         .createEl("button", { text: t("continueWithout") })

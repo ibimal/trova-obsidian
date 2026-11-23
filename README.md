@@ -17,7 +17,7 @@
 
 2. In Obsidian, open **Settings → Community plugins → Browse**, search for **Trova**, choose **Install**, then **Enable**.
 
-3. The welcome screen shows what Trova will index. Click **Start**. Instant search works at once. Related notes and Ask follow when the first index is done; the status bar shows its progress.
+3. The welcome screen shows what Trova will index. Click **Start**. The Connections and Ask pane opens in the right sidebar, and Instant search works at once. Related notes and Ask follow when the first index is done; the status bar shows its progress.
 
 <img src="https://raw.githubusercontent.com/ibimal/trova-obsidian/main/docs/images/welcome.png" alt="The welcome screen: the engine was found, 24 notes will be indexed, and a Start button." width="600">
 
